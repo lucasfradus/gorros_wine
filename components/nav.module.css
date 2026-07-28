@@ -1,0 +1,112 @@
+.nav {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 20px;
+  padding: 22px var(--gutter);
+  border-bottom: 1px solid var(--line-nav);
+  position: sticky;
+  top: 0;
+  z-index: 20;
+  background: rgba(21, 17, 16, 0.92);
+  backdrop-filter: blur(8px);
+}
+
+.left {
+  display: flex;
+  align-items: center;
+  gap: 34px;
+  min-width: 0;
+}
+
+.logo {
+  font-family: var(--font-fraunces), Georgia, serif;
+  font-weight: 500;
+  font-size: 22px;
+  letter-spacing: 0.12em;
+  color: var(--gold);
+  text-decoration: none;
+  white-space: nowrap;
+}
+
+.links {
+  display: flex;
+  gap: 26px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.link {
+  font-size: 13px;
+  letter-spacing: 0.05em;
+  color: var(--nav-link);
+  text-decoration: none;
+  padding-bottom: 3px;
+  border-bottom: 1px solid transparent;
+  white-space: nowrap;
+}
+
+.link:hover {
+  color: var(--gold);
+  border-bottom-color: var(--gold);
+}
+
+.right {
+  display: flex;
+  align-items: center;
+  gap: 22px;
+  font-size: 13px;
+}
+
+.util {
+  color: var(--gold);
+  text-decoration: none;
+}
+
+.util:hover {
+  color: var(--heading);
+}
+
+.cart {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  border: 1px solid var(--gold-line);
+  border-radius: 1px;
+  color: var(--gold);
+  padding: 9px 16px;
+  text-decoration: none;
+  white-space: nowrap;
+}
+
+.cart:hover {
+  background: var(--gold);
+  color: var(--night);
+}
+
+/* El nav completo no entra en pantallas chicas: se ocultan los enlaces
+   secundarios y quedan logo + carrito, que es lo accionable. */
+@media (max-width: 860px) {
+  .links {
+    gap: 18px;
+  }
+
+  .left {
+    gap: 22px;
+  }
+
+  .util {
+    display: none;
+  }
+}
+
+@media (max-width: 620px) {
+  .links {
+    display: none;
+  }
+
+  .logo {
+    font-size: 19px;
+  }
+}

@@ -1,0 +1,49 @@
+.club {
+  margin-top: 36px;
+  padding: 70px var(--gutter);
+  text-align: center;
+  border-top: 1px solid var(--line);
+  background: var(--hatch-club);
+}
+
+.eyebrow {
+  letter-spacing: 0.36em;
+  margin-bottom: 16px;
+}
+
+.title {
+  font-size: 44px;
+  line-height: 1.05;
+  color: var(--heading);
+  max-width: 640px;
+  margin: 0 auto 18px;
+}
+
+.lede {
+  max-width: 480px;
+  margin: 0 auto 30px;
+  font-size: 14.5px;
+  line-height: 1.7;
+  color: var(--lede);
+}
+
+.cta {
+  padding: 15px 34px;
+  letter-spacing: 0.05em;
+}
+
+@media (max-width: 1000px) {
+  .title {
+    font-size: 34px;
+  }
+}
+
+@media (max-width: 560px) {
+  .club {
+    padding: 56px var(--gutter);
+  }
+
+  .title {
+    font-size: 28px;
+  }
+}

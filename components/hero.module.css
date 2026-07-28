@@ -1,0 +1,81 @@
+.hero {
+  position: relative;
+  background: var(--hatch-hero);
+  padding: 90px var(--gutter) 84px;
+  text-align: center;
+}
+
+.eyebrow {
+  letter-spacing: 0.42em;
+  margin-bottom: 26px;
+}
+
+.title {
+  font-size: 82px;
+  line-height: 1;
+  letter-spacing: -0.01em;
+  color: var(--heading);
+}
+
+.titleAccent {
+  font-style: italic;
+  color: var(--gold);
+}
+
+.lede {
+  max-width: 520px;
+  margin: 28px auto 34px;
+  font-size: 15.5px;
+  line-height: 1.75;
+  color: var(--lede);
+}
+
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 14px;
+  justify-content: center;
+}
+
+.photoNote {
+  position: absolute;
+  left: var(--gutter);
+  bottom: 22px;
+}
+
+@media (max-width: 1000px) {
+  .title {
+    font-size: 62px;
+  }
+
+  .hero {
+    padding: 72px var(--gutter) 70px;
+  }
+}
+
+@media (max-width: 700px) {
+  .title {
+    font-size: 46px;
+  }
+}
+
+@media (max-width: 560px) {
+  .title {
+    font-size: 38px;
+  }
+
+  .hero {
+    padding: 56px var(--gutter) 64px;
+  }
+
+  .actions :global(.btn) {
+    flex: 1 1 100%;
+  }
+
+  /* En móvil la nota de foto estorba abajo a la izquierda. */
+  .photoNote {
+    position: static;
+    display: block;
+    margin-top: 28px;
+  }
+}

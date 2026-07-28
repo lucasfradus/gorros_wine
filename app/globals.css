@@ -1,0 +1,167 @@
+/*
+ * Gorros Wine — tokens de la dirección 1b "Noche premium"
+ * (negro + dorado, Fraunces para títulos, Jost para texto)
+ */
+
+:root {
+  /* superficies */
+  --night: #151110; /* fondo de la página */
+  --night-deep: #0f0c0b; /* fondo fuera del contenedor */
+
+  /* tinta */
+  --heading: #f3ecdd;
+  --text: #ece3d2;
+  --lede: #b6ab97;
+  --meta: #9a907d;
+  --nav-link: #bdb2a0;
+  --footer-meta: #8f8571;
+
+  /* marca */
+  --gold: #c9a24b;
+  --gold-line: rgba(201, 162, 75, 0.5);
+  --gold-faint: rgba(201, 162, 75, 0.6);
+
+  /* líneas */
+  --line-nav: rgba(201, 162, 75, 0.22);
+  --line: rgba(201, 162, 75, 0.18);
+  --line-card: rgba(201, 162, 75, 0.16);
+  --line-soft: rgba(201, 162, 75, 0.14);
+
+  /* tramas — marcan dónde van las fotos reales */
+  --hatch-hero: repeating-linear-gradient(115deg, #1c1613, #1c1613 13px, #191411 13px, #191411 26px);
+  --hatch-card: repeating-linear-gradient(135deg, #211a16, #211a16 9px, #1b1511 9px, #1b1511 18px);
+  --hatch-club: repeating-linear-gradient(115deg, #1a1512, #1a1512 13px, #171310 13px, #171310 26px);
+
+  /* métricas */
+  --maxw: 1180px;
+  --gutter: 40px;
+}
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  background: var(--night-deep);
+  color: var(--text);
+  font-family: var(--font-jost), system-ui, sans-serif;
+  font-size: 15px;
+  -webkit-font-smoothing: antialiased;
+}
+
+.shell {
+  max-width: var(--maxw);
+  margin: 0 auto;
+  background: var(--night);
+}
+
+h1,
+h2,
+h3 {
+  font-family: var(--font-fraunces), Georgia, serif;
+  font-weight: 400;
+  margin: 0;
+}
+
+p {
+  margin: 0;
+}
+
+/* ---------- utilidades compartidas ---------- */
+
+.eyebrow {
+  font-size: 12px;
+  letter-spacing: 0.34em;
+  text-transform: uppercase;
+  color: var(--gold);
+}
+
+/* botones — en 1b son rectos, sin radio */
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font: inherit;
+  font-size: 13px;
+  letter-spacing: 0.06em;
+  padding: 15px 32px;
+  border: 1px solid transparent;
+  cursor: pointer;
+  text-decoration: none;
+  transition: background-color 0.18s ease, color 0.18s ease, border-color 0.18s ease;
+}
+
+.btnGold {
+  background: var(--gold);
+  color: var(--night);
+  font-weight: 500;
+}
+
+.btnGold:hover {
+  background: var(--heading);
+}
+
+.btnOutline {
+  background: transparent;
+  color: var(--text);
+  border-color: var(--gold-line);
+}
+
+.btnOutline:hover {
+  border-color: var(--gold);
+  color: var(--gold);
+}
+
+/* etiqueta monoespaciada que marca un hueco de foto */
+.photoNote {
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 10px;
+  letter-spacing: 0.06em;
+  color: var(--gold-faint);
+}
+
+/* sólo para lectores de pantalla */
+.srOnly {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+/* foco visible y consistente en toda la página */
+:focus-visible {
+  outline: 2px solid var(--gold);
+  outline-offset: 2px;
+}
+
+@media (max-width: 900px) {
+  :root {
+    --gutter: 28px;
+  }
+}
+
+@media (max-width: 560px) {
+  :root {
+    --gutter: 20px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  * {
+    transition: none !important;
+    animation: none !important;
+  }
+}
