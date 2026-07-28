@@ -1,0 +1,136 @@
+.section {
+  padding: 76px var(--gutter) 20px;
+}
+
+.head {
+  text-align: center;
+  margin-bottom: 44px;
+}
+
+.eyebrow {
+  margin-bottom: 14px;
+}
+
+.title {
+  margin-bottom: 14px;
+}
+
+.lede {
+  font-size: 14px;
+  line-height: 1.75;
+  color: var(--muted);
+  max-width: 520px;
+  margin: 0 auto;
+}
+
+/* La primera foto es más ancha, como en el diseño. */
+.gallery {
+  display: grid;
+  grid-template-columns: 1.4fr 1fr;
+  gap: 16px;
+  margin-bottom: 40px;
+}
+
+.shot {
+  margin: 0;
+}
+
+.caption {
+  font-size: 11px;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--muted);
+  margin-top: 12px;
+}
+
+.upcoming {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 22px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.event {
+  display: flex;
+  gap: 20px;
+  align-items: center;
+  border: 1px solid var(--line-card);
+  padding: 24px;
+}
+
+.date {
+  text-align: center;
+  flex: none;
+}
+
+.day {
+  display: block;
+  font-family: var(--font-fraunces), Georgia, serif;
+  font-size: 34px;
+  line-height: 1;
+  color: var(--gold);
+}
+
+.month {
+  display: block;
+  font-size: 10px;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+.detail {
+  flex: 1;
+}
+
+.name {
+  font-size: 21px;
+  color: var(--heading);
+  margin-bottom: 5px;
+}
+
+.meta {
+  font-size: 12.5px;
+  color: var(--muted);
+}
+
+.book {
+  font-size: 10px;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  border: 1px solid var(--gold);
+  color: var(--gold);
+  padding: 10px 16px;
+  text-decoration: none;
+  white-space: nowrap;
+  transition: background-color 0.18s ease, color 0.18s ease;
+}
+
+.book:hover {
+  background: var(--gold);
+  color: var(--night);
+}
+
+@media (max-width: 900px) {
+  .gallery,
+  .upcoming {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 560px) {
+  .section {
+    padding-top: 56px;
+  }
+
+  .event {
+    flex-wrap: wrap;
+    gap: 14px;
+  }
+
+  .detail {
+    flex: 1 1 60%;
+  }
+}

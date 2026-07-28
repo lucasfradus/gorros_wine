@@ -1,40 +1,44 @@
 /*
- * Gorros Wine — tokens de la dirección 1b "Noche premium"
- * (negro + dorado, Fraunces para títulos, Jost para texto)
+ * Gorros Wine — tokens de "Sitio v2" (negro + dorado)
+ * Fraunces para títulos, Jost para texto.
+ * La micro-tipografía en mayúsculas con mucho tracking es el rasgo de v2.
  */
 
 :root {
   /* superficies */
-  --night: #151110; /* fondo de la página */
-  --night-deep: #0f0c0b; /* fondo fuera del contenedor */
+  --night: #0d0c0b;
+  --panel: #131110;
 
   /* tinta */
-  --heading: #f3ecdd;
-  --text: #ece3d2;
-  --lede: #b6ab97;
-  --meta: #9a907d;
-  --nav-link: #bdb2a0;
-  --footer-meta: #8f8571;
+  --heading: #f5efe4;
+  --text: #efe9df;
+  --muted: #8d867a;
+  --dim: #6b6459;
+  --chip: #b3aa9b;
 
   /* marca */
-  --gold: #c9a24b;
-  --gold-line: rgba(201, 162, 75, 0.5);
-  --gold-faint: rgba(201, 162, 75, 0.6);
+  --gold: #c8a253;
+  --gold-hover: #e0bd76;
 
   /* líneas */
-  --line-nav: rgba(201, 162, 75, 0.22);
-  --line: rgba(201, 162, 75, 0.18);
-  --line-card: rgba(201, 162, 75, 0.16);
-  --line-soft: rgba(201, 162, 75, 0.14);
+  --line: rgba(200, 162, 83, 0.18);
+  --line-soft: rgba(200, 162, 83, 0.14);
+  --line-card: rgba(200, 162, 83, 0.2);
+  --line-strong: rgba(200, 162, 83, 0.3);
+
+  /* verde de "en stock" */
+  --ok: #8fae94;
+  --ok-line: rgba(143, 174, 148, 0.4);
 
   /* tramas — marcan dónde van las fotos reales */
-  --hatch-hero: repeating-linear-gradient(115deg, #1c1613, #1c1613 13px, #191411 13px, #191411 26px);
-  --hatch-card: repeating-linear-gradient(135deg, #211a16, #211a16 9px, #1b1511 9px, #1b1511 18px);
-  --hatch-club: repeating-linear-gradient(115deg, #1a1512, #1a1512 13px, #171310 13px, #171310 26px);
+  --hatch-panel: repeating-linear-gradient(120deg, #131110, #131110 14px, #100f0d 14px, #100f0d 28px);
+  --hatch-gate: repeating-linear-gradient(120deg, #161311, #161311 14px, #12100e 14px, #12100e 28px);
+  --hatch-bottle: repeating-linear-gradient(135deg, #171412, #171412 9px, #131110 9px, #131110 18px);
+  --hatch-shot: repeating-linear-gradient(135deg, #171412, #171412 11px, #131110 11px, #131110 22px);
 
   /* métricas */
   --maxw: 1180px;
-  --gutter: 40px;
+  --gutter: 44px;
 }
 
 *,
@@ -50,7 +54,7 @@ body {
 }
 
 body {
-  background: var(--night-deep);
+  background: var(--night);
   color: var(--text);
   font-family: var(--font-jost), system-ui, sans-serif;
   font-size: 15px;
@@ -61,6 +65,7 @@ body {
   max-width: var(--maxw);
   margin: 0 auto;
   background: var(--night);
+  min-height: 100vh;
 }
 
 h1,
@@ -77,22 +82,32 @@ p {
 
 /* ---------- utilidades compartidas ---------- */
 
+/* antetítulo: el rasgo tipográfico de v2 */
 .eyebrow {
-  font-size: 12px;
-  letter-spacing: 0.34em;
+  font-size: 10.5px;
+  letter-spacing: 0.4em;
   text-transform: uppercase;
   color: var(--gold);
 }
 
-/* botones — en 1b son rectos, sin radio */
+.sectionTitle {
+  font-family: var(--font-fraunces), Georgia, serif;
+  font-weight: 400;
+  font-size: 36px;
+  color: var(--heading);
+}
+
+/* botones: rectos, mayúsculas, mucho tracking */
 .btn {
   display: inline-flex;
   align-items: center;
   justify-content: center;
   font: inherit;
-  font-size: 13px;
-  letter-spacing: 0.06em;
-  padding: 15px 32px;
+  font-size: 11px;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+  font-weight: 500;
+  padding: 14px 32px;
   border: 1px solid transparent;
   cursor: pointer;
   text-decoration: none;
@@ -102,30 +117,44 @@ p {
 .btnGold {
   background: var(--gold);
   color: var(--night);
-  font-weight: 500;
 }
 
 .btnGold:hover {
-  background: var(--heading);
+  background: var(--gold-hover);
 }
 
 .btnOutline {
   background: transparent;
-  color: var(--text);
-  border-color: var(--gold-line);
+  color: var(--gold);
+  border-color: var(--gold);
 }
 
 .btnOutline:hover {
-  border-color: var(--gold);
-  color: var(--gold);
+  background: var(--gold);
+  color: var(--night);
 }
 
-/* etiqueta monoespaciada que marca un hueco de foto */
-.photoNote {
-  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
-  font-size: 10px;
-  letter-spacing: 0.06em;
-  color: var(--gold-faint);
+/* enlace de texto subrayado, tipo "Ver todo el catálogo" */
+.linkUnder {
+  display: inline-block;
+  font-size: 11px;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+  color: var(--gold);
+  text-decoration: none;
+  border-bottom: 1px solid rgba(200, 162, 83, 0.5);
+  padding-bottom: 4px;
+  background: none;
+  border-left: 0;
+  border-right: 0;
+  border-top: 0;
+  font-family: inherit;
+  cursor: pointer;
+}
+
+.linkUnder:hover {
+  color: var(--gold-hover);
+  border-bottom-color: var(--gold-hover);
 }
 
 /* sólo para lectores de pantalla */
@@ -141,21 +170,47 @@ p {
   border: 0;
 }
 
-/* foco visible y consistente en toda la página */
 :focus-visible {
   outline: 2px solid var(--gold);
   outline-offset: 2px;
+}
+
+/* Ancla del club: compensa el nav pegajoso al saltar con /#club */
+[id] {
+  scroll-margin-top: 90px;
+}
+
+/* ---------- age gate ---------- */
+
+/* Se oculta antes de pintar para quien ya confirmó: el atributo lo pone un
+   script inline al principio del body, así no hay parpadeo ni desajuste de
+   hidratación (el servidor siempre manda el mismo HTML). */
+html[data-age-ok="1"] .js-age-gate {
+  display: none;
+}
+
+/* Mientras la pantalla está visible, no se scrollea el sitio de atrás. */
+html:not([data-age-ok="1"]) body {
+  overflow: hidden;
 }
 
 @media (max-width: 900px) {
   :root {
     --gutter: 28px;
   }
+
+  .sectionTitle {
+    font-size: 30px;
+  }
 }
 
 @media (max-width: 560px) {
   :root {
     --gutter: 20px;
+  }
+
+  .sectionTitle {
+    font-size: 26px;
   }
 }
 

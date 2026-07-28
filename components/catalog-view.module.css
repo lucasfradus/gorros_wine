@@ -1,20 +1,22 @@
-.page {
+﻿.page {
   padding: 44px var(--gutter) 60px;
 }
 
 .head {
-  margin-bottom: 34px;
+  text-align: center;
+  margin-bottom: 46px;
 }
 
 .title {
   font-size: 44px;
   color: var(--heading);
-  margin: 10px 0 6px;
+  margin: 14px 0 12px;
 }
 
 .count {
-  font-size: 14px;
-  color: var(--meta);
+  font-size: 12.5px;
+  letter-spacing: 0.06em;
+  color: var(--muted);
 }
 
 .layout {
@@ -61,14 +63,14 @@
   font-size: 12px;
   border: 1px solid var(--line-soft);
   background: transparent;
-  color: var(--nav-link);
+  color: var(--chip);
   padding: 6px 12px;
   cursor: pointer;
   transition: background-color 0.18s ease, color 0.18s ease, border-color 0.18s ease;
 }
 
 .chip:hover {
-  border-color: var(--gold-line);
+  border-color: var(--line-strong);
   color: var(--text);
 }
 
@@ -96,7 +98,7 @@
   justify-content: space-between;
   gap: 10px;
   font-size: 11px;
-  color: var(--meta);
+  color: var(--muted);
 }
 
 .rangeValue {
@@ -107,7 +109,7 @@
   font-family: inherit;
   font-size: 12px;
   background: transparent;
-  border: 1px solid var(--gold-line);
+  border: 1px solid var(--line-strong);
   color: var(--text);
   padding: 9px 14px;
   cursor: pointer;
@@ -139,7 +141,7 @@
 }
 
 .sort:hover {
-  border-color: var(--gold-line);
+  border-color: var(--line-strong);
 }
 
 /* El desplegable nativo se dibuja con los colores del sistema. */
@@ -162,7 +164,7 @@
 
 .emptyTitle {
   font-size: 15px;
-  color: var(--lede);
+  color: var(--muted);
   margin-bottom: 20px;
 }
 

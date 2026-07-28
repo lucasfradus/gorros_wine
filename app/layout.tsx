@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { Fraunces, Jost } from "next/font/google";
 import { CartProvider } from "@/components/cart-context";
+import { AgeGate, ageGateScript } from "@/components/age-gate";
 import { Nav } from "@/components/nav";
 import { Footer } from "@/components/footer";
 import "./globals.css";
@@ -36,6 +37,9 @@ export default function RootLayout({
   return (
     <html lang="es-AR" className={`${fraunces.variable} ${jost.variable}`}>
       <body>
+        {/* Corre antes de que se pinte el resto del body. */}
+        <script dangerouslySetInnerHTML={{ __html: ageGateScript }} />
+        <AgeGate />
         <CartProvider>
           <div className="shell">
             <Nav />

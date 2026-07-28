@@ -1,0 +1,162 @@
+.intro {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  align-items: stretch;
+}
+
+.copy {
+  padding: 80px 52px;
+}
+
+.eyebrow {
+  margin-bottom: 24px;
+}
+
+.title {
+  font-size: 48px;
+  line-height: 1.06;
+  color: var(--heading);
+  margin-bottom: 26px;
+}
+
+.accent {
+  font-style: italic;
+  color: var(--gold);
+}
+
+.para {
+  font-size: 15px;
+  line-height: 1.9;
+  color: var(--muted);
+  max-width: 450px;
+  margin-bottom: 18px;
+}
+
+.para:last-child {
+  margin-bottom: 0;
+}
+
+.strong {
+  font-weight: 400;
+  color: var(--heading);
+}
+
+.strongGold {
+  font-weight: 400;
+  color: var(--gold);
+}
+
+.shot {
+  min-height: 600px;
+  height: 100%;
+}
+
+/* ---------- valores ---------- */
+
+.values {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  border-top: 1px solid var(--line);
+}
+
+.value {
+  padding: 48px 40px;
+  border-right: 1px solid var(--line-soft);
+  text-align: center;
+}
+
+.value:last-child {
+  border-right: 0;
+}
+
+.valueTitle {
+  font-size: 24px;
+  color: var(--gold);
+  margin-bottom: 14px;
+}
+
+.valueBody {
+  font-size: 13.5px;
+  line-height: 1.8;
+  color: var(--muted);
+}
+
+/* ---------- cierre ---------- */
+
+.closing {
+  padding: 88px var(--gutter);
+  text-align: center;
+  border-top: 1px solid var(--line);
+  background: var(--hatch-panel);
+}
+
+.closingEyebrow {
+  letter-spacing: 0.42em;
+  margin-bottom: 20px;
+}
+
+.closingTitle {
+  font-family: var(--font-fraunces), Georgia, serif;
+  font-size: 44px;
+  line-height: 1.1;
+  color: var(--heading);
+  max-width: 740px;
+  margin: 0 auto 14px;
+}
+
+.closingSub {
+  font-size: 11px;
+  letter-spacing: 0.3em;
+  text-transform: uppercase;
+  color: var(--muted);
+  margin-bottom: 34px;
+}
+
+@media (max-width: 900px) {
+  .intro {
+    grid-template-columns: 1fr;
+  }
+
+  .copy {
+    padding: 56px var(--gutter);
+  }
+
+  .title {
+    font-size: 36px;
+  }
+
+  .shot {
+    min-height: 360px;
+  }
+
+  .values {
+    grid-template-columns: 1fr;
+  }
+
+  .value {
+    border-right: 0;
+    border-bottom: 1px solid var(--line-soft);
+    padding: 36px var(--gutter);
+  }
+
+  .value:last-child {
+    border-bottom: 0;
+  }
+
+  .closingTitle {
+    font-size: 32px;
+  }
+}
+
+@media (max-width: 560px) {
+  .title {
+    font-size: 30px;
+  }
+
+  .closingTitle {
+    font-size: 26px;
+  }
+}

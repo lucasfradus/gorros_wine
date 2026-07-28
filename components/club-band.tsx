@@ -2,21 +2,22 @@ import Link from "next/link";
 import styles from "./club-band.module.css";
 
 export function ClubBand() {
+  // id="club" es el destino del enlace "Club" del nav (/#club).
   return (
-    <section className={styles.club} aria-labelledby="club">
+    <section id="club" className={styles.club} aria-labelledby="club-title">
       <p className={`eyebrow ${styles.eyebrow}`}>Club Gorros</p>
 
-      <h2 id="club" className={styles.title}>
-        Una membresía para quienes viven el vino.
+      <h2 id="club-title" className={styles.title}>
+        Tres etiquetas elegidas para vos, cada mes.
       </h2>
 
       <p className={styles.lede}>
-        Tres etiquetas seleccionadas cada mes, acceso prioritario a catas y
-        precios de socio.
+        Curaduría mensual con notas de cata y maridajes, precios de socio y
+        acceso prioritario a las catas.
       </p>
 
-      <Link href="/club" className={`btn btnGold ${styles.cta}`}>
-        Conocer el club
+      <Link href="/club" className="btn btnGold">
+        Sumarme al club
       </Link>
     </section>
   );

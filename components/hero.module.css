@@ -1,8 +1,19 @@
-.hero {
+.shot {
   position: relative;
-  background: var(--hatch-hero);
-  padding: 90px var(--gutter) 84px;
+  width: 100%;
+  height: 440px;
+}
+
+.img {
+  object-fit: cover;
+}
+
+.copy {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
   text-align: center;
+  padding: 60px var(--gutter) 72px;
 }
 
 .eyebrow {
@@ -11,10 +22,11 @@
 }
 
 .title {
-  font-size: 82px;
-  line-height: 1;
+  font-size: 64px;
+  line-height: 1.08;
   letter-spacing: -0.01em;
   color: var(--heading);
+  max-width: 820px;
 }
 
 .titleAccent {
@@ -22,60 +34,30 @@
   color: var(--gold);
 }
 
-.lede {
-  max-width: 520px;
-  margin: 28px auto 34px;
-  font-size: 15.5px;
-  line-height: 1.75;
-  color: var(--lede);
+.cta {
+  margin-top: 36px;
 }
 
-.actions {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 14px;
-  justify-content: center;
-}
-
-.photoNote {
-  position: absolute;
-  left: var(--gutter);
-  bottom: 22px;
-}
-
-@media (max-width: 1000px) {
-  .title {
-    font-size: 62px;
+@media (max-width: 900px) {
+  .shot {
+    height: 320px;
   }
 
-  .hero {
-    padding: 72px var(--gutter) 70px;
-  }
-}
-
-@media (max-width: 700px) {
   .title {
-    font-size: 46px;
+    font-size: 44px;
+  }
+
+  .copy {
+    padding: 48px var(--gutter) 56px;
   }
 }
 
 @media (max-width: 560px) {
+  .shot {
+    height: 240px;
+  }
+
   .title {
-    font-size: 38px;
-  }
-
-  .hero {
-    padding: 56px var(--gutter) 64px;
-  }
-
-  .actions :global(.btn) {
-    flex: 1 1 100%;
-  }
-
-  /* En móvil la nota de foto estorba abajo a la izquierda. */
-  .photoNote {
-    position: static;
-    display: block;
-    margin-top: 28px;
+    font-size: 32px;
   }
 }

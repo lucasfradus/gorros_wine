@@ -1,0 +1,77 @@
+.gate {
+  position: fixed;
+  inset: 0;
+  z-index: 100;
+  background: var(--night);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 40px;
+  overflow-y: auto;
+}
+
+.texture {
+  position: absolute;
+  inset: 0;
+  background: var(--hatch-gate);
+}
+
+.inner {
+  position: relative;
+  text-align: center;
+  max-width: 520px;
+}
+
+.logo {
+  font-family: var(--font-fraunces), Georgia, serif;
+  font-size: 22px;
+  letter-spacing: 0.24em;
+  color: var(--gold);
+  margin-bottom: 44px;
+}
+
+.eyebrow {
+  font-size: 10.5px;
+  letter-spacing: 0.42em;
+  text-transform: uppercase;
+  color: var(--gold);
+  margin-bottom: 22px;
+}
+
+.title {
+  font-family: var(--font-fraunces), Georgia, serif;
+  font-weight: 400;
+  font-size: 34px;
+  line-height: 1.2;
+  color: var(--heading);
+  margin-bottom: 20px;
+}
+
+.body {
+  font-size: 14px;
+  line-height: 1.8;
+  color: var(--muted);
+  margin-bottom: 38px;
+}
+
+.moderation {
+  margin-top: 26px;
+  font-size: 11px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--dim);
+}
+
+@media (max-width: 560px) {
+  .gate {
+    padding: 28px 20px;
+  }
+
+  .title {
+    font-size: 25px;
+  }
+
+  .logo {
+    margin-bottom: 32px;
+  }
+}
