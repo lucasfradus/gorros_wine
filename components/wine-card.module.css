@@ -63,6 +63,12 @@
   margin: 5px 0 12px;
 }
 
+.region {
+  font-size: 11.5px;
+  color: var(--meta);
+  margin: -6px 0 12px;
+}
+
 .price {
   font-size: 16px;
   color: var(--gold);

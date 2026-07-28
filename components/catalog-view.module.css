@@ -1,0 +1,204 @@
+.page {
+  padding: 44px var(--gutter) 60px;
+}
+
+.head {
+  margin-bottom: 34px;
+}
+
+.title {
+  font-size: 44px;
+  color: var(--heading);
+  margin: 10px 0 6px;
+}
+
+.count {
+  font-size: 14px;
+  color: var(--meta);
+}
+
+.layout {
+  display: grid;
+  grid-template-columns: 220px 1fr;
+  gap: 34px;
+  align-items: start;
+}
+
+/* ---------- filtros ---------- */
+
+.filters {
+  border: 1px solid var(--line-card);
+  padding: 22px 20px;
+  position: sticky;
+  top: 92px;
+}
+
+.group {
+  border: 0;
+  margin: 0 0 22px;
+  padding: 0;
+}
+
+.groupTitle {
+  display: block;
+  padding: 0;
+  font-size: 11px;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--gold);
+  font-weight: 600;
+  margin-bottom: 12px;
+}
+
+.chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.chip {
+  font-family: inherit;
+  font-size: 12px;
+  border: 1px solid var(--line-soft);
+  background: transparent;
+  color: var(--nav-link);
+  padding: 6px 12px;
+  cursor: pointer;
+  transition: background-color 0.18s ease, color 0.18s ease, border-color 0.18s ease;
+}
+
+.chip:hover {
+  border-color: var(--gold-line);
+  color: var(--text);
+}
+
+.chipActive {
+  background: var(--gold);
+  border-color: var(--gold);
+  color: var(--night);
+}
+
+.chipActive:hover {
+  background: var(--heading);
+  border-color: var(--heading);
+  color: var(--night);
+}
+
+/* control de precio */
+.range {
+  width: 100%;
+  margin: 6px 0 8px;
+  accent-color: var(--gold);
+}
+
+.rangeLabels {
+  display: flex;
+  justify-content: space-between;
+  gap: 10px;
+  font-size: 11px;
+  color: var(--meta);
+}
+
+.rangeValue {
+  color: var(--gold);
+}
+
+.clear {
+  font-family: inherit;
+  font-size: 12px;
+  background: transparent;
+  border: 1px solid var(--gold-line);
+  color: var(--text);
+  padding: 9px 14px;
+  cursor: pointer;
+  width: 100%;
+  transition: background-color 0.18s ease, color 0.18s ease;
+}
+
+.clear:hover {
+  background: var(--gold);
+  color: var(--night);
+}
+
+/* ---------- grilla ---------- */
+
+.toolbar {
+  display: flex;
+  justify-content: flex-end;
+  margin-bottom: 18px;
+}
+
+.sort {
+  font-family: inherit;
+  font-size: 12.5px;
+  color: var(--text);
+  background: transparent;
+  border: 1px solid var(--line-soft);
+  padding: 8px 14px;
+  cursor: pointer;
+}
+
+.sort:hover {
+  border-color: var(--gold-line);
+}
+
+/* El desplegable nativo se dibuja con los colores del sistema. */
+.sort option {
+  background: var(--night);
+  color: var(--text);
+}
+
+.grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 22px;
+}
+
+.empty {
+  border: 1px solid var(--line-soft);
+  padding: 48px 30px;
+  text-align: center;
+}
+
+.emptyTitle {
+  font-size: 15px;
+  color: var(--lede);
+  margin-bottom: 20px;
+}
+
+.empty .clear {
+  width: auto;
+  display: inline-block;
+}
+
+@media (max-width: 1000px) {
+  .title {
+    font-size: 34px;
+  }
+
+  .grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+@media (max-width: 820px) {
+  .layout {
+    grid-template-columns: 1fr;
+    gap: 26px;
+  }
+
+  /* Pegado arriba no sirve cuando los filtros pasan a estar sobre la grilla. */
+  .filters {
+    position: static;
+  }
+}
+
+@media (max-width: 560px) {
+  .grid {
+    grid-template-columns: 1fr;
+  }
+
+  .title {
+    font-size: 28px;
+  }
+}

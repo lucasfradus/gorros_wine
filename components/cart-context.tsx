@@ -5,7 +5,7 @@ import type { Wine } from "@/lib/data";
 
 interface CartValue {
   count: number;
-  add: (wine: Wine) => void;
+  add: (wine: Wine, qty?: number) => void;
 }
 
 const CartContext = createContext<CartValue | null>(null);
@@ -13,9 +13,9 @@ const CartContext = createContext<CartValue | null>(null);
 export function CartProvider({ children }: { children: React.ReactNode }) {
   const [count, setCount] = useState(0);
 
-  const add = useCallback((_wine: Wine) => {
+  const add = useCallback((_wine: Wine, qty = 1) => {
     // Por ahora sólo lleva la cuenta: el carrito real llega con el checkout.
-    setCount((c) => c + 1);
+    setCount((c) => c + qty);
   }, []);
 
   const value = useMemo(() => ({ count, add }), [count, add]);

@@ -1,11 +1,18 @@
 "use client";
 
 import Link from "next/link";
-import type { Wine } from "@/lib/data";
+import { formatPrice, type Wine } from "@/lib/data";
 import { useCart } from "./cart-context";
 import styles from "./wine-card.module.css";
 
-export function WineCard({ wine }: { wine: Wine }) {
+export function WineCard({
+  wine,
+  showRegion = false,
+}: {
+  wine: Wine;
+  /** El catálogo muestra la región; la home no. */
+  showRegion?: boolean;
+}) {
   const { add } = useCart();
 
   return (
@@ -26,7 +33,8 @@ export function WineCard({ wine }: { wine: Wine }) {
       </h3>
 
       <p className={styles.winery}>{wine.winery}</p>
-      <p className={styles.price}>{wine.price}</p>
+      {showRegion && <p className={styles.region}>{wine.region}</p>}
+      <p className={styles.price}>{formatPrice(wine.priceARS)}</p>
 
       <button type="button" className={styles.add} onClick={() => add(wine)}>
         Agregar
