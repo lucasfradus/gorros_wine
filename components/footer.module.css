@@ -104,8 +104,22 @@
   transition: background-color 0.18s ease;
 }
 
-.submit:hover {
+.submit:hover:not(:disabled) {
   background: var(--gold-hover);
+}
+
+.submit:disabled,
+.input:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.formNotice {
+  min-height: 16px;
+  margin-top: 10px;
+  font-size: 11.5px;
+  line-height: 1.6;
+  color: var(--muted);
 }
 
 .legal {

@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { NewsletterForm } from "./newsletter-form";
 import styles from "./footer.module.css";
 
 export function Footer() {
@@ -55,27 +56,7 @@ export function Footer() {
         <div>
           <h2 className={styles.colTitle}>Newsletter</h2>
           <p className={styles.blurbSmall}>Novedades y ofertas.</p>
-          <form
-            className={styles.form}
-            action="/api/newsletter"
-            method="post"
-          >
-            <label htmlFor="newsletter-email" className="srOnly">
-              Tu correo electrónico
-            </label>
-            <input
-              id="newsletter-email"
-              className={styles.input}
-              type="email"
-              name="email"
-              placeholder="tu@email.com"
-              required
-            />
-            <button type="submit" className={styles.submit}>
-              OK
-              <span className="srOnly"> suscribirme</span>
-            </button>
-          </form>
+          <NewsletterForm />
         </div>
       </div>
 

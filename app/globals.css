@@ -13,7 +13,10 @@
   --heading: #f5efe4;
   --text: #efe9df;
   --muted: #8d867a;
-  --dim: #6b6459;
+  /* v2 usa #6b6459, pero da 3.34:1 sobre el fondo y no llega al mínimo AA de
+     4.5 para texto chico (legales, precio unitario, "Quitar"). Aclarado lo
+     justo para pasar en ambos fondos, manteniendo la proporción del tono. */
+  --dim: #857c6e;
   --chip: #b3aa9b;
 
   /* marca */

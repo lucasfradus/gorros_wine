@@ -1,0 +1,165 @@
+.head {
+  padding: 80px var(--gutter);
+  text-align: center;
+  background: var(--hatch-panel);
+  border-bottom: 1px solid var(--line);
+}
+
+.eyebrow {
+  margin-bottom: 18px;
+}
+
+.title {
+  font-size: 46px;
+  line-height: 1.1;
+  color: var(--heading);
+  max-width: 680px;
+  margin: 0 auto 20px;
+}
+
+.accent {
+  font-style: italic;
+  color: var(--gold);
+}
+
+.lede {
+  font-size: 14.5px;
+  line-height: 1.8;
+  color: var(--muted);
+  max-width: 480px;
+  margin: 0 auto 34px;
+}
+
+/* ---------- qué incluye ---------- */
+
+.includes {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  border-bottom: 1px solid var(--line);
+}
+
+.include {
+  padding: 48px 40px;
+  border-right: 1px solid var(--line-soft);
+  text-align: center;
+}
+
+.include:last-child {
+  border-right: 0;
+}
+
+.includeTitle {
+  font-size: 24px;
+  color: var(--gold);
+  margin-bottom: 14px;
+}
+
+.includeBody {
+  font-size: 13.5px;
+  line-height: 1.8;
+  color: var(--muted);
+}
+
+/* ---------- cómo funciona ---------- */
+
+.how {
+  padding: 76px var(--gutter);
+}
+
+.howTitle {
+  font-size: 28px;
+  color: var(--heading);
+  text-align: center;
+  margin-bottom: 44px;
+}
+
+.steps {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 30px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.step {
+  text-align: center;
+  padding: 0 14px;
+}
+
+.num {
+  font-family: var(--font-fraunces), Georgia, serif;
+  font-size: 30px;
+  color: var(--gold);
+  margin-bottom: 12px;
+}
+
+.stepTitle {
+  font-family: var(--font-jost), system-ui, sans-serif;
+  font-size: 11px;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+  color: var(--heading);
+  margin-bottom: 10px;
+}
+
+.stepBody {
+  font-size: 13px;
+  line-height: 1.75;
+  color: var(--muted);
+}
+
+/* ---------- cierre ---------- */
+
+.closing {
+  padding: 60px var(--gutter) 80px;
+  text-align: center;
+  border-top: 1px solid var(--line);
+}
+
+.closingTitle {
+  font-family: var(--font-fraunces), Georgia, serif;
+  font-size: 26px;
+  line-height: 1.3;
+  color: var(--heading);
+  max-width: 560px;
+  margin: 0 auto 26px;
+}
+
+@media (max-width: 900px) {
+  .title {
+    font-size: 34px;
+  }
+
+  .includes,
+  .steps {
+    grid-template-columns: 1fr;
+  }
+
+  .include {
+    border-right: 0;
+    border-bottom: 1px solid var(--line-soft);
+    padding: 36px var(--gutter);
+  }
+
+  .include:last-child {
+    border-bottom: 0;
+  }
+
+  .head {
+    padding: 56px var(--gutter);
+  }
+}
+
+@media (max-width: 560px) {
+  .title {
+    font-size: 28px;
+  }
+
+  .closingTitle {
+    font-size: 22px;
+  }
+}

@@ -1,3 +1,15 @@
+/**
+ * Datos del local. El número de WhatsApp es de ejemplo — reemplazar por el
+ * real antes de publicar (formato internacional, sin + ni espacios).
+ */
+export const shop = {
+  whatsapp: "5491100000000",
+  email: "hola@gorroswine.com",
+  instagram: "gorroswine",
+  address: "Pilar, Buenos Aires",
+  hours: "Lun a Sáb · 10 a 21 hs",
+};
+
 export type WineType = "Tinto" | "Blanco" | "Espumante" | "Rosado";
 
 export interface Wine {

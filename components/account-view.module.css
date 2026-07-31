@@ -1,0 +1,114 @@
+.page {
+  padding: 56px var(--gutter) 80px;
+  min-height: 55vh;
+}
+
+.head {
+  text-align: center;
+  margin-bottom: 36px;
+}
+
+.title {
+  font-size: 40px;
+  color: var(--heading);
+  margin: 14px 0 12px;
+}
+
+.lede {
+  font-size: 14px;
+  line-height: 1.75;
+  color: var(--muted);
+  max-width: 420px;
+  margin: 0 auto;
+}
+
+.card {
+  max-width: 440px;
+  margin: 0 auto;
+  border: 1px solid var(--line-card);
+}
+
+.tabs {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  border-bottom: 1px solid var(--line-soft);
+}
+
+.tab {
+  font-family: inherit;
+  font-size: 10.5px;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  background: transparent;
+  border: 0;
+  color: var(--muted);
+  padding: 16px 10px;
+  cursor: pointer;
+  border-bottom: 1px solid transparent;
+  transition: color 0.18s ease, border-color 0.18s ease;
+}
+
+.tab:hover {
+  color: var(--text);
+}
+
+.tabActive {
+  color: var(--gold);
+  border-bottom-color: var(--gold);
+}
+
+.form {
+  padding: 30px 28px 28px;
+}
+
+.field {
+  margin-bottom: 20px;
+}
+
+.label {
+  display: block;
+  font-size: 10px;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: var(--gold);
+  margin-bottom: 8px;
+}
+
+.input {
+  width: 100%;
+  font-family: inherit;
+  font-size: 15px;
+  color: var(--text);
+  background: transparent;
+  border: 1px solid var(--line-strong);
+  padding: 12px 14px;
+}
+
+.input:focus {
+  outline: none;
+  border-color: var(--gold);
+}
+
+.submit {
+  width: 100%;
+  margin-top: 6px;
+}
+
+.notice {
+  min-height: 20px;
+  margin-top: 18px;
+  font-size: 12.5px;
+  line-height: 1.7;
+  color: var(--muted);
+  text-align: center;
+}
+
+.noticeLink {
+  color: var(--gold);
+}
+
+@media (max-width: 560px) {
+  .title {
+    font-size: 30px;
+  }
+}
