@@ -1,5 +1,5 @@
 /**
- * Crea (o recupera) el usuario dueño.
+ * Crea (o recupera) un usuario admin.
  *
  *   npm run admin:crear
  *   npm run admin:crear -- "Lucas Fradus" lucas@gorroswine.com
@@ -8,17 +8,17 @@
  * problema del huevo y la gallina: sin nadie adentro, nadie puede invitar.
  *
  * Si el mail ya existe, en vez de fallar le pone una contraseña nueva, lo
- * reactiva y lo deja como dueño. Ésa es la salida de emergencia para el día
- * en que el dueño se quede afuera de su propio sistema.
+ * reactiva y lo deja como admin. Ésa es la salida de emergencia para el día
+ * en que no quede ningún admin que pueda entrar al panel.
  *
  * La contraseña sale de ADMIN_PASSWORD si está definida; si no, se genera una
  * al azar y se imprime una sola vez. No se pide por teclado a propósito: lo
  * tipeado queda en el historial de la terminal.
  *
  * JavaScript plano y SQL a mano, igual que `migrate.mjs` y por el mismo
- * motivo: tiene que poder correr dentro del contenedor desplegado, donde no
- * existen `tsx` ni el resto de las dependencias de desarrollo. Es el precio de
- * no depender de `lib/db/schema.ts`; si cambian esas columnas, cambia acá.
+ * motivo: tiene que poder correr dentro del contenedor desplegado sin depender
+ * de que las dependencias de desarrollo sobrevivan al build. El precio es no
+ * usar `lib/db/schema.ts`; si cambian esas columnas, cambia este INSERT.
  */
 import { existsSync } from "node:fs";
 import { randomBytes } from "node:crypto";
@@ -89,11 +89,11 @@ try {
   // la recuperación sin una consulta previa ni una condición de carrera.
   const { rows } = await pool.query(
     `INSERT INTO users (name, email, password_hash, role, is_active)
-     VALUES ($1, $2, $3, 'owner', true)
+     VALUES ($1, $2, $3, 'admin', true)
      ON CONFLICT (email) DO UPDATE
         SET name            = EXCLUDED.name,
             password_hash   = EXCLUDED.password_hash,
-            role            = 'owner',
+            role            = 'admin',
             is_active       = true,
             failed_attempts = 0,
             locked_until    = NULL,
@@ -104,8 +104,8 @@ try {
 
   console.log(
     rows[0].creado
-      ? `\n✓ Dueño creado: ${nombre} <${email}>`
-      : `\n✓ ${email} ya existía: se restableció como dueño activo.`,
+      ? `\n✓ Admin creado: ${nombre} <${email}>`
+      : `\n✓ ${email} ya existía: se restableció como admin activo.`,
   );
 
   if (generada) {
@@ -116,7 +116,7 @@ try {
   if (err.code === "42P01") {
     salir(
       "La tabla `users` no existe. Corré `npm run db:migrate` antes de crear " +
-        "el dueño.",
+        "el admin.",
     );
   }
   salir(`No se pudo crear el usuario:\n${err}`);

@@ -51,7 +51,7 @@ export default async function DashboardPage() {
         ) : null}
 
         {/* Nada de métricas inventadas: el catálogo todavía no vive en la
-            base, y decir lo contrario en el panel sería mentirle al dueño. */}
+            base, y decir lo contrario acá sería mentirle a quien lo usa. */}
         <section className={styles.card}>
           <h2 className={styles.label}>Catálogo</h2>
           <p style={{ margin: "10px 0 0", fontSize: 15 }}>

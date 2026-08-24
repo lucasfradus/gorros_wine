@@ -7,7 +7,7 @@ proyecto de Claude Design **Vinoteca de Pilar**.
 npm install
 npm run db:up        # Postgres en Docker
 npm run db:migrate   # crea las tablas
-npm run admin:crear  # crea el usuario dueño (una sola vez)
+npm run admin:crear  # crea el primer usuario admin (una sola vez)
 npm run dev          # http://localhost:3000
 ```
 
@@ -134,14 +134,14 @@ npm run admin:crear                                  # pregunta nombre y mail
 npm run admin:crear -- "Nombre" mail@ejemplo.com     # o directo
 ```
 
-Crea el usuario `owner`, que es el único que no se puede dar de alta desde el
+Crea un usuario `admin`. Es el único que no se puede dar de alta desde el
 panel: sin nadie adentro, nadie puede invitar. La contraseña sale de
 `ADMIN_PASSWORD` si está definida; si no, se genera una al azar y se imprime
 una sola vez.
 
 **Es además la salida de emergencia**: si el mail ya existe, el script le pone
-contraseña nueva, lo reactiva y lo deja como dueño. Sirve para el día en que
-el dueño se quede afuera de su propio sistema.
+contraseña nueva, lo reactiva y lo deja como admin. Sirve para el día en que no
+quede ningún admin que pueda entrar al panel.
 
 ### Modo claro y oscuro
 
@@ -172,15 +172,20 @@ las opacidades del dorado son 0.55 en oscuro y 0.72 en claro, y no menos.
 
 ### Roles
 
-| Rol      | Puede                                                       |
-| -------- | ----------------------------------------------------------- |
-| `owner`  | Todo, incluido nombrar a otros dueños                       |
-| `admin`  | Contenido y usuarios, pero **no** puede tocar a un `owner`   |
-| `editor` | Sólo contenido. No ve la sección Usuarios                   |
+| Rol      | Puede                                                          |
+| -------- | -------------------------------------------------------------- |
+| `admin`  | Todo: catálogo, precios, pedidos y usuarios. Nombra otros admin |
+| `editor` | Sólo contenido. No ve la sección Usuarios                       |
 
-Tres reglas evitan que alguien se quede afuera de su propio sistema: nadie
-puede cambiarse el rol a sí mismo, nadie puede desactivar su propia cuenta, y
-no se puede degradar ni desactivar al último dueño activo.
+Dos escalones y no tres a propósito. Un nivel intermedio sólo tiene sentido
+cuando hay gente suficiente para que la diferencia importe; con un equipo chico
+agrega estados que mantener sin agregar seguridad.
+
+Lo que protege al sistema no es la cantidad de roles sino tres reglas, y por
+eso viven en [`usuarios/actions.ts`](<app/(admin)/admin/(panel)/usuarios/actions.ts>),
+que puede consultar la base: nadie puede cambiarse el rol a sí mismo, nadie
+puede desactivar su propia cuenta, y no se puede degradar ni desactivar al
+último admin activo.
 
 ### Sesiones
 
@@ -298,7 +303,7 @@ sistema. Lo que sigue, en orden:
 - **Registro de auditoría.** Quién cambió qué y cuándo. No está: hoy sólo se
   guarda el último ingreso de cada usuario.
 - **Recuperar contraseña por mail.** No está. Hoy la restablece un
-  administrador desde el panel, o `npm run admin:crear` para el dueño.
+  administrador desde el panel, o `npm run admin:crear` desde el servidor.
 
 ## Despliegue
 
@@ -337,8 +342,8 @@ corta ahí. Es preferible a desplegar un sitio cuyo panel explota al primer clic
 
 ### El primer usuario en producción
 
-La base arranca vacía y el dueño no se puede crear desde el panel. Se crea una
-vez, desde adentro del contenedor:
+La base arranca vacía y el primer admin no se puede crear desde el panel. Se
+crea una vez, desde adentro del contenedor:
 
 ```bash
 railway ssh --service gorros-wine

@@ -4,7 +4,7 @@ import { eq } from "drizzle-orm";
 import { z } from "zod";
 import { db } from "@/lib/db";
 import { users } from "@/lib/db/schema";
-import { assignableRoles, canEditUser, requireUserManager } from "@/lib/auth";
+import { requireUserManager, ROLES } from "@/lib/auth";
 import { formatDateTime } from "@/lib/format";
 import {
   setPasswordAction,
@@ -35,7 +35,6 @@ export default async function EditarUsuarioPage({
     .limit(1);
 
   if (!objetivo) notFound();
-  if (!canEditUser(actor, objetivo)) redirect("/admin/usuarios");
 
   const esUnoMismo = objetivo.id === actor.id;
   const trabado =
@@ -69,7 +68,7 @@ export default async function EditarUsuarioPage({
           </h2>
           <UserForm
             action={updateUserAction}
-            roles={assignableRoles(actor)}
+            roles={ROLES}
             defaults={{
               id: objetivo.id,
               name: objetivo.name,

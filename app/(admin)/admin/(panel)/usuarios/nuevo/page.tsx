@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { assignableRoles, requireUserManager } from "@/lib/auth";
+import { requireUserManager, ROLES } from "@/lib/auth";
 import { createUserAction } from "../actions";
 import { UserForm } from "../user-forms";
 import styles from "../../../admin.module.css";
@@ -7,7 +7,7 @@ import styles from "../../../admin.module.css";
 export const metadata = { title: "Nuevo usuario" };
 
 export default async function NuevoUsuarioPage() {
-  const actor = await requireUserManager();
+  await requireUserManager();
 
   return (
     <>
@@ -28,7 +28,7 @@ export default async function NuevoUsuarioPage() {
       <section className={styles.card}>
         <UserForm
           action={createUserAction}
-          roles={assignableRoles(actor)}
+          roles={ROLES}
           withPassword
           submitLabel="Crear usuario"
         />

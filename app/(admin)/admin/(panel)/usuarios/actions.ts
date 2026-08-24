@@ -12,7 +12,7 @@ import {
   normalizeEmail,
 } from "@/lib/auth/password";
 import { invalidateAllSessions } from "@/lib/auth/session";
-import { canAssignRole, canEditUser, requireUserManager } from "@/lib/auth";
+import { requireUserManager } from "@/lib/auth";
 
 export interface UserFormState {
   error?: string;
@@ -28,24 +28,32 @@ const contrasena = z
   );
 
 /**
- * ¿Es el último dueño activo que queda?
+ * ¿Es el último admin activo que queda?
  *
- * Sin esta comprobación el sistema se puede quedar sin nadie que pueda
- * nombrar dueños: un `owner` se degrada a editor y ya no hay forma de volver
- * atrás desde el panel.
+ * Quedarse sin ningún admin deja el panel sin nadie que administre usuarios, y
+ * la única salida es `npm run admin:crear`, que exige acceso al servidor.
  *
- * Nota honesta: es un chequeo leer-y-después-escribir. Con dos dueños
- * degradándose en el mismo instante los dos podrían pasar. Con un panel de
- * dos o tres personas no es un riesgo real; si algún día lo fuera, hay que
- * hacerlo dentro de una transacción con `SELECT ... FOR UPDATE`.
+ * Es una red de seguridad, no la defensa principal: por el camino normal casi
+ * no se llega a necesitarla, porque para degradar o desactivar a un admin hay
+ * que ser admin, y si sos otro admin activo entonces el objetivo no es el
+ * último. Lo que de verdad sostiene el sistema son las dos reglas sobre uno
+ * mismo (no cambiarse el rol, no desactivarse).
+ *
+ * Se mantiene igual porque cubre lo que esas dos reglas no ven: dos admins
+ * degradándose a la vez, o un futuro camino de edición que no pase por acá.
+ *
+ * Nota honesta: es un chequeo leer-y-después-escribir, así que ese mismo caso
+ * simultáneo puede colarse igual. Con un panel de dos o tres personas no es un
+ * riesgo real; si algún día lo fuera, va dentro de una transacción con
+ * `SELECT ... FOR UPDATE`.
  */
-async function esUltimoOwnerActivo(userId: string): Promise<boolean> {
+async function esUltimoAdminActivo(userId: string): Promise<boolean> {
   const [otros] = await db
     .select({ n: count() })
     .from(users)
     .where(
       and(
-        eq(users.role, "owner"),
+        eq(users.role, "admin"),
         eq(users.isActive, true),
         ne(users.id, userId),
       ),
@@ -69,10 +77,10 @@ async function autorizarSobre(
   const objetivo = await buscarUsuario(id);
 
   if (!objetivo) return { error: "Ese usuario ya no existe." };
-  if (!canEditUser(actor, objetivo)) {
-    return { error: "No tenés permiso para modificar a este usuario." };
-  }
 
+  // Con dos roles no hay nada más que preguntar: si sos admin, podés editar a
+  // cualquiera. Los límites que quedan son sobre uno mismo y sobre el último
+  // admin, y los aplica cada acción.
   return { actor, objetivo };
 }
 
@@ -89,7 +97,7 @@ export async function createUserAction(
   _prev: UserFormState,
   formData: FormData,
 ): Promise<UserFormState> {
-  const actor = await requireUserManager();
+  await requireUserManager();
 
   const parsed = crearSchema.safeParse({
     name: formData.get("name"),
@@ -99,10 +107,6 @@ export async function createUserAction(
   });
 
   if (!parsed.success) return { error: parsed.error.issues[0].message };
-
-  if (!canAssignRole(actor, parsed.data.role)) {
-    return { error: "No podés asignar ese rol." };
-  }
 
   const email = normalizeEmail(parsed.data.email);
 
@@ -156,19 +160,16 @@ export async function updateUserAction(
   if (cambiaRol) {
     // Cambiarse el rol a uno mismo es la vía más corta a quedarse afuera.
     if (objetivo.id === actor.id) {
-      return { error: "No podés cambiar tu propio rol. Pedíselo a otro dueño." };
-    }
-    if (!canAssignRole(actor, parsed.data.role)) {
-      return { error: "No podés asignar ese rol." };
+      return { error: "No podés cambiar tu propio rol. Pedíselo a otro admin." };
     }
     if (
-      objetivo.role === "owner" &&
+      objetivo.role === "admin" &&
       objetivo.isActive &&
-      (await esUltimoOwnerActivo(objetivo.id))
+      (await esUltimoAdminActivo(objetivo.id))
     ) {
       return {
         error:
-          "Es el único dueño activo. Nombrá otro dueño antes de cambiarle el rol.",
+          "Es el único admin activo. Nombrá otro admin antes de cambiarle el rol.",
       };
     }
   }
@@ -261,10 +262,10 @@ export async function toggleActiveAction(
 
   if (
     desactivando &&
-    objetivo.role === "owner" &&
-    (await esUltimoOwnerActivo(objetivo.id))
+    objetivo.role === "admin" &&
+    (await esUltimoAdminActivo(objetivo.id))
   ) {
-    return { error: "Es el único dueño activo. No se puede desactivar." };
+    return { error: "Es el único admin activo. No se puede desactivar." };
   }
 
   await db

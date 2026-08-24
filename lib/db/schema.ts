@@ -13,11 +13,16 @@ import {
  * Roles del panel. Son los del *sistema*, no los del negocio: un cliente que
  * compra vinos no es un `user`, va a tener su propia tabla.
  *
- * - `owner`  — el dueño. Todo, incluido asignar el rol owner.
- * - `admin`  — gestiona usuarios y contenido, pero no toca a los owners.
+ * - `admin`  — todo, incluido nombrar a otros admin.
  * - `editor` — sólo contenido (catálogo, precios, eventos). No ve usuarios.
+ *
+ * Dos escalones y no tres a propósito. Un tercer nivel intermedio sólo tiene
+ * sentido cuando hay gente suficiente para que la diferencia importe; con un
+ * equipo chico agrega estados que mantener sin agregar seguridad. Lo que
+ * protege al sistema no es la cantidad de roles, sino las reglas que impiden
+ * quedarse sin admins (ver `usuarios/actions.ts`).
  */
-export const userRole = pgEnum("user_role", ["owner", "admin", "editor"]);
+export const userRole = pgEnum("user_role", ["admin", "editor"]);
 export type UserRole = (typeof userRole.enumValues)[number];
 
 export const users = pgTable("users", {
@@ -71,7 +76,7 @@ export const sessions = pgTable(
     createdAt: timestamp("created_at", { withTimezone: true })
       .notNull()
       .defaultNow(),
-    /** Para que el dueño pueda mirar desde dónde se abrió cada sesión. */
+    /** Para poder mirar desde dónde se abrió cada sesión. */
     userAgent: text("user_agent"),
     ip: text("ip"),
   },
