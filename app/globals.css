@@ -22,6 +22,10 @@
   /* marca */
   --gold: #c8a253;
   --gold-hover: #e0bd76;
+  /* El rojo del isologo (`public/logos/isologo.png`). Segundo color de marca:
+     es del símbolo y nada más. Da 3.88:1 sobre --night, así que pasa el mínimo
+     de 3:1 de un elemento gráfico pero no el de texto — no usarlo para copy. */
+  --red: #e00000;
 
   /* líneas */
   --line: rgba(200, 162, 83, 0.18);
@@ -192,9 +196,35 @@ html[data-age-ok="1"] .js-age-gate {
   display: none;
 }
 
-/* Mientras la pantalla está visible, no se scrollea el sitio de atrás. */
-html:not([data-age-ok="1"]) body {
+/* Mientras la pantalla está visible, no se scrollea el sitio de atrás.
+   El :has() lo limita a las páginas que montan el age gate: el panel de
+   administración no lo tiene y sin esto quedaría sin scroll. */
+html:not([data-age-ok="1"]) body:has(.js-age-gate) {
   overflow: hidden;
+}
+
+/* ---------- panel de administración ---------- */
+
+/*
+ * El panel elige su modo (claro, oscuro o el del sistema) y lo aplica sobre su
+ * propio contenedor, que lleva data-theme. El body lo acompaña para que el
+ * rebote del scroll no deje ver el negro de la tienda detrás de un panel en
+ * claro. Sin data-theme —la tienda— no cambia nada.
+ */
+body:has([data-theme]) {
+  background: light-dark(#f7f4ed, #0d0c0b);
+}
+
+body:has([data-theme="dark"]) {
+  color-scheme: dark;
+}
+
+body:has([data-theme="light"]) {
+  color-scheme: light;
+}
+
+body:has([data-theme="system"]) {
+  color-scheme: light dark;
 }
 
 @media (max-width: 900px) {

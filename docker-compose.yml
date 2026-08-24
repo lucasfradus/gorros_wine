@@ -1,0 +1,29 @@
+# Postgres para desarrollo local.
+#
+#   docker compose up -d      levanta la base
+#   docker compose down       la apaga (los datos quedan en el volumen)
+#   docker compose down -v    la apaga y BORRA los datos
+#
+# En producción esto no se usa: ahí va un Postgres administrado (Railway,
+# Neon, etc.) y sólo cambia DATABASE_URL.
+services:
+  db:
+    image: postgres:17-alpine
+    container_name: gorros-db
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: gorros
+      POSTGRES_PASSWORD: gorros_dev
+      POSTGRES_DB: gorros
+    ports:
+      - "5432:5432"
+    volumes:
+      - gorros-pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U gorros -d gorros"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+volumes:
+  gorros-pgdata:

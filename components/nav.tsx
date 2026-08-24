@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { navLinks } from "@/lib/data";
+import { Isotipo } from "./isotipo";
 import { useCart } from "./cart-context";
 import styles from "./nav.module.css";
 
@@ -13,7 +14,8 @@ export function Nav() {
   return (
     <header className={styles.nav}>
       <Link href="/" className={styles.logo}>
-        GORROS WINE
+        <Isotipo size={28} className={styles.logoMark} />
+        <span>GORROS WINE</span>
       </Link>
 
       <nav aria-label="Principal">

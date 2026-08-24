@@ -1,10 +1,6 @@
 import type { Metadata, Viewport } from "next";
 import { Fraunces, Jost } from "next/font/google";
 import { siteUrl } from "@/lib/site";
-import { CartProvider } from "@/components/cart-context";
-import { AgeGate, ageGateScript } from "@/components/age-gate";
-import { Nav } from "@/components/nav";
-import { Footer } from "@/components/footer";
 import "./globals.css";
 
 // Ambas son variable fonts: no se declara `weight`, se usa el rango completo.
@@ -21,31 +17,19 @@ const jost = Jost({
   variable: "--font-jost",
 });
 
-const title = "Gorros Wine — Vinoteca boutique en Pilar";
-const description =
-  "Selección curada de tintos, blancos y espumantes. Comprá online con retiro en el local o envío a domicilio en Pilar y zona.";
-
+/**
+ * El layout raíz sólo monta `<html>`, `<body>`, las fuentes y los tokens.
+ * Todo lo que es "sitio público" (nav, footer, age gate, carrito) vive en
+ * `app/(store)/layout.tsx`, y el panel en `app/(admin)/layout.tsx`, porque
+ * el admin no debe heredar nada de la tienda.
+ */
 export const metadata: Metadata = {
   // Necesaria para que las URLs de Open Graph salgan absolutas.
   metadataBase: new URL(siteUrl),
-  title: { default: title, template: "%s · Gorros Wine" },
-  description,
-  openGraph: {
-    type: "website",
-    locale: "es_AR",
-    siteName: "Gorros Wine",
-    title,
-    description,
-    images: [
-      {
-        url: "/hero-home.webp",
-        width: 1200,
-        height: 800,
-        alt: "La cava de Gorros Wine",
-      },
-    ],
-  },
-  twitter: { card: "summary_large_image" },
+  // Sin `template` acá: cada área define el suyo. Si la raíz tuviera uno,
+  // envolvería también al título por defecto de la tienda y la home saldría
+  // como "Gorros Wine — Vinoteca boutique en Pilar · Gorros Wine".
+  title: "Gorros Wine",
 };
 
 // En Next 15 themeColor va en `viewport`, no en `metadata`.
@@ -60,18 +44,7 @@ export default function RootLayout({
 }) {
   return (
     <html lang="es-AR" className={`${fraunces.variable} ${jost.variable}`}>
-      <body>
-        {/* Corre antes de que se pinte el resto del body. */}
-        <script dangerouslySetInnerHTML={{ __html: ageGateScript }} />
-        <AgeGate />
-        <CartProvider>
-          <div className="shell">
-            <Nav />
-            <main>{children}</main>
-            <Footer />
-          </div>
-        </CartProvider>
-      </body>
+      <body>{children}</body>
     </html>
   );
 }

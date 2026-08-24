@@ -11,12 +11,21 @@
   border-bottom: 1px solid var(--line-soft);
 }
 
+/* Lockup vertical: acá sobra alto y el símbolo puede respirar. */
 .logo {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 16px;
   font-family: var(--font-fraunces), Georgia, serif;
   font-size: 19px;
   letter-spacing: 0.24em;
   color: var(--gold);
   margin-bottom: 16px;
+}
+
+.logoMark {
+  color: var(--red);
 }
 
 .blurb {

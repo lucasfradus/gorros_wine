@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { Isotipo } from "./isotipo";
 import styles from "./age-gate.module.css";
 
 export const AGE_KEY = "gw-age-ok";
@@ -39,7 +40,10 @@ export function AgeGate() {
       <div className={styles.texture} aria-hidden="true" />
 
       <div className={styles.inner}>
-        <p className={styles.logo}>GORROS WINE</p>
+        <p className={styles.logo}>
+          <Isotipo size={72} className={styles.logoMark} />
+          <span>GORROS WINE</span>
+        </p>
         <p className={styles.eyebrow}>Verificación de edad</p>
 
         <h1 id="age-title" className={styles.title}>

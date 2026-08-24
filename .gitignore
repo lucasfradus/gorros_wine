@@ -14,3 +14,6 @@ next-env.d.ts
 
 # ajustes locales de Claude Code (por máquina)
 .claude/settings.local.json
+
+# worktrees hermanos: marcador de puerto que deja scripts/worktree.ps1
+.worktree-port
