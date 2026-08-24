@@ -36,6 +36,10 @@ daría una base sin las pantallas que hay que tocar.
 - **Rojo `#e00000`**, el de `isologo.png`. El pack de 512 usa `#c61312`, más
   apagado; se unifica en el del original grande.
   Da 3.88:1 sobre el fondo: **sirve para gráfico, no para texto**.
+- **El fondo del icono se decide por destino.** Favicon calado —la pestaña ya
+  tiene fondo propio y un tile opaco ahí se lee como un bloque oscuro—; iOS y
+  PWA opacos, porque iOS compone sobre negro y un launcher calado queda roto.
+  Con el fondo cambia el aire: calado 0.94 del lado, sobre tile 0.68.
 
 ### Pasos
 
@@ -91,6 +95,12 @@ iOS y PWA. El dorado quedó intacto: el rojo entra sólo en el símbolo.
   HTML del build y rasterizando los dos pesos a 28px, no en pantalla.
 
 **Qué habría que mirar después.**
+
+- **El favicon calado pierde fuerza en pestaña oscura**: 2.43:1 contra el gris de
+  Chrome en modo oscuro, contra 5.04:1 en claro. Se lee, pero apagado. Si molesta,
+  los favicons SVG aceptan `prefers-color-scheme` adentro del archivo y se puede
+  levantar el rojo sólo para pestaña oscura — pero eso mete un segundo rojo en la
+  marca, así que es decisión de identidad y no de implementación.
 
 - Si aparece el AI/EPS original de la marca, se tira `scripts/_isotipo.mjs` y se
   usa ese vector: el trazado es fiel al raster, pero un raster sigue siendo el

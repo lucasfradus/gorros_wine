@@ -32,6 +32,10 @@ const DILATACION = 12;
 const ROJO = "#e00000";
 const NOCHE = "#0d0c0b";
 
+/** Cuánto del lado ocupa la marca según lleve tile atrás o vaya calada. */
+const AIRE_TILE = 0.68;
+const AIRE_CALADO = 0.94;
+
 // ---------------------------------------------------------------- PNG: leer
 
 /** Decodifica un PNG RGBA de 8 bits sin interlace (que es lo que hay acá). */
@@ -316,20 +320,41 @@ function rasterizar(polis, tam, escala, desplaz, ss = 4) {
 
 const hex = (c) => [1, 3, 5].map((i) => parseInt(c.slice(i, i + 2), 16));
 
-/** Icono cuadrado: la marca sobre el fondo noche, con aire alrededor. */
-function icono(polis, tam, ocupacion = 0.68) {
-  const escala = ocupacion;
+/**
+ * Icono cuadrado.
+ *
+ * El fondo se decide por archivo, no de una vez:
+ *
+ * - **Calado** (`fondo: null`) para el favicon. La pestaña ya tiene su propio
+ *   fondo, y un cuadrado opaco ahí se lee como un bloque oscuro en vez de como
+ *   la marca. El rojo aguanta solo contra pestaña clara y contra oscura.
+ * - **Opaco** para iOS y la PWA. No es una elección estética: iOS compone el
+ *   apple-touch-icon sobre negro, y un icono de launcher calado queda roto.
+ *
+ * Y con el fondo cambia el aire: calado conviene grande, porque no hay tile que
+ * le dé presencia; sobre tile conviene chico, porque el tile ya ocupa.
+ */
+function icono(polis, tam, { fondo = NOCHE, ocupacion = AIRE_TILE } = {}) {
   const desplaz = (1000 * (1 - ocupacion)) / 2;
-  const alfa = rasterizar(polis, tam, escala, desplaz);
-  const [fr, fg, fb] = hex(NOCHE);
+  const alfa = rasterizar(polis, tam, ocupacion, desplaz);
   const [mr, mg, mb] = hex(ROJO);
   const rgba = Buffer.alloc(tam * tam * 4);
-  for (let i = 0; i < tam * tam; i++) {
-    const a = alfa[i];
-    rgba[i * 4] = Math.round(fr + (mr - fr) * a);
-    rgba[i * 4 + 1] = Math.round(fg + (mg - fg) * a);
-    rgba[i * 4 + 2] = Math.round(fb + (mb - fb) * a);
-    rgba[i * 4 + 3] = 255;
+  if (fondo) {
+    const [fr, fg, fb] = hex(fondo);
+    for (let i = 0; i < tam * tam; i++) {
+      const a = alfa[i];
+      rgba[i * 4] = Math.round(fr + (mr - fr) * a);
+      rgba[i * 4 + 1] = Math.round(fg + (mg - fg) * a);
+      rgba[i * 4 + 2] = Math.round(fb + (mb - fb) * a);
+      rgba[i * 4 + 3] = 255;
+    }
+  } else {
+    for (let i = 0; i < tam * tam; i++) {
+      rgba[i * 4] = mr;
+      rgba[i * 4 + 1] = mg;
+      rgba[i * 4 + 2] = mb;
+      rgba[i * 4 + 3] = Math.round(alfa[i] * 255);
+    }
   }
   return escribirPNG(tam, tam, rgba);
 }
@@ -386,20 +411,28 @@ const salidas = [
       `export const ISOTIPO_PATH_ICONO =\n  "${pathGrueso}";\n`,
   },
   {
+    // Calado: lo pinta la pestaña, no nosotros.
     ruta: "app/icon.svg",
     contenido:
       `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1000 1000">\n` +
-      `  <rect width="1000" height="1000" fill="${NOCHE}"/>\n` +
-      `  <path fill="${ROJO}" fill-rule="evenodd" transform="translate(160 160) scale(0.68)" d="${pathGrueso}"/>\n` +
+      `  <path fill="${ROJO}" fill-rule="evenodd"` +
+      ` transform="translate(${num((1000 * (1 - AIRE_CALADO)) / 2)} ${num((1000 * (1 - AIRE_CALADO)) / 2)})` +
+      ` scale(${AIRE_CALADO})" d="${pathGrueso}"/>\n` +
       `</svg>\n`,
   },
+  {
+    ruta: "app/favicon.ico",
+    contenido: ico(
+      [32, 48].map((tam) => ({
+        tam,
+        buf: icono(grueso, tam, { fondo: null, ocupacion: AIRE_CALADO }),
+      }))
+    ),
+  },
+  // Opacos: los compone iOS / el launcher contra su propio fondo.
   { ruta: "app/apple-icon.png", contenido: icono(grueso, 180) },
   { ruta: "public/icon-192.png", contenido: icono(grueso, 192) },
   { ruta: "public/icon-512.png", contenido: icono(grueso, 512) },
-  {
-    ruta: "app/favicon.ico",
-    contenido: ico([32, 48].map((tam) => ({ tam, buf: icono(grueso, tam) }))),
-  },
 ];
 
 console.log(`\nisologo: ${original.w}x${original.h}`);
