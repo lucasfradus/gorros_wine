@@ -320,10 +320,16 @@ corre `npm run db:migrate` **antes** de levantar la versión nueva: si la
 migración falla, el deploy se aborta y queda corriendo la versión anterior.
 
 Por eso [`scripts/migrate.mjs`](scripts/migrate.mjs) es JavaScript plano y usa
-sólo dependencias de producción. `drizzle-kit` no sirve para esto: es una
-dependencia de desarrollo y no existe en la imagen desplegada. Sigue siendo el
-que **genera** el SQL (`npm run db:generate`); `migrate.mjs` sólo lo aplica,
-y es el mismo camino en local y en producción.
+sólo dependencias de producción (`drizzle-orm` y `pg`).
+
+Hoy la imagen que arma Railway **sí** incluye las dependencias de desarrollo
+—`drizzle-kit` está ahí y `drizzle-kit migrate` funcionaría—, pero eso es un
+detalle de cómo Railpack arma la imagen, no una garantía: el día que pode las
+dev dependencies, las migraciones dejarían de correr y el deploy se cortaría
+justo antes de levantar. El runner propio no depende de eso.
+
+`drizzle-kit` sigue siendo el que **genera** el SQL (`npm run db:generate`);
+`migrate.mjs` sólo lo aplica, y es el mismo camino en local y en producción.
 
 Con `DATABASE_URL` faltando, `next build` **falla a propósito**: el panel se
 importa al recolectar la configuración de las páginas y [`lib/db/index.ts`](lib/db/index.ts)
@@ -342,10 +348,11 @@ npm run admin:crear -- "Nombre Apellido" mail@ejemplo.com
 `railway ssh` necesita una clave SSH registrada en la cuenta. Si la terminal
 responde *"No SSH keys found"*, se genera una vez con `ssh-keygen -t ed25519`.
 
-Por eso [`scripts/create-admin.mjs`](scripts/create-admin.mjs) también es
-JavaScript plano con SQL a mano, y no usa Drizzle: en la imagen desplegada no
-hay `tsx` para ejecutar TypeScript. El precio es que las columnas de `users`
-aparecen escritas a mano ahí; si cambia el esquema, cambia ese INSERT.
+[`scripts/create-admin.mjs`](scripts/create-admin.mjs) es JavaScript plano con
+SQL a mano por el mismo motivo que el runner de migraciones: no depende de que
+las dependencias de desarrollo sobrevivan al build. El precio es que las
+columnas de `users` aparecen escritas a mano ahí; si cambia el esquema, cambia
+ese INSERT.
 
 ## Nota sobre el cache de Next
 
