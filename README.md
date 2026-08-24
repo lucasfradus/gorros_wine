@@ -5,7 +5,10 @@ proyecto de Claude Design **Vinoteca de Pilar**.
 
 ```bash
 npm install
-npm run dev      # http://localhost:3000
+npm run db:up        # Postgres en Docker
+npm run db:migrate   # crea las tablas
+npm run admin:crear  # crea el usuario dueño (una sola vez)
+npm run dev          # http://localhost:3000
 ```
 
 ## Qué diseño se implementó
@@ -49,6 +52,10 @@ Google Fonts en runtime.
 | `/cuenta`         | estático | Formulario de ingreso (sin auth todavía)   |
 | `/terminos`       | estático | Términos y condiciones (borrador)          |
 | `/privacidad`     | estático | Política de privacidad (borrador)          |
+| `/admin`          | dinámico | Panel: inicio                              |
+| `/admin/login`    | dinámico | Ingreso al panel (`noindex`)               |
+| `/admin/usuarios` | dinámico | Usuarios del sistema: alta, rol, acceso    |
+| `/admin/cuenta`   | dinámico | Cambiar la propia contraseña               |
 
 No queda ningún enlace interno roto. También se generan `/sitemap.xml`,
 `/robots.txt` y el favicon desde [`app/icon.svg`](app/icon.svg).
@@ -90,6 +97,110 @@ ve ningún parpadeo, y el HTML del servidor es siempre el mismo, así que no hay
 desajuste de hidratación.
 
 Para volver a verlo: `localStorage.removeItem("gw-age-ok")` y recargar.
+
+## Base de datos
+
+Postgres, con [Drizzle](https://orm.drizzle.team) como capa de acceso y
+migraciones versionadas en `drizzle/`.
+
+En desarrollo la base corre en Docker (`docker-compose.yml`). En producción
+sólo cambia `DATABASE_URL`; el resto es igual.
+
+```bash
+npm run db:up        # levanta Postgres
+npm run db:generate  # después de tocar lib/db/schema.ts
+npm run db:migrate   # aplica las migraciones pendientes
+npm run db:studio    # explorador visual de la base
+npm run db:down      # apaga (los datos quedan en el volumen)
+```
+
+El esquema vive en [`lib/db/schema.ts`](lib/db/schema.ts). Hoy tiene dos
+tablas: `users` y `sessions`.
+
+**`users` son las cuentas del sistema, no los clientes de la vinoteca.** Los
+clientes van a ser su propia tabla, con dirección, historial de pedidos y
+lista de precios. Mezclarlos es el error clásico que después cuesta desarmar.
+
+## Panel de administración
+
+Vive en `/admin`, en el grupo de rutas `app/(admin)`. La tienda vive en
+`app/(store)`. El layout raíz sólo monta `<html>`, las fuentes y los tokens,
+así el panel no hereda nav, footer, age gate ni carrito.
+
+### Ingresar
+
+```bash
+npm run admin:crear                                  # pregunta nombre y mail
+npm run admin:crear -- "Nombre" mail@ejemplo.com     # o directo
+```
+
+Crea el usuario `owner`, que es el único que no se puede dar de alta desde el
+panel: sin nadie adentro, nadie puede invitar. La contraseña sale de
+`ADMIN_PASSWORD` si está definida; si no, se genera una al azar y se imprime
+una sola vez.
+
+**Es además la salida de emergencia**: si el mail ya existe, el script le pone
+contraseña nueva, lo reactiva y lo deja como dueño. Sirve para el día en que
+el dueño se quede afuera de su propio sistema.
+
+### Roles
+
+| Rol      | Puede                                                       |
+| -------- | ----------------------------------------------------------- |
+| `owner`  | Todo, incluido nombrar a otros dueños                       |
+| `admin`  | Contenido y usuarios, pero **no** puede tocar a un `owner`   |
+| `editor` | Sólo contenido. No ve la sección Usuarios                   |
+
+Tres reglas evitan que alguien se quede afuera de su propio sistema: nadie
+puede cambiarse el rol a sí mismo, nadie puede desactivar su propia cuenta, y
+no se puede degradar ni desactivar al último dueño activo.
+
+### Sesiones
+
+Sesiones en base, no JWT. La diferencia que importa es que se pueden
+**revocar**: desactivar a alguien lo echa en el acto, y cambiarle la
+contraseña le cierra todas las pantallas abiertas. Con un JWT firmado habría
+que esperar a que venza.
+
+Detalles que conviene conocer antes de tocar
+[`lib/auth/session.ts`](lib/auth/session.ts):
+
+- **En la base se guarda el SHA-256 del token, no el token.** Un dump robado
+  de `sessions` no sirve para entrar a ningún lado.
+- **Duran 30 días, fijos, sin renovación deslizante.** Renovar exige reescribir
+  la cookie en cada request, y en Next las cookies sólo se pueden tocar desde
+  una Server Action o un Route Handler — nunca desde el layout que hace la
+  verificación.
+- **La cookie es `httpOnly` + `sameSite=lax`**, y `secure` en producción.
+
+### Quién controla el acceso
+
+[`middleware.ts`](middleware.ts) **no** es el control de acceso: corre en Edge,
+no puede consultar Postgres, y sólo mira si la cookie existe para redirigir
+rápido. Quién es cada uno se decide siempre contra la base, en
+`requireUser()` de [`lib/auth/index.ts`](lib/auth/index.ts), que llaman tanto
+las páginas como las Server Actions.
+
+`/admin/login` queda deliberadamente fuera del middleware. Si sacara de ahí a
+todo el que trae cookie, una cookie vencida entraría en un rebote infinito
+entre el panel y el ingreso.
+
+### Freno a la fuerza bruta
+
+Cinco intentos fallidos traban la cuenta 15 minutos. El contador vive en la
+base y no en memoria, así sobrevive a un reinicio y funciona con más de una
+instancia. Mientras está trabada no entra ni con la contraseña correcta;
+cambiársela desde el panel la destraba.
+
+El mensaje de error es el mismo para "ese mail no existe" y "esa contraseña
+está mal", y cuando el mail no existe igual se gasta el tiempo de un bcrypt:
+si no, la demora delataría qué mails están dados de alta.
+
+### No hay borrar usuarios, sólo desactivar
+
+Es a propósito. En cuanto los usuarios tengan cosas colgando —quién cargó un
+precio, quién despachó un pedido— borrar una fila deja huérfano ese historial.
+Desactivar corta el acceso igual de rápido y no rompe nada hacia atrás.
 
 ## Diferencias respecto del diseño
 
@@ -139,17 +250,28 @@ cumplir manteniendo la proporción del tono.
 - **`NEXT_PUBLIC_SITE_URL`.** Sin definir, el sitemap y las tarjetas de Open
   Graph apuntan a `localhost:3000`.
 
-### Backend (siguiente etapa)
+### Backend
 
-- **Checkout y pagos.** Hoy el pedido sale por WhatsApp.
-- **Autenticación.** `/cuenta` es sólo el formulario; al enviar avisa que las
-  cuentas no están habilitadas.
-- **Newsletter.** El formulario del footer avisa en vez de postear; falta
-  `/api/newsletter`.
-- **Datos desde un CMS o base.** `lib/data.ts` es estático: 9 vinos y 4
-  eventos hardcodeados.
-- **Pedidos y mails.** Persistencia de órdenes y confirmaciones.
+Hecho: base de datos, ingreso al panel y administración de usuarios del
+sistema. Lo que sigue, en orden:
+
+- **Catálogo en la base.** [`lib/data.ts`](lib/data.ts) todavía es estático: 9
+  vinos y 4 eventos escritos a mano. Es lo próximo, y con importación desde
+  planilla — el catálogo real son 400+ etiquetas que hoy viven en un Excel.
+- **Clientes.** Su propia tabla, separada de `users`. Dirección, historial de
+  pedidos y lista de precios.
+- **Checkout y pagos.** Hoy el pedido sale por WhatsApp. Mercado Pago
+  (Checkout Pro) conviviendo con ese botón.
+- **Pedidos y mails.** Persistencia de órdenes, estados y confirmaciones.
+- **Envíos.** Costo por código postal. Se vende a todo el país.
+- **Cuentas de cliente.** `/cuenta` (la de la tienda) es sólo el formulario; al
+  enviar avisa que las cuentas no están habilitadas.
+- **Newsletter.** El formulario del footer avisa en vez de postear.
 - **Reservas de eventos.** El botón "Reservar" todavía no hace nada.
+- **Registro de auditoría.** Quién cambió qué y cuándo. No está: hoy sólo se
+  guarda el último ingreso de cada usuario.
+- **Recuperar contraseña por mail.** No está. Hoy la restablece un
+  administrador desde el panel, o `npm run admin:crear` para el dueño.
 
 ## Nota sobre el cache de Next
 

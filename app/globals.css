@@ -192,8 +192,10 @@ html[data-age-ok="1"] .js-age-gate {
   display: none;
 }
 
-/* Mientras la pantalla está visible, no se scrollea el sitio de atrás. */
-html:not([data-age-ok="1"]) body {
+/* Mientras la pantalla está visible, no se scrollea el sitio de atrás.
+   El :has() lo limita a las páginas que montan el age gate: el panel de
+   administración no lo tiene y sin esto quedaría sin scroll. */
+html:not([data-age-ok="1"]) body:has(.js-age-gate) {
   overflow: hidden;
 }
 
