@@ -5,6 +5,86 @@
  * repetir tabla, formulario y botón en cada una.
  */
 
+/* ---------- temas ---------- */
+
+/*
+ * El panel tiene modo oscuro y modo claro. Todos los colores se declaran una
+ * sola vez con `light-dark()`, y lo único que cambia por modo es la propiedad
+ * `color-scheme` de este contenedor.
+ *
+ * Se hace así, y no con dos bloques de tokens duplicados, por tres razones:
+ * cada color vive en un solo lugar, el modo "sistema" sale gratis, y el
+ * servidor puede pintar el modo correcto de entrada — no hay script inline ni
+ * parpadeo al cargar, como sí haría falta si el modo se leyera del navegador.
+ *
+ * `color-scheme` además le avisa al navegador cómo pintar lo suyo: barras de
+ * scroll, autocompletado y controles nativos acompañan el modo.
+ *
+ * Requiere `light-dark()` (Chrome 123+, Safari 17.5+, Firefox 120+).
+ */
+.themed {
+  color-scheme: dark;
+
+  /* superficies */
+  --night: light-dark(#f7f4ed, #0d0c0b);
+  --panel: light-dark(#ffffff, #131110);
+
+  /* tinta */
+  --heading: light-dark(#171310, #f5efe4);
+  --text: light-dark(#2c2621, #efe9df);
+  --muted: light-dark(#5f584e, #8d867a);
+  --dim: light-dark(#6e6659, #857c6e);
+  --chip: light-dark(#5f584e, #b3aa9b);
+
+  /* marca */
+  --gold: light-dark(#7d5f1f, #c8a253);
+  --gold-hover: light-dark(#5e4715, #e0bd76);
+  /* tinta sobre el dorado lleno del botón principal */
+  --on-gold: light-dark(#ffffff, #14110c);
+  /* El rojo del isotipo es el único color que no cambia por modo: da 5.04:1
+     sobre la tarjeta clara y 3.75:1 sobre la oscura, y las dos pasan el 3:1
+     que le corresponde a un elemento gráfico. Se declara igual acá para que
+     quede dicho que fue mirado, y no que se coló del :root de la tienda. */
+  --red: #e00000;
+
+  /* líneas decorativas: separan, no identifican nada */
+  --line: light-dark(rgba(23, 19, 16, 0.14), rgba(200, 162, 83, 0.18));
+  --line-soft: light-dark(rgba(23, 19, 16, 0.1), rgba(200, 162, 83, 0.14));
+  --line-strong: light-dark(rgba(125, 95, 31, 0.45), rgba(200, 162, 83, 0.3));
+  --row-line: light-dark(rgba(23, 19, 16, 0.09), rgba(200, 162, 83, 0.08));
+
+  /*
+   * Borde de campo. Éste no es decorativo: es lo que te dice dónde empieza y
+   * termina un input, así que tiene que llegar a 3:1 contra el fondo (WCAG
+   * 1.4.11). Las opacidades salen de ese mínimo, no del gusto: por debajo de
+   * 0.55 en oscuro y 0.72 en claro, el campo deja de verse.
+   */
+  --field-line: light-dark(rgba(125, 95, 31, 0.72), rgba(200, 162, 83, 0.55));
+
+  /* realces al pasar el mouse y de sección activa */
+  --hover-soft: light-dark(rgba(125, 95, 31, 0.07), rgba(200, 162, 83, 0.06));
+  --hover-strong: light-dark(rgba(125, 95, 31, 0.11), rgba(200, 162, 83, 0.09));
+
+  /* estados */
+  --ok: light-dark(#2f5c39, #8fae94);
+  --ok-line: light-dark(rgba(47, 92, 57, 0.45), rgba(143, 174, 148, 0.4));
+  --ok-bg: light-dark(rgba(47, 92, 57, 0.08), rgba(143, 174, 148, 0.08));
+  --danger: light-dark(#963232, #e0adad);
+  --danger-line: light-dark(rgba(150, 50, 50, 0.45), rgba(200, 120, 120, 0.45));
+  --danger-bg: light-dark(rgba(150, 50, 50, 0.07), rgba(200, 120, 120, 0.08));
+
+  background: var(--night);
+  color: var(--text);
+}
+
+.themed[data-theme="light"] {
+  color-scheme: light;
+}
+
+.themed[data-theme="system"] {
+  color-scheme: light dark;
+}
+
 /* ---------- ingreso ---------- */
 
 .loginWrap {
@@ -26,6 +106,12 @@
 .loginBrand {
   text-align: center;
   margin-bottom: 32px;
+}
+
+.loginMark {
+  display: block;
+  margin: 0 auto 18px;
+  color: var(--red);
 }
 
 .loginLogo {
@@ -95,12 +181,12 @@
 
 .navLink:hover {
   color: var(--text);
-  background: rgba(200, 162, 83, 0.06);
+  background: var(--hover-soft);
 }
 
 .navLinkActive {
   color: var(--heading);
-  background: rgba(200, 162, 83, 0.09);
+  background: var(--hover-strong);
   border-left-color: var(--gold);
 }
 
@@ -122,6 +208,57 @@
   text-transform: uppercase;
   color: var(--dim);
   margin-top: 3px;
+}
+
+.logoutBtn {
+  margin-top: 12px;
+}
+
+/* ---------- selector de modo ---------- */
+
+.themeForm {
+  margin-top: 18px;
+}
+
+.themeSwitch {
+  display: flex;
+  gap: 4px;
+  border: 1px solid var(--line-soft);
+  border-radius: 3px;
+  padding: 3px;
+}
+
+.themeBtn {
+  flex: 1;
+  font-family: inherit;
+  font-size: 9px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  padding: 7px 2px;
+  border: 0;
+  border-radius: 2px;
+  background: transparent;
+  color: var(--dim);
+  cursor: pointer;
+}
+
+.themeBtn:hover {
+  color: var(--text);
+  background: var(--hover-soft);
+}
+
+.themeBtnOn {
+  background: var(--hover-strong);
+  color: var(--gold);
+}
+
+.themeLabel {
+  display: block;
+  font-size: 10px;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--dim);
+  margin-bottom: 7px;
 }
 
 /* ---------- contenido ---------- */
@@ -189,7 +326,7 @@
 
 .table td {
   padding: 15px 18px;
-  border-bottom: 1px solid rgba(200, 162, 83, 0.08);
+  border-bottom: 1px solid var(--row-line);
   color: var(--text);
   vertical-align: middle;
 }
@@ -213,6 +350,10 @@
 .cellRight {
   text-align: right;
   white-space: nowrap;
+}
+
+.cellDim {
+  color: var(--dim);
 }
 
 .you {
@@ -242,8 +383,8 @@
 }
 
 .badgeOff {
-  border-color: rgba(180, 120, 120, 0.4);
-  color: #c99a9a;
+  border-color: var(--danger-line);
+  color: var(--danger);
 }
 
 .badgeOn {
@@ -276,7 +417,7 @@
 .select {
   width: 100%;
   background: var(--night);
-  border: 1px solid var(--line);
+  border: 1px solid var(--field-line);
   border-radius: 3px;
   padding: 11px 12px;
   color: var(--text);
@@ -307,13 +448,13 @@
   gap: 10px;
   align-items: flex-start;
   padding: 11px 13px;
-  border: 1px solid var(--line-soft);
+  border: 1px solid var(--field-line);
   border-radius: 3px;
   cursor: pointer;
 }
 
 .radioRow:hover {
-  border-color: var(--line);
+  border-color: var(--gold);
 }
 
 .radioRow input {
@@ -344,7 +485,7 @@
   text-transform: uppercase;
   padding: 12px 20px;
   border-radius: 3px;
-  border: 1px solid var(--line-strong);
+  border: 1px solid var(--field-line);
   background: transparent;
   color: var(--text);
   cursor: pointer;
@@ -365,13 +506,13 @@
 .btnPrimary {
   background: var(--gold);
   border-color: var(--gold);
-  color: #14110c;
+  color: var(--on-gold);
 }
 
 .btnPrimary:hover {
   background: var(--gold-hover);
   border-color: var(--gold-hover);
-  color: #14110c;
+  color: var(--on-gold);
 }
 
 .btnSmall {
@@ -380,8 +521,8 @@
 }
 
 .btnDanger:hover {
-  border-color: #c07878;
-  color: #d99a9a;
+  border-color: var(--danger);
+  color: var(--danger);
 }
 
 .btnRow {
@@ -407,14 +548,14 @@
 }
 
 .alertError {
-  border-color: rgba(200, 120, 120, 0.45);
-  background: rgba(200, 120, 120, 0.08);
-  color: #e0adad;
+  border-color: var(--danger-line);
+  background: var(--danger-bg);
+  color: var(--danger);
 }
 
 .alertOk {
   border-color: var(--ok-line);
-  background: rgba(143, 174, 148, 0.08);
+  background: var(--ok-bg);
   color: var(--ok);
 }
 
@@ -463,6 +604,10 @@
   color: var(--gold);
 }
 
+.sectionHead {
+  margin-bottom: 18px;
+}
+
 /* ---------- responsive ---------- */
 
 @media (max-width: 860px) {
@@ -506,6 +651,14 @@
     padding-top: 0;
     margin-left: auto;
     text-align: right;
+  }
+
+  .themeForm {
+    margin-top: 8px;
+  }
+
+  .themeLabel {
+    display: none;
   }
 
   .main {

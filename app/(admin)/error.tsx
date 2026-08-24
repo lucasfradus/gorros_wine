@@ -14,7 +14,7 @@ export default function AdminError({
   reset: () => void;
 }) {
   return (
-    <div className={styles.loginWrap}>
+    <div className={`${styles.themed} ${styles.loginWrap}`}>
       <div className={styles.loginCard}>
         <div className={styles.loginBrand}>
           <span className={styles.loginLogo}>Gorros Wine</span>

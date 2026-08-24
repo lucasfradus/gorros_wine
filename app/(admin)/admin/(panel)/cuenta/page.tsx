@@ -47,7 +47,7 @@ export default async function CuentaPage() {
         </section>
 
         <section className={styles.card}>
-          <h2 className={styles.label} style={{ marginBottom: 18 }}>
+          <h2 className={`${styles.label} ${styles.sectionHead}`}>
             Cambiar contraseña
           </h2>
           <ChangePasswordForm />

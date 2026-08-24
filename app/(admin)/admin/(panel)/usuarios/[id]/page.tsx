@@ -64,7 +64,7 @@ export default async function EditarUsuarioPage({
         ) : null}
 
         <section className={styles.card}>
-          <h2 className={styles.label} style={{ marginBottom: 18 }}>
+          <h2 className={`${styles.label} ${styles.sectionHead}`}>
             Datos y rol
           </h2>
           <UserForm
@@ -82,7 +82,7 @@ export default async function EditarUsuarioPage({
         </section>
 
         <section className={styles.card}>
-          <h2 className={styles.label} style={{ marginBottom: 18 }}>
+          <h2 className={`${styles.label} ${styles.sectionHead}`}>
             Contraseña
           </h2>
           <PasswordForm action={setPasswordAction} userId={objetivo.id} />
@@ -90,7 +90,7 @@ export default async function EditarUsuarioPage({
 
         {esUnoMismo ? null : (
           <section className={styles.card}>
-            <h2 className={styles.label} style={{ marginBottom: 18 }}>
+            <h2 className={`${styles.label} ${styles.sectionHead}`}>
               Acceso
             </h2>
             <ToggleActiveForm
@@ -102,7 +102,7 @@ export default async function EditarUsuarioPage({
         )}
 
         <section className={styles.card}>
-          <h2 className={styles.label} style={{ marginBottom: 18 }}>
+          <h2 className={`${styles.label} ${styles.sectionHead}`}>
             Historial
           </h2>
           <ul className={styles.metaList}>

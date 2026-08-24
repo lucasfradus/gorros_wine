@@ -22,12 +22,21 @@
   max-width: 520px;
 }
 
+/* Es la primera pantalla que ve cualquiera: acá el símbolo va grande. */
 .logo {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 26px;
   font-family: var(--font-fraunces), Georgia, serif;
   font-size: 22px;
   letter-spacing: 0.24em;
   color: var(--gold);
   margin-bottom: 44px;
+}
+
+.logoMark {
+  color: var(--red);
 }
 
 .eyebrow {

@@ -95,7 +95,7 @@ export default async function UsuariosPage() {
                         {u.isActive ? "Activo" : "Desactivado"}
                       </span>
                     </td>
-                    <td style={{ color: "var(--dim)" }}>
+                    <td className={styles.cellDim}>
                       {formatDateTime(u.lastLoginAt)}
                     </td>
                     <td className={styles.cellRight}>

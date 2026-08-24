@@ -143,6 +143,33 @@ una sola vez.
 contraseña nueva, lo reactiva y lo deja como dueño. Sirve para el día en que
 el dueño se quede afuera de su propio sistema.
 
+### Modo claro y oscuro
+
+El panel tiene tres modos —**Oscuro**, **Claro** y **Auto**— y se cambian desde
+el pie de la barra lateral. La tienda no cambia: sigue siendo negra y dorada,
+que es la marca.
+
+Tres decisiones detrás:
+
+- **La preferencia va en una cookie, no en la tabla `users`.** Así el servidor
+  la lee antes de renderizar y el modo correcto se pinta de entrada: nunca hay
+  un destello oscuro antes de que aparezca el claro. Además funciona en la
+  pantalla de ingreso, donde todavía no hay usuario, y no cuesta una migración.
+  Lo que se pierde es que la elección no viaja entre navegadores.
+- **Los colores se declaran una sola vez, con `light-dark()`.** Lo único que
+  cambia por modo es `color-scheme` en el contenedor del panel. No hay dos
+  bloques de tokens que mantener en paralelo, y el modo "Auto" sale gratis
+  porque lo resuelve el navegador. Requiere Chrome 123+, Safari 17.5+ o
+  Firefox 120+.
+- **El selector no lleva JavaScript propio.** Son tres botones de envío en un
+  formulario, en un componente de servidor. Anda con el JS deshabilitado, y con
+  JS React lo resuelve sin recargar.
+
+Los colores del modo claro no se eligieron a ojo: todo el texto pasa WCAG AA
+(4.5:1) sobre los dos fondos, en los dos modos. El borde de los campos de
+formulario llega a 3:1, que es el mínimo para un componente de interfaz —por eso
+las opacidades del dorado son 0.55 en oscuro y 0.72 en claro, y no menos.
+
 ### Roles
 
 | Rol      | Puede                                                       |

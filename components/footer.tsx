@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { Isotipo } from "./isotipo";
 import { NewsletterForm } from "./newsletter-form";
 import styles from "./footer.module.css";
 
@@ -7,7 +8,10 @@ export function Footer() {
     <footer className={styles.footer}>
       <div className={styles.cols}>
         <div>
-          <p className={styles.logo}>GORROS WINE</p>
+          <p className={styles.logo}>
+            <Isotipo size={30} className={styles.logoMark} />
+            <span>GORROS WINE</span>
+          </p>
           <p className={styles.blurb}>
             Vinoteca en Pilar, Buenos Aires. Etiquetas de las principales
             bodegas argentinas e internacionales.

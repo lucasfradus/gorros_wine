@@ -12,7 +12,11 @@
   backdrop-filter: blur(10px);
 }
 
+/* Lockup horizontal: el header no tiene alto para apilar. */
 .logo {
+  display: flex;
+  align-items: center;
+  gap: 12px;
   font-family: var(--font-fraunces), Georgia, serif;
   font-weight: 400;
   font-size: 19px;
@@ -20,6 +24,12 @@
   color: var(--gold);
   text-decoration: none;
   white-space: nowrap;
+}
+
+/* El símbolo lleva el rojo de marca; el wordmark sigue dorado. */
+.logoMark {
+  flex-shrink: 0;
+  color: var(--red);
 }
 
 .links {
