@@ -41,6 +41,24 @@ param(
 
 $ErrorActionPreference = 'Stop'
 
+# git y npm escriben en stderr aunque les vaya bien: "Preparing worktree...",
+# "npm warn deprecated...". En PowerShell 5.1, con ErrorActionPreference en Stop,
+# cada línea de stderr de un ejecutable nativo se vuelve un error terminante y
+# aborta el script a mitad de camino — el worktree quedaba creado pero sin puerto,
+# sin .env.local y sin node_modules. Lo único que dice de verdad si un ejecutable
+# falló es $LASTEXITCODE, que es lo que se chequea en cada llamada.
+function Invoke-Nativo {
+  $anterior = $ErrorActionPreference
+  $ErrorActionPreference = 'Continue'
+  try {
+    $exe   = $args[0]
+    $resto = if ($args.Count -gt 1) { $args[1..($args.Count - 1)] } else { @() }
+    & $exe @resto
+  } finally { $ErrorActionPreference = $anterior }
+}
+
+function Invoke-Git { Invoke-Nativo git @args }
+
 $repo    = (Resolve-Path (Join-Path $PSScriptRoot '..')).Path
 $padre   = Split-Path $repo -Parent
 $prefijo = 'Gorros-'
@@ -73,7 +91,7 @@ switch ($comando) {
     Write-Host "Worktrees de Gorros Wine" -ForegroundColor Cyan
     Write-Host ""
 
-    git -C $repo worktree list | ForEach-Object {
+    Invoke-Git -C $repo worktree list | ForEach-Object {
       $ruta = ($_ -split '\s+')[0]
       $f = Join-Path $ruta '.worktree-port'
       $puerto = if (Test-Path $f) { (Get-Content $f -Raw).Trim() } else { '3000' }
@@ -95,17 +113,17 @@ switch ($comando) {
     if (Test-Path $destino) { throw "Ya existe $destino." }
 
     Write-Host "`nTrayendo origin..." -ForegroundColor DarkGray
-    git -C $repo fetch origin --quiet
+    Invoke-Git -C $repo fetch origin --quiet
 
     # La base es siempre origin/main. Nunca una rama de feature ajena: si esa
     # rama se rebasa o se descarta, este worktree queda colgado de la nada.
-    $existe = git -C $repo rev-parse --verify --quiet "refs/heads/$rama"
+    $existe = Invoke-Git -C $repo rev-parse --verify --quiet "refs/heads/$rama"
 
     if ($existe) {
       Write-Host "La rama $rama ya existe: se engancha el worktree a esa rama." -ForegroundColor Yellow
-      git -C $repo worktree add $destino $rama
+      Invoke-Git -C $repo worktree add $destino $rama
     } else {
-      git -C $repo worktree add -b $rama $destino origin/main
+      Invoke-Git -C $repo worktree add -b $rama $destino origin/main
     }
     if ($LASTEXITCODE -ne 0) { throw "git worktree add falló." }
 
@@ -126,7 +144,8 @@ switch ($comando) {
     if (-not $sinInstalar) {
       Write-Host "`nInstalando dependencias (node_modules no se comparte entre worktrees)..." -ForegroundColor DarkGray
       Push-Location $destino
-      try { npm install } finally { Pop-Location }
+      try { Invoke-Nativo npm install } finally { Pop-Location }
+      if ($LASTEXITCODE -ne 0) { throw "npm install falló en $destino." }
     }
 
     Write-Host ""
@@ -146,7 +165,7 @@ switch ($comando) {
     $destino = Join-Path $padre "$prefijo$slug"
     if (-not (Test-Path $destino)) { throw "No existe $destino." }
 
-    $rama = (git -C $destino rev-parse --abbrev-ref HEAD).Trim()
+    $rama = (Invoke-Git -C $destino rev-parse --abbrev-ref HEAD).Trim()
 
     # El marcador de puerto lo puso este script: se lo lleva antes de irse, o
     # git se niega a borrar el worktree por tener un archivo sin trackear.
@@ -154,7 +173,7 @@ switch ($comando) {
 
     # Sin --force a propósito: si quedó trabajo sin commitear, que falle y lo
     # vea la persona antes de perderlo.
-    git -C $repo worktree remove $destino
+    Invoke-Git -C $repo worktree remove $destino
     if ($LASTEXITCODE -ne 0) {
       throw "No se pudo borrar: hay cambios sin commitear en $destino. Revisalos primero."
     }
@@ -163,7 +182,7 @@ switch ($comando) {
 
     if ($borrarRama) {
       # -d y no -D: sólo borra si ya está mergeada.
-      git -C $repo branch -d $rama
+      Invoke-Git -C $repo branch -d $rama
       if ($LASTEXITCODE -ne 0) {
         Write-Host "La rama $rama no está mergeada en main: se deja como está." -ForegroundColor Yellow
       } else {
