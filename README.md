@@ -300,6 +300,53 @@ sistema. Lo que sigue, en orden:
 - **Recuperar contraseña por mail.** No está. Hoy la restablece un
   administrador desde el panel, o `npm run admin:crear` para el dueño.
 
+## Despliegue
+
+El sitio vive en Railway, en el proyecto `gorros-wine`: un servicio web
+conectado a `lucasfradus/gorros_wine` que despliega solo con cada push a
+`main`, y un Postgres.
+
+- **`DATABASE_URL`** es una referencia al servicio de Postgres
+  (`${{Postgres.DATABASE_URL}}`), no un valor copiado: si Railway rota la
+  contraseña, el web la toma sola. Apunta a la red privada del proyecto, así
+  que la base **no está expuesta a internet**.
+- **`NEXT_PUBLIC_SITE_URL`** tiene que estar seteada o el sitemap y las
+  tarjetas de Open Graph apuntan a `localhost`.
+
+### Las migraciones corren solas
+
+[`railway.json`](railway.json) declara `preDeployCommand`, así que Railway
+corre `npm run db:migrate` **antes** de levantar la versión nueva: si la
+migración falla, el deploy se aborta y queda corriendo la versión anterior.
+
+Por eso [`scripts/migrate.mjs`](scripts/migrate.mjs) es JavaScript plano y usa
+sólo dependencias de producción. `drizzle-kit` no sirve para esto: es una
+dependencia de desarrollo y no existe en la imagen desplegada. Sigue siendo el
+que **genera** el SQL (`npm run db:generate`); `migrate.mjs` sólo lo aplica,
+y es el mismo camino en local y en producción.
+
+Con `DATABASE_URL` faltando, `next build` **falla a propósito**: el panel se
+importa al recolectar la configuración de las páginas y [`lib/db/index.ts`](lib/db/index.ts)
+corta ahí. Es preferible a desplegar un sitio cuyo panel explota al primer clic.
+
+### El primer usuario en producción
+
+La base arranca vacía y el dueño no se puede crear desde el panel. Se crea una
+vez, desde adentro del contenedor:
+
+```bash
+railway ssh --service gorros-wine
+npm run admin:crear -- "Nombre Apellido" mail@ejemplo.com
+```
+
+`railway ssh` necesita una clave SSH registrada en la cuenta. Si la terminal
+responde *"No SSH keys found"*, se genera una vez con `ssh-keygen -t ed25519`.
+
+Por eso [`scripts/create-admin.mjs`](scripts/create-admin.mjs) también es
+JavaScript plano con SQL a mano, y no usa Drizzle: en la imagen desplegada no
+hay `tsx` para ejecutar TypeScript. El precio es que las columnas de `users`
+aparecen escritas a mano ahí; si cambia el esquema, cambia ese INSERT.
+
 ## Nota sobre el cache de Next
 
 No corras `npm run build` mientras `npm run dev` está activo: comparten el
