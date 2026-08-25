@@ -51,8 +51,14 @@ function Invoke-Nativo {
   $anterior = $ErrorActionPreference
   $ErrorActionPreference = 'Continue'
   try {
-    $exe   = $args[0]
-    $resto = if ($args.Count -gt 1) { $args[1..($args.Count - 1)] } else { @() }
+    $exe = $args[0]
+    # Sin `if`, y no es capricho. Asignar el resultado de un `if` desenrolla los
+    # arrays de un solo elemento: `$resto` terminaba siendo el String "install"
+    # en vez de un array, y splatear un String lo reparte carácter por carácter.
+    # `npm install` salía como `npm i n s t a l l` — npm tomaba la `i` como alias
+    # de install e intentaba bajar los paquetes n, s, t, a y l. Las llamadas a git
+    # nunca lo mostraron porque todas van con tres argumentos o más.
+    $resto = @($args | Select-Object -Skip 1)
     & $exe @resto
   } finally { $ErrorActionPreference = $anterior }
 }
