@@ -23,12 +23,16 @@ Los checkboxes se marcan **allá**, que es donde está el detalle de cada paso.
 | 5. Server Actions (crear, editar, borrar) | ☑ |
 | 6. Pantallas del panel | ☑ (falta prueba en navegador) |
 | 7. Enlace en la navegación | ☑ |
-| 8. La tienda lee la agenda real | ☐ |
-| 9. Migrar los cuatro eventos de hoy | ☐ |
+| 8. La tienda lee la agenda real | ☑ |
+| 9. Migrar los cuatro eventos de hoy | ☑ (falta correrlo en producción) |
 
-**Antes de escribir el formulario**, leer la sección de huso horario del plan:
-`<input type="datetime-local">` entrega un string sin zona y el servidor de
-producción corre en UTC. Es el error caro de esta iteración.
+Las nueve están hechas y el código está en verde (`tsc` y `build`). **Lo que
+falta para cerrar** está en la sección Cierre del plan:
+
+1. Probar el panel a mano en el navegador (`:3004`), con los dos roles.
+2. Correr `APPLY=1 node scripts/_eventos-seed.mjs` **en producción** después del
+   deploy, o la página de eventos sale al aire vacía.
+3. PR a `main` y `./scripts/worktree.ps1 borrar eventos -borrarRama`.
 
 ---
 

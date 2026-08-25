@@ -1,6 +1,6 @@
 "use server";
 
-import { revalidatePath } from "next/cache";
+import { revalidatePath, revalidateTag } from "next/cache";
 import { redirect } from "next/navigation";
 import { eq } from "drizzle-orm";
 import { z } from "zod";
@@ -8,6 +8,7 @@ import { db } from "@/lib/db";
 import { eventos } from "@/lib/db/schema";
 import { canEditEvents, requireUser } from "@/lib/auth";
 import { esquemaImagen } from "@/lib/content/esquema-imagen";
+import { EVENTOS_TAG } from "@/lib/eventos";
 import { desdeInputLocal } from "@/lib/format";
 
 export interface EventoFormState {
@@ -16,10 +17,16 @@ export interface EventoFormState {
 }
 
 /**
- * Lo que toca invalidar cuando cambia la agenda: la página de eventos, la home
- * —que muestra los dos próximos— y el listado del panel.
+ * Lo que toca invalidar cuando cambia la agenda.
+ *
+ * El tag es el que hace el trabajo: de él cuelga el `unstable_cache` de
+ * `lib/eventos.ts`, y sin invalidarlo la tienda sigue sirviendo la lista vieja
+ * por más que se marquen las rutas. Las rutas van igual —la página de eventos,
+ * la home que muestra los dos próximos, y el listado del panel— porque es la
+ * convención del repo y deja explícito qué pantalla cambia.
  */
 function invalidar() {
+  revalidateTag(EVENTOS_TAG);
   revalidatePath("/eventos");
   revalidatePath("/");
   revalidatePath("/admin/eventos");

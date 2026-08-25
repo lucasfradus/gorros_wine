@@ -517,7 +517,7 @@ export const REGISTRO = {
 
   eventos: {
     label: "Eventos",
-    help: "El texto y las fotos de /eventos. Los eventos en sí todavía se cargan en el código.",
+    help: "El texto y las fotos que rodean a la agenda de /eventos. Las catas en sí se cargan en la sección Eventos del panel.",
     revalidate: ["/eventos"],
     campos: {
       eyebrow: { tipo: "texto", label: "Volanta", original: "Eventos" },
@@ -542,6 +542,19 @@ export const REGISTRO = {
           imagen: { tipo: "imagen", label: "Foto", original: null },
         },
         original: [{ imagen: null }, { imagen: null }],
+      },
+      sinEventos: {
+        tipo: "parrafo",
+        label: "Sin fechas · aviso",
+        help: "Lo que se lee cuando no hay ningún evento publicado por venir. Se ve en /eventos y reemplaza a la lista.",
+        original:
+          "Por ahora no tenemos fechas abiertas. Escribinos y te avisamos cuando salga la próxima.",
+      },
+      pasadosTitulo: {
+        tipo: "texto",
+        label: "Pasados · título",
+        help: "El encabezado de la lista de encuentros que ya ocurrieron.",
+        original: "Ya pasaron",
       },
       feriaEyebrow: {
         tipo: "texto",

@@ -201,53 +201,6 @@ export const navLinks = [
 
 // El copy de la home, Nosotros y el Club se edita desde el panel: vive en
 // `lib/content/registry.ts`, con el texto original al lado de cada campo.
-
-// ---------- eventos ----------
-
-export interface WineEvent {
-  day: string;
-  month: string;
-  title: string;
-  meta: string;
-  price: string;
-}
-
-export const events: WineEvent[] = [
-  {
-    day: "18",
-    month: "Jul",
-    title: "Cata de Malbecs de altura",
-    meta: "19:30 hs · Local Pilar · 8 etiquetas a ciegas",
-    price: "$9.000",
-  },
-  {
-    day: "02",
-    month: "Ago",
-    title: "Espumantes & quesos",
-    meta: "20:00 hs · con sommelier invitada",
-    price: "$11.000",
-  },
-  {
-    day: "16",
-    month: "Ago",
-    title: "Iniciación al vino",
-    meta: "19:00 hs · para arrancar sin vueltas",
-    price: "$7.500",
-  },
-  {
-    day: "30",
-    month: "Ago",
-    title: "Noche de Patagonia",
-    meta: "20:30 hs · Pinot y Merlot del sur",
-    price: "$10.500",
-  },
-];
-
-/** Los dos próximos, que se muestran en la home. */
-export const upcomingEvents = events.slice(0, 2);
-
-/** Galería de eventos pasados. Sin foto todavía: quedan como hueco. */
-export const pastEvents = [
-  { id: "evento-1", caption: "Cata a ciegas de Malbecs · Junio 2026" },
-  { id: "evento-2", caption: "Espumantes & quesos · Mayo 2026" },
-];
+//
+// Los eventos tampoco están más acá: son una tabla, y se cargan desde la
+// sección Eventos del panel. Se leen con `lib/eventos.ts`.

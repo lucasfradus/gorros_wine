@@ -50,14 +50,44 @@ app/
 
 Hoy conviven tres fuentes, y conviene tenerlo claro:
 
-- **El catálogo de vinos y los eventos viven en `lib/data.ts`**, como arrays de
-  TypeScript. No están en la base. Es la razón por la que `/catalogo` y las
-  fichas se pueden generar estáticas.
+- **El catálogo de vinos vive en `lib/data.ts`**, como arrays de TypeScript. No
+  está en la base. Es la razón por la que `/catalogo` y las fichas se pueden
+  generar estáticas.
 - **Los textos y las fotos del sitio salen del CMS** (ver abajo).
-- **La base tiene `users`, `sessions`, `content` y `media`** (`lib/db/schema.ts`).
+- **La base tiene `users`, `sessions`, `content`, `media` y `eventos`**
+  (`lib/db/schema.ts`).
 
 Mover el catálogo a la base es una iteración pendiente, y de las grandes: toca
 schema, panel de edición y render de la tienda. Va en worktree.
+
+## La agenda de eventos
+
+Las catas y encuentros **sí** están en la base, desde la iteración del ABM. Se
+cargan en **Eventos**, en el panel, y se leen con `lib/eventos.ts`.
+
+Un evento es una fecha, no un rango: de `comienza` salen el día, el mes y la
+hora que muestra la tarjeta. La tienda lista los próximos con botón de reserva
+y, debajo, los seis últimos que ya pasaron, apagados y sin botón. El panel no
+tiene ese tope, que es donde el histórico completo se viene a buscar.
+
+Tres cosas que no son obvias:
+
+- **La lectura va cacheada con el tag `eventos`, y además con un techo de
+  quince minutos.** El tag cubre las ediciones del panel; el techo cubre el
+  paso del tiempo, porque la agenda cambia **sola** —un evento pasa de próximo
+  a pasado sin que nadie toque nada— y sin él una cata ya empezada seguiría
+  anunciándose como próxima hasta la siguiente edición.
+- **`unstable_cache` serializa a JSON: las `Date` vuelven como string.** Por eso
+  `lib/eventos.ts` declara la frontera de forma explícita: lo que se cachea
+  lleva `comienza` como ISO, y `getAgenda` es el único lugar que la reconvierte.
+  Sin eso, la primera lectura funciona —caché frío, objeto tal cual salió de
+  Drizzle— y la segunda rompe.
+- **La hora se guarda y se lee siempre en la zona de Buenos Aires**, fija en
+  `lib/format.ts`. El formulario usa `<input type="datetime-local">`, que
+  entrega un string sin zona, y producción corre en UTC.
+
+Los textos que rodean a la agenda —volanta, título, bajada, galería, el aviso
+de "no hay fechas"— siguen siendo del CMS.
 
 ## El CMS de contenido
 

@@ -1,5 +1,8 @@
 import type { Metadata } from "next";
-import { events } from "@/lib/data";
+import type { EventoPublico } from "@/lib/eventos";
+import { formatPrice } from "@/lib/data";
+import { getAgenda } from "@/lib/eventos";
+import { formatDia, formatHora, formatMes } from "@/lib/format";
 import { getContent } from "@/lib/content/get";
 import { ContentImage } from "@/components/content-image";
 import { Lineas } from "@/components/rich-text";
@@ -11,9 +14,10 @@ export async function generateMetadata(): Promise<Metadata> {
 }
 
 export default async function EventsPage() {
-  const [c, local] = await Promise.all([
+  const [c, local, agenda] = await Promise.all([
     getContent("eventos"),
     getContent("local"),
+    getAgenda(),
   ]);
 
   return (
@@ -38,25 +42,28 @@ export default async function EventsPage() {
         ))}
       </div>
 
-      {/* Los eventos siguen escritos a mano: el ABM es otra iteración. */}
-      <ul className={styles.list}>
-        {events.map((e) => (
-          <li key={e.title} className={styles.event}>
-            <p className={styles.date}>
-              <span className={styles.day}>{e.day}</span>
-              <span className={styles.month}>{e.month}</span>
-            </p>
-            <div>
-              <h2 className={styles.name}>{e.title}</h2>
-              <p className={styles.meta}>{e.meta}</p>
-            </div>
-            <button type="button" className={styles.book}>
-              Reservar · {e.price}
-              <span className="srOnly"> {e.title}</span>
-            </button>
-          </li>
-        ))}
-      </ul>
+      {agenda.proximos.length === 0 ? (
+        <p className={styles.vacio}>{c.sinEventos}</p>
+      ) : (
+        <ul className={styles.list}>
+          {agenda.proximos.map((e) => (
+            <Fila key={e.id} evento={e} />
+          ))}
+        </ul>
+      )}
+
+      {agenda.pasados.length > 0 ? (
+        <section className={styles.past} aria-labelledby="pasados">
+          <h2 id="pasados" className={styles.pastTitle}>
+            {c.pasadosTitulo}
+          </h2>
+          <ul className={styles.list}>
+            {agenda.pasados.map((e) => (
+              <Fila key={e.id} evento={e} pasado />
+            ))}
+          </ul>
+        </section>
+      ) : null}
 
       <section className={styles.fair} aria-labelledby="caminos">
         <p className={`eyebrow ${styles.fairEyebrow}`}>{c.feriaEyebrow}</p>
@@ -81,5 +88,53 @@ export default async function EventsPage() {
         </a>
       </section>
     </div>
+  );
+}
+
+/**
+ * Un renglón de la agenda.
+ *
+ * El que ya pasó se muestra apagado y sin botón: sigue ahí porque un encuentro
+ * hecho vale como prueba de que esto pasa de verdad, pero no se puede reservar.
+ */
+function Fila({ evento, pasado = false }: { evento: EventoPublico; pasado?: boolean }) {
+  const meta = [
+    formatHora(evento.comienza),
+    evento.lugar,
+    evento.detalle,
+  ].filter(Boolean);
+
+  // Los próximos cuelgan del h1 de la página; los pasados, del h2 de su
+  // sección. Saltear un nivel deja la navegación por encabezados mal armada
+  // para quien recorre la página con un lector de pantalla.
+  const Titulo = pasado ? "h3" : "h2";
+
+  return (
+    <li className={`${styles.event} ${pasado ? styles.eventPast : ""}`}>
+      <ContentImage
+        imagen={evento.imagen}
+        etiqueta="Foto del evento"
+        className={styles.shot}
+        height={96}
+        sizes="120px"
+      />
+
+      <p className={styles.date}>
+        <span className={styles.day}>{formatDia(evento.comienza)}</span>
+        <span className={styles.month}>{formatMes(evento.comienza)}</span>
+      </p>
+
+      <div>
+        <Titulo className={styles.name}>{evento.titulo}</Titulo>
+        <p className={styles.meta}>{meta.join(" · ")}</p>
+      </div>
+
+      {pasado ? null : (
+        <button type="button" className={styles.book}>
+          Reservar · {formatPrice(Math.round(evento.precioCentavos / 100))}
+          <span className="srOnly"> {evento.titulo}</span>
+        </button>
+      )}
+    </li>
   );
 }
