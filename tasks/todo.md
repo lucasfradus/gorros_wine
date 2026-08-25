@@ -7,6 +7,6 @@
 > los del training data) y `tasks/lessons.md`.
 
 _Sin plan activo. La última iteración —el CMS de contenido— quedó archivada en
-[docs/planes/2026-08-25-cms-contenido.md](../docs/planes/2026-08-25-cms-contenido.md).
-Queda pendiente de su cierre: cargar las variables `S3_*` en el servicio de
-producción y mergear el PR._
+[docs/planes/2026-08-25-cms-contenido.md](../docs/planes/2026-08-25-cms-contenido.md)
+y su PR ya está mergeado (`4e64455`). Queda pendiente de su cierre una sola
+cosa: cargar las variables `S3_*` en el servicio de producción._
