@@ -1,34 +1,33 @@
-import Image from "next/image";
 import Link from "next/link";
+import { getContent } from "@/lib/content/get";
+import { ContentImage } from "./content-image";
+import { Lineas } from "./rich-text";
 import styles from "./hero.module.css";
 
-export function Hero() {
+export async function Hero() {
+  const c = await getContent("home");
+
   return (
     <section className={styles.hero}>
-      <div className={styles.shot}>
-        <Image
-          src="/hero-home.webp"
-          alt="La cava de Gorros Wine"
-          fill
-          priority
-          sizes="(max-width: 1180px) 100vw, 1180px"
-          className={styles.img}
-        />
-      </div>
+      <ContentImage
+        imagen={c.heroImagen}
+        etiqueta="Foto principal de la portada"
+        className={styles.shot}
+        priority
+      />
 
       <div className={styles.copy}>
-        <p className={`eyebrow ${styles.eyebrow}`}>
-          Vinoteca · Pilar, Buenos Aires
-        </p>
+        <p className={`eyebrow ${styles.eyebrow}`}>{c.heroEyebrow}</p>
 
         <h1 className={styles.title}>
-          No solo vendemos vinos,
-          <br />
-          <em className={styles.titleAccent}>creamos experiencias.</em>
+          <Lineas
+            texto={c.heroTitulo}
+            clases={{ acento: styles.titleAccent }}
+          />
         </h1>
 
         <Link href="/catalogo" className={`btn btnOutline ${styles.cta}`}>
-          Ver catálogo
+          {c.heroCta}
         </Link>
       </div>
     </section>

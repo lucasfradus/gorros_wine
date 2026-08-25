@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { formatPrice, shop } from "@/lib/data";
+import { formatPrice } from "@/lib/data";
 import { MAX_QTY, useCart } from "./cart-context";
 import styles from "./cart-view.module.css";
 
@@ -16,7 +16,8 @@ function orderMessage(
   return `Hola! Quiero hacer este pedido:\n\n${items}\n\nSubtotal: ${formatPrice(subtotal)}`;
 }
 
-export function CartView() {
+/** El número llega por props: acá no se puede leer la base. */
+export function CartView({ whatsapp }: { whatsapp: string }) {
   const { lines, count, subtotal, ready, setQty, remove, clear } = useCart();
 
   // Hasta leer localStorage no se sabe si está vacío: mostrar "vacío" acá
@@ -44,7 +45,7 @@ export function CartView() {
     );
   }
 
-  const waHref = `https://wa.me/${shop.whatsapp}?text=${encodeURIComponent(
+  const waHref = `https://wa.me/${whatsapp}?text=${encodeURIComponent(
     orderMessage(lines, subtotal),
   )}`;
 

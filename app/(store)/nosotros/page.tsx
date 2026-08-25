@@ -1,59 +1,46 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { values } from "@/lib/data";
-import { PhotoSlot } from "@/components/photo-slot";
+import { getContent } from "@/lib/content/get";
+import { ContentImage } from "@/components/content-image";
+import { Lineas, Parrafos } from "@/components/rich-text";
 import styles from "./nosotros.module.css";
 
-export const metadata: Metadata = {
-  title: "Nosotros",
-  description:
-    "Gorros Wine nació de la pasión de Gonzalo y Agustina por el mundo del vino. Vinoteca en Pilar, Buenos Aires.",
-};
+export async function generateMetadata(): Promise<Metadata> {
+  const c = await getContent("nosotros");
+  return { title: c.seoTitulo, description: c.seoDescripcion };
+}
 
-export default function AboutPage() {
+export default async function AboutPage() {
+  const c = await getContent("nosotros");
+
   return (
     <>
       <section className={styles.intro}>
         <div className={styles.copy}>
-          <p className={`eyebrow ${styles.eyebrow}`}>Nosotros</p>
+          <p className={`eyebrow ${styles.eyebrow}`}>{c.eyebrow}</p>
 
           <h1 className={styles.title}>
-            El vino se vive,
-            <br />
-            se comparte
-            <br />y se <em className={styles.accent}>disfruta.</em>
+            <Lineas texto={c.titulo} clases={{ acento: styles.accent }} />
           </h1>
 
-          <p className={styles.para}>
-            Gorros Wine nació de la pasión de{" "}
-            <b className={styles.strong}>Gonzalo y Agustina</b> por el mundo del
-            vino, y del deseo de crear un espacio donde cada cliente encuentre
-            mucho más que una botella.
-          </p>
-
-          <p className={styles.para}>
-            Con una cuidada selección de etiquetas de las principales bodegas
-            argentinas e internacionales, buscamos acercar vinos que inspiren
-            encuentros, celebraciones y momentos inolvidables.
-          </p>
-
-          <p className={styles.para}>
-            Creemos en el asesoramiento personalizado, en descubrir las
-            historias detrás de cada etiqueta y en compartir la cultura del vino
-            a través de degustaciones, experiencias exclusivas y nuestra feria{" "}
-            <b className={styles.strongGold}>Caminos del Vino</b>.
-          </p>
+          <Parrafos
+            texto={c.cuerpo}
+            className={styles.para}
+            clases={{ acento: styles.strongGold, destacado: styles.strong }}
+          />
         </div>
 
-        <PhotoSlot
-          label="Foto del local / Gonzalo y Agustina"
+        <ContentImage
+          imagen={c.imagen}
+          etiqueta="Foto del local / Gonzalo y Agustina"
           className={styles.shot}
+          sizes="(max-width: 900px) 100vw, 560px"
         />
       </section>
 
       <ul className={styles.values}>
-        {values.map((v) => (
-          <li key={v.title} className={styles.value}>
+        {c.valores.map((v, i) => (
+          <li key={i} className={styles.value}>
             <h2 className={styles.valueTitle}>{v.title}</h2>
             <p className={styles.valueBody}>{v.body}</p>
           </li>
@@ -61,16 +48,13 @@ export default function AboutPage() {
       </ul>
 
       <section className={styles.closing}>
-        <p className={`eyebrow ${styles.closingEyebrow}`}>
-          Bienvenidos a Gorros Wine
-        </p>
+        <p className={`eyebrow ${styles.closingEyebrow}`}>{c.cierreEyebrow}</p>
         <p className={styles.closingTitle}>
-          No solo vendemos vinos,{" "}
-          <em className={styles.accent}>creamos experiencias.</em>
+          <Lineas texto={c.cierreTitulo} clases={{ acento: styles.accent }} />
         </p>
-        <p className={styles.closingSub}>Viví tu experiencia Gorros Wine</p>
+        <p className={styles.closingSub}>{c.cierreSub}</p>
         <Link href="/catalogo" className="btn btnGold">
-          Explorar el catálogo
+          {c.cierreCta}
         </Link>
       </section>
     </>

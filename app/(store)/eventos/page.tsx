@@ -1,31 +1,44 @@
 import type { Metadata } from "next";
 import { events } from "@/lib/data";
-import { PhotoSlot } from "@/components/photo-slot";
+import { getContent } from "@/lib/content/get";
+import { ContentImage } from "@/components/content-image";
+import { Lineas } from "@/components/rich-text";
 import styles from "./eventos.module.css";
 
-export const metadata: Metadata = {
-  title: "Eventos",
-  description:
-    "Catas y encuentros en Gorros Wine, Pilar. Cupos limitados: reservás online y pagás en el local.",
-};
+export async function generateMetadata(): Promise<Metadata> {
+  const c = await getContent("eventos");
+  return { title: c.seoTitulo, description: c.seoDescripcion };
+}
 
-export default function EventsPage() {
+export default async function EventsPage() {
+  const [c, local] = await Promise.all([
+    getContent("eventos"),
+    getContent("local"),
+  ]);
+
   return (
     <div className={styles.page}>
       <header className={styles.head}>
-        <p className={`eyebrow ${styles.eyebrow}`}>Eventos</p>
-        <h1 className={styles.title}>Catas y encuentros</h1>
-        <p className={styles.lede}>
-          Vení a probar, aprender y compartir. Cupos limitados — reservás online
-          y pagás en el local.
-        </p>
+        <p className={`eyebrow ${styles.eyebrow}`}>{c.eyebrow}</p>
+        <h1 className={styles.title}>
+          <Lineas texto={c.titulo} />
+        </h1>
+        <p className={styles.lede}>{c.lede}</p>
       </header>
 
       <div className={styles.gallery}>
-        <PhotoSlot label="Foto de un evento pasado" height={300} />
-        <PhotoSlot label="Foto de un evento pasado" height={300} />
+        {c.galeria.map((g, i) => (
+          <ContentImage
+            key={i}
+            imagen={g.imagen}
+            etiqueta="Foto de un evento pasado"
+            height={300}
+            sizes="(max-width: 900px) 100vw, 560px"
+          />
+        ))}
       </div>
 
+      {/* Los eventos siguen escritos a mano: el ABM es otra iteración. */}
       <ul className={styles.list}>
         {events.map((e) => (
           <li key={e.title} className={styles.event}>
@@ -46,28 +59,25 @@ export default function EventsPage() {
       </ul>
 
       <section className={styles.fair} aria-labelledby="caminos">
-        <p className={`eyebrow ${styles.fairEyebrow}`}>Caminos del Vino</p>
+        <p className={`eyebrow ${styles.fairEyebrow}`}>{c.feriaEyebrow}</p>
         <h2 id="caminos" className={styles.fairTitle}>
-          Nuestra feria del vino
+          <Lineas texto={c.feriaTitulo} />
         </h2>
-        <p className={styles.fairBody}>
-          Un encuentro con bodegas invitadas, degustaciones abiertas y las
-          historias detrás de cada etiqueta.
-        </p>
+        <p className={styles.fairBody}>{c.feriaBody}</p>
         <button type="button" className="btn btnOutline">
-          Más información
+          {c.feriaCta}
         </button>
       </section>
 
       <section className={styles.private}>
         <div>
-          <h2 className={styles.privateTitle}>¿Armamos una cata privada?</h2>
-          <p className={styles.privateBody}>
-            Cumpleaños, empresas o con amigos. La organizamos a tu medida.
-          </p>
+          <h2 className={styles.privateTitle}>
+            <Lineas texto={c.privadaTitulo} />
+          </h2>
+          <p className={styles.privateBody}>{c.privadaBody}</p>
         </div>
-        <a href="mailto:hola@gorroswine.com" className="btn btnGold">
-          Escribinos
+        <a href={`mailto:${local.email}`} className="btn btnGold">
+          {c.privadaCta}
         </a>
       </section>
     </div>

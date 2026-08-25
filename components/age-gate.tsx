@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { Isotipo } from "./isotipo";
+import { Lineas } from "./rich-text";
 import styles from "./age-gate.module.css";
 
 export const AGE_KEY = "gw-age-ok";
@@ -13,7 +14,20 @@ export const AGE_KEY = "gw-age-ok";
  */
 export const ageGateScript = `try{if(localStorage.getItem(${JSON.stringify(AGE_KEY)})==="1")document.documentElement.setAttribute("data-age-ok","1")}catch(e){}`;
 
-export function AgeGate() {
+export interface AgeGateCopy {
+  eyebrow: string;
+  titulo: string;
+  body: string;
+  cta: string;
+  pie: string;
+}
+
+/**
+ * El copy llega por props y no de `getContent()`: esto es un componente de
+ * cliente —necesita `localStorage` y estado— y desde el navegador no se puede
+ * leer la base. Lo trae el layout de la tienda, que sí corre en el servidor.
+ */
+export function AgeGate({ copy }: { copy: AgeGateCopy }) {
   const [confirmed, setConfirmed] = useState(false);
 
   function confirm() {
@@ -44,17 +58,13 @@ export function AgeGate() {
           <Isotipo size={72} className={styles.logoMark} />
           <span>GORROS WINE</span>
         </p>
-        <p className={styles.eyebrow}>Verificación de edad</p>
+        <p className={styles.eyebrow}>{copy.eyebrow}</p>
 
         <h1 id="age-title" className={styles.title}>
-          La venta de bebidas alcohólicas está prohibida para menores de 18
-          años.
+          <Lineas texto={copy.titulo} />
         </h1>
 
-        <p className={styles.body}>
-          Para ingresar al sitio, confirmá que tenés la edad legal para consumir
-          alcohol en Argentina.
-        </p>
+        <p className={styles.body}>{copy.body}</p>
 
         <button
           type="button"
@@ -62,10 +72,10 @@ export function AgeGate() {
           onClick={confirm}
           autoFocus
         >
-          Soy mayor de 18 años
+          {copy.cta}
         </button>
 
-        <p className={styles.moderation}>Beber con moderación</p>
+        <p className={styles.moderation}>{copy.pie}</p>
       </div>
     </div>
   );

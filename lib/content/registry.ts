@@ -671,6 +671,149 @@ export const REGISTRO = {
       },
     },
   },
+
+  legalesPrivacidad: {
+    label: "Política de privacidad",
+    help: "La página /privacidad. Ojo: es un texto legal — conviene que lo revise un asesor antes de publicarlo.",
+    revalidate: ["/privacidad"],
+    campos: {
+      titulo: {
+        tipo: "texto",
+        label: "Título",
+        original: "Política de privacidad",
+      },
+      actualizado: {
+        tipo: "texto",
+        label: "Última actualización",
+        help: "Se muestra como \"Última actualización: …\". Actualizala cada vez que cambies el texto.",
+        original: "julio de 2026",
+      },
+      aviso: {
+        tipo: "parrafo",
+        label: "Aviso de borrador",
+        help: "El recuadro de arriba. Dejalo vacío para que no se muestre — es lo que hay que hacer cuando el texto ya esté revisado.",
+        original:
+          "**Borrador.** Este texto es una base genérica y todavía no fue revisado por un asesor legal. Antes de publicar el sitio hay que validarlo y completar los datos de la razón social.",
+      },
+      cuerpo: {
+        tipo: "rico",
+        label: "Texto",
+        help: "`## ` para un subtítulo, `- ` para una viñeta, `**negrita**`, `[texto](destino)` para un enlace. Entre llaves se completan solos los datos del local: {direccion}, {horarios}, {email}, {instagram}, {whatsapp}.",
+        original: `## Qué datos guardamos
+
+- **Para tu pedido:** nombre, teléfono, dirección de entrega y correo electrónico.
+- **Si te suscribís al newsletter:** tu correo electrónico.
+- **En tu navegador:** el carrito y la confirmación de edad se guardan sólo en tu dispositivo, no en nuestros servidores.
+
+## Para qué los usamos
+
+Para preparar y entregar tus pedidos, responder tus consultas y —si nos diste el consentimiento— enviarte novedades. No usamos tus datos para otra cosa.
+
+## Con quién los compartimos
+
+Sólo con quienes necesitamos para cumplir el pedido: el servicio de entrega y el medio de pago. No vendemos ni cedemos tus datos a terceros con fines publicitarios.
+
+## Cuánto tiempo los conservamos
+
+Los datos de compra se conservan mientras sean necesarios para cumplir obligaciones contables e impositivas. Los del newsletter, hasta que te des de baja.
+
+## Tus derechos
+
+Podés pedir acceder, rectificar o suprimir tus datos escribiendo a [{email}](mailto:{email}). La Agencia de Acceso a la Información Pública, órgano de control de la Ley 25.326, atiende las denuncias por incumplimiento.
+
+El titular de los datos puede solicitar el retiro o bloqueo de su nombre de nuestras bases de datos conforme al artículo 27, inciso 3 de la Ley 25.326.
+
+## Cookies
+
+Hoy el sitio no usa cookies de terceros ni de analítica. Si eso cambia, actualizamos esta página y te lo avisamos.`,
+      },
+      seoTitulo: {
+        tipo: "texto",
+        label: "SEO · título",
+        original: "Política de privacidad",
+      },
+      seoDescripcion: {
+        tipo: "parrafo",
+        label: "SEO · descripción",
+        original:
+          "Cómo tratamos tus datos personales en Gorros Wine, Pilar, Buenos Aires.",
+      },
+    },
+  },
+
+  legalesTerminos: {
+    label: "Términos y condiciones",
+    help: "La página /terminos. Ojo: es un texto legal — conviene que lo revise un asesor antes de publicarlo.",
+    revalidate: ["/terminos"],
+    campos: {
+      titulo: {
+        tipo: "texto",
+        label: "Título",
+        original: "Términos y condiciones",
+      },
+      actualizado: {
+        tipo: "texto",
+        label: "Última actualización",
+        original: "julio de 2026",
+      },
+      aviso: {
+        tipo: "parrafo",
+        label: "Aviso de borrador",
+        help: "Dejalo vacío para que no se muestre.",
+        original:
+          "**Borrador.** Este texto es una base genérica y todavía no fue revisado por un asesor legal. Antes de publicar el sitio hay que validarlo y completar los datos de la razón social.",
+      },
+      cuerpo: {
+        tipo: "rico",
+        label: "Texto",
+        help: "`## ` para un subtítulo, `- ` para una viñeta, `**negrita**`, `[texto](destino)` para un enlace. Entre llaves se completan solos los datos del local: {direccion}, {horarios}, {email}, {instagram}, {whatsapp}.",
+        original: `## 1. Edad mínima
+
+La venta de bebidas alcohólicas está prohibida a menores de 18 años. Al usar este sitio declarás tener la edad legal para consumir alcohol en la República Argentina. Podemos pedir documento al entregar o al retirar el pedido, y rechazar la entrega si no se acredita la edad.
+
+## 2. Productos y precios
+
+Los precios están expresados en pesos argentinos e incluyen impuestos. Pueden cambiar sin aviso previo. Las fotos y descripciones son ilustrativas: la cosecha efectivamente entregada puede diferir de la publicada según disponibilidad.
+
+La disponibilidad está sujeta a stock. Si una etiqueta no estuviera disponible después de confirmado el pedido, te avisamos para reemplazarla o devolverte el importe.
+
+## 3. Pedidos, envíos y retiro
+
+- **Envío:** hacemos entregas en Pilar y zona. El día y la franja horaria se coordinan al confirmar el pedido.
+- **Retiro en el local:** reservás online y retirás en {direccion}, {horarios}.
+- La entrega se realiza a una persona mayor de 18 años que pueda acreditar su edad.
+
+## 4. Cambios y devoluciones
+
+Si el producto llega en mal estado o no corresponde con lo pedido, escribinos dentro de los 3 días de recibido y lo reponemos o te devolvemos el importe. Por tratarse de productos alimenticios, no se aceptan devoluciones de botellas abiertas, salvo defecto del producto.
+
+Nada de esto limita los derechos que te otorga la Ley 24.240 de Defensa del Consumidor, incluido el derecho de revocación dentro de los 10 días corridos en las compras a distancia.
+
+## 5. Club Gorros
+
+La membresía no tiene permanencia mínima: podés darla de baja cuando quieras avisándonos antes del cierre del mes en curso. La selección mensual la definimos nosotros y puede variar según disponibilidad.
+
+## 6. Eventos
+
+Los cupos son limitados y la reserva se confirma con el pago. Si no podés asistir, avisanos con al menos 48 horas para reprogramar.
+
+## 7. Contacto
+
+Por cualquier consulta escribinos a [{email}](mailto:{email}) o por Instagram a [@{instagram}](https://instagram.com/{instagram}).`,
+      },
+      seoTitulo: {
+        tipo: "texto",
+        label: "SEO · título",
+        original: "Términos y condiciones",
+      },
+      seoDescripcion: {
+        tipo: "parrafo",
+        label: "SEO · descripción",
+        original:
+          "Términos y condiciones de uso y compra en Gorros Wine, Pilar, Buenos Aires.",
+      },
+    },
+  },
 } satisfies Record<string, Grupo>;
 
 export type Registro = typeof REGISTRO;

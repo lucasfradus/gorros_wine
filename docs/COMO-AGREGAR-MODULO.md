@@ -6,6 +6,10 @@ Catálogo, Eventos o Pedidos), respetando las convenciones que ya usa Usuarios.
 Antes de arrancar: leer `AGENTS.md`, y si es una iteración grande, abrir worktree
 (`./scripts/worktree.ps1 nuevo <slug>`) y escribir el plan en `docs/planes/`.
 
+> **¿Es sólo un texto o una foto del sitio?** Entonces no hace falta nada de
+> esto: se agrega un campo al registro del CMS. Ver
+> [Sumar un campo al CMS](#sumar-un-campo-al-cms), al final.
+
 ## 1. Schema
 
 En `lib/db/schema.ts`, con el mismo estilo que `users`: comentarios explicando
@@ -47,13 +51,13 @@ En `lib/auth/permissions.ts`, como función pura. No dispersar comparaciones de 
 por la UI: si mañana cambia la regla, tiene que cambiar en un solo lugar.
 
 ```ts
-/** El catálogo lo edita cualquiera del panel; los precios sólo owner/admin. */
+/** El catálogo lo edita cualquiera del panel; los precios sólo un admin. */
 export function canEditCatalog(actor: PublicUser): boolean {
   return true;
 }
 
 export function canEditPrices(actor: PublicUser): boolean {
-  return actor.role === "owner" || actor.role === "admin";
+  return actor.role === "admin";
 }
 ```
 
@@ -169,10 +173,45 @@ permiso si la sección no es para todos.
 Un `productos.module.css` al lado del componente, con los tokens de
 `app/globals.css`. Nada de colores hardcodeados.
 
+## Sumar un campo al CMS
+
+El caso más frecuente no es una sección nueva sino **un texto o una foto más** en
+una pantalla que ya existe. Para eso no se toca ninguna pantalla del panel: se
+agrega el campo a `lib/content/registry.ts` y el formulario aparece solo.
+
+```ts
+// en el grupo que corresponda, dentro de `campos`
+heroPie: {
+  tipo: "texto",              // texto | parrafo | rico | imagen | lista
+  label: "Hero · pie",        // lo que se lee en el panel
+  help: "La línea chica debajo del botón.",
+  original: "Envíos en el día en Pilar",   // lo que dice hoy
+},
+```
+
+Después, leerlo donde se use:
+
+```tsx
+const c = await getContent("home");
+// ...
+<p className={styles.pie}>{c.heroPie}</p>
+```
+
+Tres cosas que conviene tener presentes:
+
+- **`original` es el texto que ya está en el código**, copiado tal cual. No es un
+  ejemplo ni un placeholder: es lo que va a mostrar el sitio mientras nadie lo
+  edite, y lo que devuelve "Restaurar el original".
+- **El grupo declara qué invalidar** (`revalidate`, y `afectaTodo: true` si el
+  campo se ve en el marco del sitio). Si eso queda mal, se edita y no se ve.
+- **Renombrar un campo deja filas viejas en `content`.** No rompe nada —
+  `get.ts` cae al original cuando el valor guardado no valida— pero la edición
+  se pierde. Si el texto importa, migrar la fila a mano.
+
 ## 7. Verificar
 
 - [ ] `npx tsc --noEmit`
 - [ ] `npm run build`
-- [ ] Probado con **los tres roles**: `owner`, `admin`, `editor`. Que el editor
-      no pueda hacer lo que no debe — y no sólo que no vea el botón.
+- [ ] Probado con **los dos roles**: `admin` y `editor`. Que el editor no pueda
+      hacer lo que no debe — y no sólo que no vea el botón.
 - [ ] Actualizar `docs/ARQUITECTURA.md` si cambió el mapa general.

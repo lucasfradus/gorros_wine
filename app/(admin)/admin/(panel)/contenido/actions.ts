@@ -213,7 +213,7 @@ export async function uploadMediaAction(
 /**
  * Las imágenes y las listas viajan como JSON en un input oculto, porque un
  * `<input>` sólo sabe de strings y estas dos son estructuras. El resto llega
- * como texto y se usa tal cual.
+ * como texto.
  */
 function leerDelForm(campo: Campo, bruto: FormDataEntryValue | null): unknown {
   if (campo.tipo === "imagen" || campo.tipo === "lista") {
@@ -221,14 +221,39 @@ function leerDelForm(campo: Campo, bruto: FormDataEntryValue | null): unknown {
       return campo.tipo === "imagen" ? null : [];
     }
     try {
-      return JSON.parse(bruto);
+      return normalizarSaltos(JSON.parse(bruto));
     } catch {
       // `undefined` no valida contra ningún esquema: cae como error del campo.
       return undefined;
     }
   }
 
-  return typeof bruto === "string" ? bruto : "";
+  return typeof bruto === "string" ? normalizarSaltos(bruto) : "";
+}
+
+/**
+ * Deja los saltos de línea en `\n`.
+ *
+ * No es cosmético. Al enviar un formulario, el navegador convierte los saltos
+ * de un `<textarea>` a CRLF —lo pide el estándar—, mientras que los originales
+ * del registro están escritos con `\n`. Sin esto, **todo campo multilínea se
+ * guardaba siempre**, aunque nadie lo hubiera tocado: nunca era igual a su
+ * original. Y "restaurar el original" no borraba nada, porque lo restaurado
+ * volvía a salir con CRLF.
+ */
+function normalizarSaltos<T>(valor: T): T {
+  if (typeof valor === "string") {
+    return valor.replace(/\r\n/g, "\n") as T;
+  }
+  if (Array.isArray(valor)) {
+    return valor.map(normalizarSaltos) as T;
+  }
+  if (valor && typeof valor === "object") {
+    return Object.fromEntries(
+      Object.entries(valor).map(([k, v]) => [k, normalizarSaltos(v)]),
+    ) as T;
+  }
+  return valor;
 }
 
 // ---------- validación armada desde el registro ----------

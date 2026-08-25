@@ -41,7 +41,11 @@
   color: var(--heading);
 }
 
+/* Va sobre un <em>, que es lo que emite `*acento*` del contenido editable.
+   Acá el acento no es bastardilla sino color: en un párrafo largo la itálica
+   se lee como una cita y no como el nombre propio que es. */
 .strongGold {
+  font-style: normal;
   font-weight: 400;
   color: var(--gold);
 }

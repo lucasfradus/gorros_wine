@@ -1,14 +1,5 @@
-/**
- * Datos del local. El número de WhatsApp es de ejemplo — reemplazar por el
- * real antes de publicar (formato internacional, sin + ni espacios).
- */
-export const shop = {
-  whatsapp: "5491100000000",
-  email: "hola@gorroswine.com",
-  instagram: "gorroswine",
-  address: "Pilar, Buenos Aires",
-  hours: "Lun a Sáb · 10 a 21 hs",
-};
+// Los datos del local (WhatsApp, mail, dirección, horarios) se editan desde el
+// panel: viven en `lib/content/registry.ts`, grupo `local`.
 
 export type WineType = "Tinto" | "Blanco" | "Espumante" | "Rosado";
 
@@ -208,89 +199,8 @@ export const navLinks = [
   { label: "Nosotros", href: "/nosotros" },
 ];
 
-// ---------- contenido de la home v2 ----------
-
-export interface Benefit {
-  label: string;
-  body: string;
-}
-
-export const benefits: Benefit[] = [
-  { label: "Envíos", body: "Pilar y zona · coordinás día y horario" },
-  { label: "Retiro en el local", body: "Reservás online, pagás al retirar" },
-  { label: "Club Gorros", body: "3 etiquetas curadas por mes" },
-];
-
-export interface Review {
-  quote: string;
-  name: string;
-  tag: string;
-}
-
-export const reviews: Review[] = [
-  {
-    quote:
-      "Me asesoraron por WhatsApp y clavé el vino perfecto para un regalo. Llegó a Pilar en el día.",
-    name: "Sofía R.",
-    tag: "Compra online",
-  },
-  {
-    quote:
-      "El club es un lujo: todos los meses descubro algo nuevo y siempre le pegan a mi gusto.",
-    name: "Martín A.",
-    tag: "Socio del Club",
-  },
-  {
-    quote:
-      "Fui a una cata y volví con tres botellas. Gente que sabe y que te lo explica sin poses.",
-    name: "Lucía M.",
-    tag: "Evento",
-  },
-];
-
-export interface Step {
-  n: string;
-  title: string;
-  body: string;
-}
-
-export const steps: Step[] = [
-  {
-    n: "01",
-    title: "Elegís",
-    body: "Navegás el catálogo y sumás tus etiquetas al carrito.",
-  },
-  {
-    n: "02",
-    title: "Envío o retiro",
-    body: "Recibís en Pilar y zona, o reservás y retirás en el local.",
-  },
-  {
-    n: "03",
-    title: "Pagás",
-    body: "Online o al retirar. Tarjeta, transferencia o efectivo.",
-  },
-];
-
-export interface Value {
-  title: string;
-  body: string;
-}
-
-export const values: Value[] = [
-  {
-    title: "Asesoramiento",
-    body: "Te acompañamos a encontrar el vino justo para cada ocasión, sin poses.",
-  },
-  {
-    title: "Selección curada",
-    body: "Etiquetas de las principales bodegas argentinas e internacionales.",
-  },
-  {
-    title: "Experiencias",
-    body: "Degustaciones, encuentros exclusivos y nuestra feria Caminos del Vino.",
-  },
-];
+// El copy de la home, Nosotros y el Club se edita desde el panel: vive en
+// `lib/content/registry.ts`, con el texto original al lado de cada campo.
 
 // ---------- eventos ----------
 

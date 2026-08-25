@@ -1,9 +1,16 @@
 import Link from "next/link";
+import { getContent } from "@/lib/content/get";
 import { Isotipo } from "./isotipo";
 import { NewsletterForm } from "./newsletter-form";
+import { Lineas } from "./rich-text";
 import styles from "./footer.module.css";
 
-export function Footer() {
+export async function Footer() {
+  const [c, local] = await Promise.all([
+    getContent("footer"),
+    getContent("local"),
+  ]);
+
   return (
     <footer className={styles.footer}>
       <div className={styles.cols}>
@@ -12,14 +19,11 @@ export function Footer() {
             <Isotipo size={30} className={styles.logoMark} />
             <span>GORROS WINE</span>
           </p>
-          <p className={styles.blurb}>
-            Vinoteca en Pilar, Buenos Aires. Etiquetas de las principales
-            bodegas argentinas e internacionales.
-          </p>
+          <p className={styles.blurb}>{c.blurb}</p>
         </div>
 
         <div>
-          <h2 className={styles.colTitle}>Tienda</h2>
+          <h2 className={styles.colTitle}>{c.tiendaTitulo}</h2>
           <ul className={styles.list}>
             <li>
               <Link href="/catalogo" className={styles.link}>
@@ -40,34 +44,33 @@ export function Footer() {
         </div>
 
         <div>
-          <h2 className={styles.colTitle}>Contacto</h2>
+          <h2 className={styles.colTitle}>{c.contactoTitulo}</h2>
           <ul className={styles.list}>
-            <li>Pilar, Buenos Aires</li>
-            <li>Lun a Sáb · 10 a 21 hs</li>
+            <li>{local.direccion}</li>
+            <li>{local.horarios}</li>
             <li>
               <a
-                href="https://instagram.com/gorroswine"
+                href={`https://instagram.com/${local.instagram}`}
                 className={styles.link}
                 target="_blank"
                 rel="noopener noreferrer"
               >
-                @gorroswine
+                {`@${local.instagram}`}
               </a>
             </li>
           </ul>
         </div>
 
         <div>
-          <h2 className={styles.colTitle}>Newsletter</h2>
-          <p className={styles.blurbSmall}>Novedades y ofertas.</p>
+          <h2 className={styles.colTitle}>{c.newsletterTitulo}</h2>
+          <p className={styles.blurbSmall}>{c.newsletterBlurb}</p>
           <NewsletterForm />
         </div>
       </div>
 
       <div className={styles.legal}>
         <p>
-          © 2026 Gorros Wine · Beber con moderación. Prohibida su venta a
-          menores de 18 años.
+          <Lineas texto={c.legal} />
         </p>
         <p className={styles.legalLinks}>
           <Link href="/terminos" className={styles.link}>
