@@ -2,6 +2,7 @@ import {
   boolean,
   index,
   integer,
+  jsonb,
   pgEnum,
   pgTable,
   text,
@@ -89,3 +90,72 @@ export type Session = typeof sessions.$inferSelect;
 
 /** El usuario tal como viaja a la interfaz: sin el hash de la contraseña. */
 export type PublicUser = Omit<User, "passwordHash">;
+
+/**
+ * Contenido editable del sitio: sólo lo que alguien **cambió**.
+ *
+ * El texto original de cada campo vive en `lib/content/registry.ts`, en código.
+ * Acá abajo no hay una fila por campo del sitio, hay una fila por campo tocado:
+ * si nadie editó el título del hero, no existe `home.heroTitle` y la página
+ * muestra el del registro. Tres consecuencias que valen la tabla:
+ *
+ * - Con la base vacía el sitio se ve exactamente como se ve hoy, y un deploy
+ *   nuevo no arranca en blanco.
+ * - "Restaurar el original" es borrar la fila, no recordar qué decía antes.
+ * - El copy sigue versionado en git, que es donde se revisa por qué cambió.
+ *
+ * `value` es jsonb y no text porque el mismo campo guarda tres formas según su
+ * tipo en el registro: un string, la lista de ítems, o la referencia a una
+ * imagen. Postgres valida que sea JSON; que además tenga la forma que el
+ * registro declara lo valida `lib/content/get.ts` al leer.
+ */
+export const content = pgTable("content", {
+  /** `<grupo>.<campo>`, como `home.heroTitle`. Lo arma el registro. */
+  key: text("key").primaryKey(),
+  value: jsonb("value").notNull(),
+  updatedAt: timestamp("updated_at", { withTimezone: true })
+    .notNull()
+    .defaultNow(),
+  /** Quién lo tocó. `set null` y no cascade: que se borre la cuenta no puede
+   *  hacer desaparecer el texto que está publicado en el sitio. */
+  updatedBy: uuid("updated_by").references(() => users.id, {
+    onDelete: "set null",
+  }),
+});
+
+/**
+ * Inventario de las imágenes subidas desde el panel. Los bytes viven en el
+ * bucket S3; acá queda con qué servirlas y de dónde salieron.
+ *
+ * `key` es `img/<sha256 recortado>.<ext>`: **la clave es el contenido**. De ahí
+ * salen dos cosas gratis. Una, subir dos veces la misma foto no duplica nada,
+ * porque cae en la misma clave. La otra, y la que importa: si el contenido
+ * cambia la URL cambia, así que `/media/...` puede servirse con un año de
+ * caché inmutable sin riesgo de mostrar una foto vieja.
+ */
+export const media = pgTable("media", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  key: text("key").notNull().unique(),
+  mime: text("mime").notNull(),
+  bytes: integer("bytes").notNull(),
+
+  /** Leídos de la cabecera del archivo al subirlo. Nulos si el formato no se
+   *  supo medir: `next/image` puede maquetar igual con `fill`. */
+  width: integer("width"),
+  height: integer("height"),
+
+  /** El nombre con el que llegó, sólo para reconocerla en una lista. */
+  originalName: text("original_name"),
+
+  createdAt: timestamp("created_at", { withTimezone: true })
+    .notNull()
+    .defaultNow(),
+  createdBy: uuid("created_by").references(() => users.id, {
+    onDelete: "set null",
+  }),
+});
+
+export type Content = typeof content.$inferSelect;
+export type NewContent = typeof content.$inferInsert;
+export type Media = typeof media.$inferSelect;
+export type NewMedia = typeof media.$inferInsert;

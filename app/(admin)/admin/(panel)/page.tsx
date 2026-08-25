@@ -3,6 +3,7 @@ import { count, eq } from "drizzle-orm";
 import { db } from "@/lib/db";
 import { users } from "@/lib/db/schema";
 import { canManageUsers, requireUser } from "@/lib/auth";
+import { getEditados } from "@/lib/content/get";
 import { wines } from "@/lib/data";
 import styles from "../admin.module.css";
 
@@ -18,6 +19,9 @@ export default async function DashboardPage() {
         .from(users)
         .where(eq(users.isActive, true))
     : [{ n: 0 }];
+
+  const porGrupo = await getEditados();
+  const editados = Object.values(porGrupo).reduce((n, c) => n + c.length, 0);
 
   return (
     <>
@@ -49,6 +53,29 @@ export default async function DashboardPage() {
             </div>
           </section>
         ) : null}
+
+        <section className={styles.card}>
+          <h2 className={styles.label}>Contenido del sitio</h2>
+          <p style={{ margin: "10px 0 0", fontSize: 15 }}>
+            {editados === 0
+              ? "Todo como vino con el diseño."
+              : editados === 1
+                ? "1 campo editado."
+                : `${editados} campos editados.`}
+          </p>
+          <p className={styles.hint} style={{ marginTop: 8 }}>
+            Los textos y las fotos de la home, Nosotros, Club, Eventos y el pie
+            de página.
+          </p>
+          <div className={styles.btnRow} style={{ marginTop: 16 }}>
+            <Link
+              href="/admin/contenido"
+              className={`${styles.btn} ${styles.btnSmall}`}
+            >
+              Editar contenido
+            </Link>
+          </div>
+        </section>
 
         {/* Nada de métricas inventadas: el catálogo todavía no vive en la
             base, y decir lo contrario acá sería mentirle a quien lo usa. */}

@@ -20,11 +20,12 @@ export function NavLinks({ showUsers }: { showUsers: boolean }) {
 
   const items: Item[] = [
     { href: "/admin", label: "Inicio" },
+    { href: "/admin/contenido", label: "Contenido", section: "Sitio" },
     { href: "/admin/cuenta", label: "Mi cuenta", section: "Cuenta" },
   ];
 
   if (showUsers) {
-    items.splice(1, 0, {
+    items.splice(2, 0, {
       href: "/admin/usuarios",
       label: "Usuarios",
       section: "Sistema",

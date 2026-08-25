@@ -10,6 +10,14 @@ const nextConfig = {
   devIndicators: {
     position: "bottom-right",
   },
+
+  experimental: {
+    // Las imágenes del CMS se suben por una Server Action, y el límite de
+    // cuerpo que trae Next por defecto es 1 MB: no entra una foto de celular.
+    // El tope real de la subida lo pone `uploadMediaAction` (4 MB); acá se deja
+    // un poco de aire para el resto del formulario.
+    serverActions: { bodySizeLimit: "6mb" },
+  },
 };
 
 export default nextConfig;
