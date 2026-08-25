@@ -43,3 +43,19 @@ export function canManageUsers(actor: PublicUser): boolean {
 export function canEditContent(_actor: PublicUser): boolean {
   return true;
 }
+
+/**
+ * ¿Puede cargar y publicar eventos?
+ *
+ * Los dos roles, y no es una concesión: el `ROLE_DESCRIPTION` de arriba ya le
+ * promete al editor "catálogo, precios y eventos". Si esto devolviera sólo
+ * `admin`, lo que estaría mal sería la descripción que lee la persona al
+ * asignar el rol.
+ *
+ * Queda como función por lo mismo que las de arriba: el día que publicar exija
+ * ser admin —y editar el borrador no— se cambia acá, y no en cada pantalla que
+ * pregunta.
+ */
+export function canEditEvents(_actor: PublicUser): boolean {
+  return true;
+}
