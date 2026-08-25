@@ -1,6 +1,6 @@
 {
-  "id": "a03d8849-46bd-4fba-aa47-d97b3bb19045",
-  "prevId": "9631d002-0055-4d70-acf0-1361524ffa16",
+  "id": "20f1f456-aa6a-4778-a75c-49b5938e48a8",
+  "prevId": "a03d8849-46bd-4fba-aa47-d97b3bb19045",
   "version": "7",
   "dialect": "postgresql",
   "tables": {
@@ -371,6 +371,105 @@
           "onUpdate": "no action"
         }
       },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "public.eventos": {
+      "name": "eventos",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "uuid",
+          "primaryKey": true,
+          "notNull": true,
+          "default": "gen_random_uuid()"
+        },
+        "titulo": {
+          "name": "titulo",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "comienza": {
+          "name": "comienza",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "lugar": {
+          "name": "lugar",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "detalle": {
+          "name": "detalle",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "precio_centavos": {
+          "name": "precio_centavos",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "imagen": {
+          "name": "imagen",
+          "type": "jsonb",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "publicado": {
+          "name": "publicado",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": true,
+          "default": false
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        },
+        "updated_at": {
+          "name": "updated_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {
+        "eventos_agenda_idx": {
+          "name": "eventos_agenda_idx",
+          "columns": [
+            {
+              "expression": "publicado",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "comienza",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
+      "foreignKeys": {},
       "compositePrimaryKeys": {},
       "uniqueConstraints": {},
       "policies": {},

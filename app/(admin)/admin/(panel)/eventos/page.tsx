@@ -4,7 +4,7 @@ import { db } from "@/lib/db";
 import { eventos, type Evento } from "@/lib/db/schema";
 import { requireEventEditor } from "@/lib/auth";
 import { formatDia, formatHora, formatMes } from "@/lib/format";
-import { formatPrice } from "@/lib/data";
+import { formatearPrecio } from "@/lib/precio";
 import styles from "../../admin.module.css";
 import propios from "./eventos.module.css";
 
@@ -117,7 +117,7 @@ function Tabla({
                     </span>
                   </td>
                   <td className={styles.cellDim}>
-                    {formatPrice(Math.round(e.precioCentavos / 100))}
+                    {formatearPrecio(e.precioCentavos, "ARS")}
                   </td>
                   <td>
                     <span

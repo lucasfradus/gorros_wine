@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import type { EventoPublico } from "@/lib/eventos";
-import { formatPrice } from "@/lib/data";
+import { formatearPrecio } from "@/lib/precio";
 import { getAgenda } from "@/lib/eventos";
 import { formatDia, formatHora, formatMes } from "@/lib/format";
 import { getContent } from "@/lib/content/get";
@@ -131,7 +131,7 @@ function Fila({ evento, pasado = false }: { evento: EventoPublico; pasado?: bool
 
       {pasado ? null : (
         <button type="button" className={styles.book}>
-          Reservar · {formatPrice(Math.round(evento.precioCentavos / 100))}
+          Reservar · {formatearPrecio(evento.precioCentavos, "ARS")}
           <span className="srOnly"> {evento.titulo}</span>
         </button>
       )}

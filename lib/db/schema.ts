@@ -5,9 +5,11 @@ import {
   jsonb,
   pgEnum,
   pgTable,
+  primaryKey,
   text,
   timestamp,
   uuid,
+  type AnyPgColumn,
 } from "drizzle-orm/pg-core";
 import type { ImagenValor } from "@/lib/content/types";
 
@@ -160,6 +162,315 @@ export type Content = typeof content.$inferSelect;
 export type NewContent = typeof content.$inferInsert;
 export type Media = typeof media.$inferSelect;
 export type NewMedia = typeof media.$inferInsert;
+// ---------------------------------------------------------------- catálogo
+
+/**
+ * Tipos de vino. Son los cuatro que la tienda ya filtra en el catálogo (ver
+ * `components/catalog-view.tsx`). Si algún día entra un naranjo o un dulce, se
+ * agrega el valor acá y drizzle-kit genera el `ALTER TYPE`.
+ */
+export const tipoVino = pgEnum("tipo_vino", [
+  "Tinto",
+  "Blanco",
+  "Espumante",
+  "Rosado",
+]);
+export type TipoVino = (typeof tipoVino.enumValues)[number];
+
+/**
+ * Moneda del precio de lista.
+ *
+ * Casi todo va en pesos; el enum existe por los importados que la bodega
+ * cotiza en dólares. El equivalente en pesos **no se guarda**: se calcula
+ * contra la última fila de `cotizaciones`. Si se guardara, cada movimiento del
+ * dólar obligaría a reescribir el catálogo entero.
+ */
+export const monedaPrecio = pgEnum("moneda", ["ARS", "USD"]);
+export type Moneda = (typeof monedaPrecio.enumValues)[number];
+
+/**
+ * Categorías del catálogo.
+ *
+ * La vinoteca no vende sólo vino: también accesorios, heladeras y regalería.
+ * La categoría es **qué clase de cosa es** el producto, y es lo que decide qué
+ * ficha se le pide: una heladera no tiene bodega, ni varietal, ni añada.
+ *
+ * `esVino` es esa decisión, explícita y no adivinada por el nombre. Con un
+ * slug reservado —"si la categoría se llama vino…"— alcanzaría con que alguien
+ * la renombre para romper el formulario.
+ *
+ * Ojo con el solapamiento: **el estilo del vino (Tinto, Blanco…) NO va acá**,
+ * va en `productos.tipo`. Si además se armaran categorías "Vino > Tintos", el
+ * mismo dato quedaría en dos lugares y se irían separando. Las subcategorías
+ * son para lo demás: "Accesorios > Copas".
+ */
+export const categorias = pgTable(
+  "categorias",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    slug: text("slug").notNull().unique(),
+
+    /** El nombre no es único: dos ramas distintas pueden tener un "Otros". */
+    nombre: text("nombre").notNull(),
+
+    /** La categoría padre, si es una subcategoría. `restrict`: una categoría
+     *  con hijas no se borra. El tipo de retorno explícito lo pide Drizzle
+     *  para poder resolver una referencia a la propia tabla. */
+    parentId: uuid("parent_id").references((): AnyPgColumn => categorias.id, {
+      onDelete: "restrict",
+    }),
+
+    /** Para ordenar el menú a mano: el orden alfabético casi nunca es el que
+     *  conviene mostrar. */
+    orden: integer("orden").notNull().default(0),
+
+    /** ¿Los productos de esta categoría llevan ficha de vino? Se hereda del
+     *  padre al guardar, no se calcula al leer: así una consulta nunca tiene
+     *  que subir por el árbol para saberlo. */
+    esVino: boolean("es_vino").notNull().default(false),
+
+    isActive: boolean("is_active").notNull().default(true),
+
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+  },
+  (t) => [
+    index("categorias_padre_idx").on(t.parentId),
+    index("categorias_activas_idx").on(t.isActive),
+  ],
+);
+
+/**
+ * Varietales, con ABM propio.
+ *
+ * Antes eran una lista fija en `lib/catalogo.ts` y un `text[]` en el producto.
+ * Con tabla, corregir "Cabernet Sauvingon" es editar una fila y no salir a
+ * buscar en qué productos quedó mal escrito.
+ */
+export const varietales = pgTable(
+  "varietales",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    slug: text("slug").notNull().unique(),
+    nombre: text("nombre").notNull().unique(),
+    isActive: boolean("is_active").notNull().default(true),
+
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+  },
+  (t) => [index("varietales_activos_idx").on(t.isActive)],
+);
+
+/**
+ * Bodegas.
+ *
+ * Son el proveedor, no una etiqueta de marketing: por eso viven acá el
+ * contacto comercial y las condiciones, que nunca se muestran en la tienda.
+ */
+export const bodegas = pgTable(
+  "bodegas",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+
+    /** Para la URL pública del día que la tienda lea de la base. Sale del
+     *  nombre y se puede corregir a mano. */
+    slug: text("slug").notNull().unique(),
+    nombre: text("nombre").notNull().unique(),
+
+    /** La **key** del objeto en el bucket, no una URL. Si mañana cambia cómo
+     *  se sirven las imágenes, no hay que migrar ninguna fila. */
+    logoKey: text("logo_key"),
+
+    pais: text("pais"),
+    sitioWeb: text("sitio_web"),
+
+    /** El contacto va en tres columnas y no en un campo libre: separado se
+     *  puede armar el `mailto:` y el link de WhatsApp; todo junto, no. */
+    contactoNombre: text("contacto_nombre"),
+    contactoEmail: text("contacto_email"),
+    contactoTelefono: text("contacto_telefono"),
+
+    /** Plazos de entrega, mínimos de compra, condiciones de pago. Texto libre
+     *  a propósito: es lo que hoy vive en un WhatsApp o en la cabeza de
+     *  alguien, y estructurarlo antes de ver qué se repite es adivinar. */
+    notas: text("notas"),
+
+    /** Se archiva en vez de borrar, igual que los usuarios y por lo mismo:
+     *  los productos cuelgan de acá. */
+    isActive: boolean("is_active").notNull().default(true),
+
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+  },
+  (t) => [index("bodegas_activas_idx").on(t.isActive)],
+);
+
+/**
+ * Productos del catálogo.
+ *
+ * Una sola tabla para todo lo que se vende —vino, accesorios, heladeras,
+ * regalería—, con los campos de vino en nullable y la **categoría** decidiendo
+ * cuáles se piden. Se eligió así, y no una tabla `vinos` aparte, porque el
+ * listado, los filtros y la búsqueda quedan sin joins; que es lo que va a usar
+ * la tienda cuando lea de acá. El costo es que una heladera guarda media docena
+ * de columnas en NULL.
+ *
+ * Lo que la base **no** garantiza, entonces, lo garantiza la Server Action:
+ * que un producto de categoría de vino traiga bodega, tipo y varietales, y que
+ * uno que no lo es no traiga nada de eso.
+ *
+ * Mientras la tienda siga leyendo `lib/data.ts`, esta tabla la usa sólo el
+ * panel. Aun así el modelo sigue lo que la tienda **ya renderiza** —tipo,
+ * región, guarda, maridajes—, para que migrar el render después sea una
+ * mudanza y no un rediseño.
+ */
+export const productos = pgTable(
+  "productos",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    slug: text("slug").notNull().unique(),
+    nombre: text("nombre").notNull(),
+
+    /** Qué clase de cosa es. Es lo único que decide qué ficha se le pide. */
+    categoriaId: uuid("categoria_id")
+      .notNull()
+      .references(() => categorias.id, { onDelete: "restrict" }),
+
+    /** Nullable desde que el catálogo dejó de ser sólo vino: una copa no viene
+     *  de una bodega. `restrict` y no `cascade`: borrar una bodega no puede
+     *  llevarse puestos sus vinos. Para sacarla de circulación está `isActive`. */
+    bodegaId: uuid("bodega_id").references(() => bodegas.id, {
+      onDelete: "restrict",
+    }),
+
+    /** El estilo del vino. Nullable por lo mismo que `bodegaId`. */
+    tipo: tipoVino("tipo"),
+
+    /** "Valle de Uco · Mendoza". Va en el producto y no en la bodega: una
+     *  misma bodega hace vinos de varios valles. */
+    region: text("region"),
+
+    /** Nullable a propósito: los espumantes y varios blends no tienen añada. */
+    anada: integer("anada"),
+
+    /** En centavos. Guardar plata en float termina en $14899.99999. */
+    precioCentavos: integer("precio_centavos").notNull(),
+    moneda: monedaPrecio("moneda").notNull().default("ARS"),
+
+    stock: integer("stock").notNull().default(0),
+
+    /** Se archiva en vez de borrar: mañana hay pedidos colgando de esta fila. */
+    isActive: boolean("is_active").notNull().default(true),
+
+    /** Lo que la home levanta como destacados. Hoy eso es un `slice(0, 4)`
+     *  sobre un array; con una columna lo elige quien carga el catálogo. */
+    destacado: boolean("destacado").notNull().default(false),
+
+    /** Notas de cata. Hoy las nueve etiquetas comparten el mismo párrafo de
+     *  relleno (`placeholderDescription` en `lib/data.ts`). */
+    descripcion: text("descripcion"),
+
+    /** "Listo para beber", "Guarda 5 años". Es una fila de la ficha. */
+    guarda: text("guarda"),
+    maridajes: text("maridajes").array().notNull().default([]),
+
+    /** Para distinguir magnums y medias de la botella de 750. Nullable: una
+     *  heladera no se mide en mililitros. */
+    volumenMl: integer("volumen_ml"),
+
+    /** Key en el bucket, misma razón que `bodegas.logoKey`. */
+    imagenKey: text("imagen_key"),
+
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+  },
+  (t) => [
+    index("productos_categoria_idx").on(t.categoriaId),
+    index("productos_bodega_idx").on(t.bodegaId),
+    index("productos_activos_idx").on(t.isActive),
+  ],
+);
+
+/**
+ * Qué uvas lleva cada vino.
+ *
+ * Tabla intermedia y no un `text[]` en el producto: con los varietales en su
+ * propia tabla, la relación tiene que ir por id. Así renombrar un varietal no
+ * obliga a recorrer productos, y el filtro por uva es un join exacto en vez de
+ * la búsqueda por subcadena que hace hoy `catalog-view.tsx`.
+ *
+ * `cascade` del lado del producto —si algún día se borra, sus uvas se van con
+ * él— y `restrict` del lado del varietal: uno que está en uso no se borra.
+ */
+export const productoVarietales = pgTable(
+  "producto_varietales",
+  {
+    productoId: uuid("producto_id")
+      .notNull()
+      .references(() => productos.id, { onDelete: "cascade" }),
+    varietalId: uuid("varietal_id")
+      .notNull()
+      .references(() => varietales.id, { onDelete: "restrict" }),
+  },
+  (t) => [
+    primaryKey({ columns: [t.productoId, t.varietalId] }),
+    index("producto_varietales_varietal_idx").on(t.varietalId),
+  ],
+);
+
+/**
+ * Historial de la cotización del dólar.
+ *
+ * Historial y no una fila que se pisa, por dos razones. Leer la vigente es un
+ * `orderBy(desc(createdAt)).limit(1)`, así que no hay upsert que escribir ni
+ * fila semilla que crear. Y queda asentado quién movió el dólar y cuándo, que
+ * es justo lo que se pregunta cuando un precio no cierra.
+ */
+export const cotizaciones = pgTable(
+  "cotizaciones",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+
+    /** Cuántos centavos de peso vale un dólar. Entero y en centavos, por la
+     *  misma razón que los precios. */
+    arsPorUsdCentavos: integer("ars_por_usd_centavos").notNull(),
+
+    /** Quién la cargó. Nullable porque también podría cargarla un script sin
+     *  nadie detrás. */
+    createdBy: uuid("created_by").references(() => users.id),
+
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+  },
+  (t) => [index("cotizaciones_fecha_idx").on(t.createdAt)],
+);
+
+export type Categoria = typeof categorias.$inferSelect;
+export type NewCategoria = typeof categorias.$inferInsert;
+export type Varietal = typeof varietales.$inferSelect;
+export type NewVarietal = typeof varietales.$inferInsert;
+export type Bodega = typeof bodegas.$inferSelect;
+export type NewBodega = typeof bodegas.$inferInsert;
+export type Producto = typeof productos.$inferSelect;
+export type NewProducto = typeof productos.$inferInsert;
+export type Cotizacion = typeof cotizaciones.$inferSelect;
 
 /**
  * La agenda de catas y encuentros.

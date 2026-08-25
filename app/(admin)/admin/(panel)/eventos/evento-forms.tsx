@@ -5,13 +5,8 @@ import { useActionState } from "react";
 import { useFormStatus } from "react-dom";
 import type { ImagenValor } from "@/lib/content/types";
 import { ImageField } from "../image-field";
-import type { EventoFormState } from "./actions";
+import { Aviso, Submit, type FormAction, type FormState } from "../form-ui";
 import styles from "../../admin.module.css";
-
-type Accion = (
-  prev: EventoFormState,
-  formData: FormData,
-) => Promise<EventoFormState>;
 
 export interface EventoDefaults {
   id?: string;
@@ -26,52 +21,17 @@ export interface EventoDefaults {
   publicado?: boolean;
 }
 
-function Aviso({ state }: { state: EventoFormState }) {
-  if (state.error) {
-    return (
-      <p className={`${styles.alert} ${styles.alertError}`} role="alert">
-        {state.error}
-      </p>
-    );
-  }
-  if (state.ok) {
-    return (
-      <p className={`${styles.alert} ${styles.alertOk}`} role="status">
-        {state.ok}
-      </p>
-    );
-  }
-  return null;
-}
-
-function Submit({ children }: { children: string }) {
-  const { pending } = useFormStatus();
-
-  return (
-    <button
-      type="submit"
-      disabled={pending}
-      className={`${styles.btn} ${styles.btnPrimary}`}
-    >
-      {pending ? "Guardando…" : children}
-    </button>
-  );
-}
-
 /** Alta y edición. La misma pantalla, distinto action. */
 export function EventoForm({
   action,
   defaults,
   submitLabel,
 }: {
-  action: Accion;
+  action: FormAction;
   defaults?: EventoDefaults;
   submitLabel: string;
 }) {
-  const [state, formAction] = useActionState<EventoFormState, FormData>(
-    action,
-    {},
-  );
+  const [state, formAction] = useActionState<FormState, FormData>(action, {});
 
   // La foto se elige y se sube antes del submit, así que su valor vive acá y
   // viaja al servidor como JSON en un input oculto: un `<input>` sólo sabe de
@@ -222,14 +182,11 @@ export function BorrarEvento({
   eventoId,
   titulo,
 }: {
-  action: Accion;
+  action: FormAction;
   eventoId: string;
   titulo: string;
 }) {
-  const [state, formAction] = useActionState<EventoFormState, FormData>(
-    action,
-    {},
-  );
+  const [state, formAction] = useActionState<FormState, FormData>(action, {});
 
   return (
     <form

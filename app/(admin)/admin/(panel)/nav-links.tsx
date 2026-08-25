@@ -18,20 +18,22 @@ interface Item {
 export function NavLinks({ showUsers }: { showUsers: boolean }) {
   const pathname = usePathname();
 
+  // En orden de pantalla. Catálogo lo ven los dos roles: `ROLE_DESCRIPTION`
+  // dice que el editor maneja "catálogo, precios y eventos".
   const items: Item[] = [
     { href: "/admin", label: "Inicio" },
+    { href: "/admin/productos", label: "Productos", section: "Catálogo" },
+    { href: "/admin/categorias", label: "Categorías" },
+    { href: "/admin/bodegas", label: "Bodegas" },
+    { href: "/admin/varietales", label: "Varietales" },
     { href: "/admin/contenido", label: "Contenido", section: "Sitio" },
     { href: "/admin/eventos", label: "Eventos" },
+    ...(showUsers
+      ? [{ href: "/admin/usuarios", label: "Usuarios", section: "Sistema" }]
+      : []),
     { href: "/admin/cuenta", label: "Mi cuenta", section: "Cuenta" },
   ];
 
-  if (showUsers) {
-    items.splice(3, 0, {
-      href: "/admin/usuarios",
-      label: "Usuarios",
-      section: "Sistema",
-    });
-  }
 
   return (
     <nav className={styles.nav}>

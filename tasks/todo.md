@@ -8,33 +8,34 @@
 
 ## ABM de eventos
 
-El plan completo —contexto, decisiones tomadas, tareas y verificación— está en
+Las nueve tareas hechas, `tsc` y `build` en verde. El plan completo —contexto,
+decisiones y review— está en
 [docs/planes/2026-08-25-eventos.md](../docs/planes/2026-08-25-eventos.md).
-Los checkboxes se marcan **allá**, que es donde está el detalle de cada paso.
 
-**Worktree:** `../Gorros-eventos` · rama `feat/eventos` · puerto `:3004`
+**Falta para cerrarlo:**
 
-| Tarea | Estado |
-| --- | --- |
-| 1. Tabla `eventos` y migración | ☑ |
-| 2. Permisos (`canEditEvents`, `requireEventEditor`) | ☑ |
-| 3. Mudar `ImageField` y `uploadMediaAction` a un lugar compartido | ☑ |
-| 4. Fechas: `datetime-local` ↔ instante, con huso fijo | ☑ |
-| 5. Server Actions (crear, editar, borrar) | ☑ |
-| 6. Pantallas del panel | ☑ (falta prueba en navegador) |
-| 7. Enlace en la navegación | ☑ |
-| 8. La tienda lee la agenda real | ☑ |
-| 9. Migrar los cuatro eventos de hoy | ☑ (falta correrlo en producción) |
+1. Probar el panel a mano en el navegador, con los dos roles. La tienda ya se
+   verificó por HTTP, con fechas y sin fechas.
+2. Correr `APPLY=1 node scripts/_eventos-seed.mjs` **en producción** después
+   del deploy, o la página de eventos sale al aire vacía.
+3. `./scripts/worktree.ps1 borrar eventos -borrarRama`.
 
-Las nueve están hechas y el código está en verde (`tsc` y `build`). **Lo que
-falta para cerrar** está en la sección Cierre del plan:
+## Lo que dejó pendiente el CMS
 
-1. Probar el panel a mano en el navegador (`:3004`), con los dos roles.
-2. Correr `APPLY=1 node scripts/_eventos-seed.mjs` **en producción** después del
-   deploy, o la página de eventos sale al aire vacía.
-3. PR a `main` y `./scripts/worktree.ps1 borrar eventos -borrarRama`.
+- Cargar las variables `S3_*` en el servicio de producción. Sin eso no se
+  pueden subir imágenes: ni de contenido, ni de catálogo, ni de eventos.
 
----
+## Lo que dejó pendiente el catálogo
 
-_Pendiente de la iteración anterior (CMS de contenido, ya mergeada en
-`4e64455`): cargar las variables `S3_*` en el servicio de producción._
+Plan archivado en
+[docs/planes/2026-08-25-admin-catalogo.md](../docs/planes/2026-08-25-admin-catalogo.md).
+
+- **El campo de imagen del catálogo.** Las columnas `logo_key` e `imagen_key`
+  ya están; falta sumar el campo a `bodega-forms.tsx` y `producto-forms.tsx`.
+  Ahora es más corto de lo que decía ese plan: `ImageField` y
+  `uploadMediaAction` ya no viven en `contenido/`, están en la raíz del panel
+  justamente para que los use cualquier sección. Sin migración.
+- **Cablear la tienda pública al catálogo de la base**: hoy `/catalogo`,
+  `/producto/[id]`, `/buscar` y la home siguen leyendo `lib/data.ts`. Es la
+  iteración que viene, y de las grandes. Los eventos ya hicieron ese camino en
+  chico: mirar `lib/eventos.ts` antes de arrancar, sobre todo lo del caché.
