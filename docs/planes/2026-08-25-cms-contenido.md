@@ -156,9 +156,11 @@ esto y hasta ahora no tenía ninguna pantalla propia.
 - [x] Comparado contra `main` con la tabla vacía: **diez pantallas idénticas**,
       metadata incluida.
 - [x] Bucket creado en Railway.
-- [ ] Variables `S3_*` cargadas en el servicio `gorros-wine` de producción.
-- [ ] PR mergeado a `main`.
-- [ ] `./scripts/worktree.ps1 borrar cms-contenido -borrarRama`
+- [x] Variables `S3_*` cargadas en el servicio `gorros-wine`, **por referencia**
+      (`${{gorros-media.BUCKET}}` y compañía) para que roten solas. Verificado
+      con `railway run` que las cinco resuelven a valores reales.
+- [x] PR mergeado a `main` — [#2](https://github.com/lucasfradus/gorros_wine/pull/2), el 2026-08-25.
+- [x] `./scripts/worktree.ps1 borrar cms-contenido -borrarRama`
 
 ## Review
 
@@ -210,10 +212,6 @@ dependencias (Node 24 ya trae `WebSocket`):
 
 **Qué quedó afuera.**
 
-- **Las variables `S3_*` en producción.** El bucket existe, pero el servicio
-  `gorros-wine` todavía no las tiene. Conviene cargarlas por *referencia* a las
-  del bucket (`${{gorros-media.BUCKET}}`) y no copiando los valores, así rotan
-  solas. Hasta que estén, en producción se editan textos pero no se suben fotos.
 - **No hay biblioteca de medios.** Cada foto se sube en el campo donde se usa y
   el texto alternativo se edita ahí. Reemplazar una imagen deja la anterior en
   el bucket: falta un script `_` que borre las huérfanas.
@@ -224,10 +222,12 @@ dependencias (Node 24 ya trae `WebSocket`):
 
 **Qué habría que mirar después.**
 
-- **Hay un tercer worktree tocando la misma base** (aparecieron `productos`,
-  `bodegas` y `cotizaciones`). Su migración quedó aplicada en la base de
-  desarrollo con un número que no está en esta rama: el que mergee segundo va a
-  tener que renumerar. Vale la pena coordinarlo antes de abrir los dos PR.
+- **La región de la firma no es la misma en local que en producción.** Las
+  credenciales del bucket dicen `auto`, pero la referencia de Railway
+  (`${{gorros-media.REGION}}`) resuelve a `sjc`. La región entra en la firma
+  SigV4, así que valía comprobarlo: el endpoint de Railway **no la valida** —
+  probado con `auto`, `sjc` y `us-west-1`, las tres suben y bajan igual. Queda
+  anotado por si algún día el endpoint se pone estricto.
 - **El límite de 4 MB por imagen no comprime nada.** Una foto de celular moderna
   puede pasarlo, y ahí el mensaje pide achicarla a mano. Si molesta, el paso
   siguiente es redimensionar del lado del cliente antes de subir.
