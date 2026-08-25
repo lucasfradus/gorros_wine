@@ -1,55 +1,17 @@
 "use client";
 
 import { useActionState } from "react";
-import { useFormStatus } from "react-dom";
 import type { UserRole } from "@/lib/db/schema";
 import { ROLE_DESCRIPTION, ROLE_LABEL } from "@/lib/auth/permissions";
 import { MIN_PASSWORD_LENGTH } from "@/lib/auth/constants";
 import type { UserFormState } from "./actions";
+import { Aviso, Submit } from "../form-ui";
 import styles from "../../admin.module.css";
 
 type Accion = (
   prev: UserFormState,
   formData: FormData,
 ) => Promise<UserFormState>;
-
-function Aviso({ state }: { state: UserFormState }) {
-  if (state.error) {
-    return (
-      <p className={`${styles.alert} ${styles.alertError}`} role="alert">
-        {state.error}
-      </p>
-    );
-  }
-  if (state.ok) {
-    return (
-      <p className={`${styles.alert} ${styles.alertOk}`} role="status">
-        {state.ok}
-      </p>
-    );
-  }
-  return null;
-}
-
-function Submit({
-  children,
-  variant = "primary",
-}: {
-  children: string;
-  variant?: "primary" | "plain";
-}) {
-  const { pending } = useFormStatus();
-
-  return (
-    <button
-      type="submit"
-      disabled={pending}
-      className={`${styles.btn} ${variant === "primary" ? styles.btnPrimary : ""}`}
-    >
-      {pending ? "Guardando…" : children}
-    </button>
-  );
-}
 
 /** Alta y edición de datos. La misma pantalla, distinto action. */
 export function UserForm({

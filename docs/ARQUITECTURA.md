@@ -41,6 +41,10 @@ app/
         ├── login/        pantalla de ingreso
         └── (panel)/      todo lo que exige sesión
             ├── page.tsx  inicio del panel
+            ├── productos/ ABM del catálogo + cotización del dólar
+            ├── categorias/ qué clase de cosa es cada producto (con árbol)
+            ├── bodegas/  ABM de proveedores y su contacto comercial
+            ├── varietales/ las uvas que se pueden elegir en un vino
             ├── contenido/ textos e imágenes del sitio
             ├── usuarios/ alta, edición, roles, activar/desactivar
             └── cuenta/   mi perfil y cambio de contraseña
@@ -50,14 +54,39 @@ app/
 
 Hoy conviven tres fuentes, y conviene tenerlo claro:
 
-- **El catálogo de vinos y los eventos viven en `lib/data.ts`**, como arrays de
-  TypeScript. No están en la base. Es la razón por la que `/catalogo` y las
-  fichas se pueden generar estáticas.
+- **El catálogo que muestra la tienda y los eventos viven en `lib/data.ts`**,
+  como arrays de TypeScript. Es la razón por la que `/catalogo` y las fichas se
+  pueden generar estáticas.
 - **Los textos y las fotos del sitio salen del CMS** (ver abajo).
-- **La base tiene `users`, `sessions`, `content` y `media`** (`lib/db/schema.ts`).
+- **El catálogo editable vive en la base**: además de `users`, `sessions`,
+  `content` y `media` están `categorias`, `varietales`, `bodegas`, `productos`,
+  `producto_varietales` y `cotizaciones` (`lib/db/schema.ts`), que se editan
+  desde la sección Catálogo del panel.
 
-Mover el catálogo a la base es una iteración pendiente, y de las grandes: toca
-schema, panel de edición y render de la tienda. Va en worktree.
+O sea que **lo que se carga en el panel todavía no se ve en la tienda**. Fue a
+propósito: mover el render público a la base cambia `/catalogo`,
+`/producto/[id]`, `/buscar` y la home, y las saca del render estático. Es la
+iteración que sigue, y va en worktree.
+
+Sobre el modelo del catálogo, cuatro decisiones que se explican una sola vez:
+
+- **La categoría decide la ficha.** La vinoteca no vende sólo vino: también
+  accesorios, heladeras y regalería. `categorias.esVino` dice si los productos
+  de esa categoría llevan bodega, varietales, añada, guarda y maridajes. Las
+  subcategorías (dos niveles, "Accesorios › Copas") lo heredan al guardarse.
+- **Una sola tabla `productos`, con los campos de vino en nullable.** Se
+  eligió sobre una tabla `vinos` aparte para que el listado, los filtros y la
+  búsqueda no lleven joins. Como la base entonces no puede garantizar la
+  coherencia, la garantiza `armarFila()` en `productos/actions.ts`: si la
+  categoría no es de vino, esos campos se fuerzan a `null` en vez de guardarse
+  a medias.
+
+- **La plata va en centavos enteros**, nunca en `float`. Un producto guarda su
+  precio en su moneda (`ARS` o `USD`); el equivalente en pesos **no se guarda**,
+  se calcula contra la última fila de `cotizaciones` (ver `lib/precio.ts`). Si
+  se guardara, cada movimiento del dólar obligaría a reescribir el catálogo.
+- **`cotizaciones` es un historial**, no una fila que se pisa: la vigente es la
+  última. No hay upsert que escribir y queda asentado quién movió el dólar.
 
 ## El CMS de contenido
 
@@ -119,8 +148,11 @@ o un Route Handler, nunca desde el layout que hace la verificación.
 
 | Rol | Alcance |
 | --- | --- |
-| `admin` | Todo: contenido, catálogo y usuarios. Puede nombrar otros admin |
-| `editor` | Sólo contenido del sitio. No ve la sección Usuarios |
+| `admin` | Todo: contenido, catálogo, precios y usuarios. Puede nombrar otros admin |
+| `editor` | Contenido del sitio y catálogo. No ve la sección Usuarios |
+
+Dos escalones y no tres: con un equipo chico, un nivel intermedio agrega estados
+que mantener sin agregar seguridad (el porqué largo está en `lib/db/schema.ts`).
 
 Dos invariantes que el código defiende explícitamente: **siempre queda al menos
 un `admin` activo**, y **nadie se cambia el rol ni se desactiva a sí mismo**.

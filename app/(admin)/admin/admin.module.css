@@ -414,7 +414,8 @@
 }
 
 .input,
-.select {
+.select,
+.textarea {
   width: 100%;
   background: var(--night);
   border: 1px solid var(--field-line);
@@ -425,8 +426,16 @@
   font-size: 15px;
 }
 
+/* Sólo a lo alto: agrandarlo a lo ancho desborda la tarjeta del formulario. */
+.textarea {
+  min-height: 96px;
+  line-height: 1.6;
+  resize: vertical;
+}
+
 .input:focus-visible,
-.select:focus-visible {
+.select:focus-visible,
+.textarea:focus-visible {
   outline: 2px solid var(--gold);
   outline-offset: 1px;
 }
@@ -606,6 +615,74 @@
 
 .sectionHead {
   margin-bottom: 18px;
+}
+
+/* Fila de subcategoría en el listado de Categorías: la sangría es lo que hace
+   legible el árbol de un vistazo. */
+.cellNested {
+  padding-left: 22px;
+}
+
+/* Dos o tres campos cortos en la misma línea (precio y moneda, stock y
+   volumen). Con auto-fit se apilan solos en pantalla angosta: no hace falta
+   una media query. */
+.fieldRow {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: 14px;
+}
+
+/* Selección múltiple en forma de pastillas: varietales y maridajes. Un
+   <select multiple> es incómodo en escritorio e inusable en el teléfono. */
+.chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.chip {
+  display: inline-flex;
+}
+
+/* El checkbox se esconde pero sigue existiendo: es lo que hace que la
+   pastilla se pueda tildar con el teclado y que un lector de pantalla la
+   anuncie como casilla. Nada de divs con onClick. */
+.chip input {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  opacity: 0;
+}
+
+.chipText {
+  padding: 7px 12px;
+  border: 1px solid var(--field-line);
+  border-radius: 999px;
+  font-size: 13px;
+  color: var(--chip);
+  cursor: pointer;
+}
+
+.chip input:checked + .chipText {
+  border-color: var(--gold);
+  color: var(--heading);
+}
+
+.chip input:focus-visible + .chipText {
+  outline: 2px solid var(--gold);
+  outline-offset: 2px;
+}
+
+/* Separador de grupo dentro de un formulario largo: el de Productos tiene
+   veinte campos y sin cortes se lee como una lista de compras. */
+.formSection {
+  margin-top: 8px;
+  padding-top: 20px;
+  border-top: 1px solid var(--field-line);
+  color: var(--dim);
+  font-size: 10px;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
 }
 
 /* ---------- responsive ---------- */

@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { count, eq } from "drizzle-orm";
 import { db } from "@/lib/db";
-import { users } from "@/lib/db/schema";
+import { bodegas, productos, users } from "@/lib/db/schema";
 import { canManageUsers, requireUser } from "@/lib/auth";
 import { getEditados } from "@/lib/content/get";
 import { wines } from "@/lib/data";
@@ -22,6 +22,14 @@ export default async function DashboardPage() {
 
   const porGrupo = await getEditados();
   const editados = Object.values(porGrupo).reduce((n, c) => n + c.length, 0);
+
+  const [[productosActivos], [bodegasActivas]] = await Promise.all([
+    db
+      .select({ n: count() })
+      .from(productos)
+      .where(eq(productos.isActive, true)),
+    db.select({ n: count() }).from(bodegas).where(eq(bodegas.isActive, true)),
+  ]);
 
   return (
     <>
@@ -77,18 +85,39 @@ export default async function DashboardPage() {
           </div>
         </section>
 
-        {/* Nada de métricas inventadas: el catálogo todavía no vive en la
-            base, y decir lo contrario acá sería mentirle a quien lo usa. */}
+        {/* Se cuenta lo que hay en la base, y se aclara que la tienda todavía
+            no lo lee: decir "N etiquetas" a secas haría creer que el sitio ya
+            muestra eso. */}
         <section className={styles.card}>
           <h2 className={styles.label}>Catálogo</h2>
           <p style={{ margin: "10px 0 0", fontSize: 15 }}>
-            {wines.length} etiquetas, todavía escritas a mano en{" "}
-            <code>lib/data.ts</code>.
+            {productosActivos.n === 0
+              ? "Todavía no hay productos cargados."
+              : `${productosActivos.n} ${
+                  productosActivos.n === 1 ? "producto activo" : "productos activos"
+                } de ${bodegasActivas.n} ${
+                  bodegasActivas.n === 1 ? "bodega" : "bodegas"
+                }.`}
           </p>
           <p className={styles.hint} style={{ marginTop: 8 }}>
-            La próxima etapa las pasa a la base y las hace editables desde acá,
-            con importación desde la planilla.
+            La tienda pública sigue mostrando las {wines.length} etiquetas
+            escritas a mano en <code>lib/data.ts</code>. Cablearla a la base es
+            la etapa que viene.
           </p>
+          <div className={styles.btnRow} style={{ marginTop: 16 }}>
+            <Link
+              href="/admin/productos"
+              className={`${styles.btn} ${styles.btnSmall}`}
+            >
+              Ver productos
+            </Link>
+            <Link
+              href="/admin/bodegas"
+              className={`${styles.btn} ${styles.btnSmall}`}
+            >
+              Bodegas
+            </Link>
+          </div>
         </section>
       </div>
     </>
