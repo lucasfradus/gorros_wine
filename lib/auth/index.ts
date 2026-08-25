@@ -3,7 +3,7 @@ import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import type { PublicUser } from "@/lib/db/schema";
 import { SESSION_COOKIE, validateSessionToken } from "./session";
-import { canManageUsers } from "./permissions";
+import { canEditContent, canManageUsers } from "./permissions";
 
 export * from "./permissions";
 export { SESSION_COOKIE };
@@ -42,6 +42,13 @@ export async function requireUser(next?: string): Promise<PublicUser> {
 export async function requireUserManager(): Promise<PublicUser> {
   const user = await requireUser();
   if (!canManageUsers(user)) redirect("/admin");
+  return user;
+}
+
+/** Exige sesión con permiso sobre el contenido del sitio. */
+export async function requireContentEditor(): Promise<PublicUser> {
+  const user = await requireUser();
+  if (!canEditContent(user)) redirect("/admin");
   return user;
 }
 

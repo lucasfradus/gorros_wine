@@ -6,11 +6,7 @@
 > Antes de tocar código: leer `AGENTS.md` (este Next.js y este Drizzle no son
 > los del training data) y `tasks/lessons.md`.
 
-_Sin plan activo. La última iteración —identidad visual— quedó archivada en
-[docs/planes/2026-08-24-isotipo.md](../docs/planes/2026-08-24-isotipo.md). La
-próxima iteración grande arranca con `./scripts/worktree.ps1 nuevo <slug>` y su
-plan en `docs/planes/`._
-
-## Review
-
-_(Al terminar: qué se hizo, qué quedó afuera, qué habría que mirar después.)_
+_Sin plan activo. La última iteración —el CMS de contenido— quedó archivada en
+[docs/planes/2026-08-25-cms-contenido.md](../docs/planes/2026-08-25-cms-contenido.md).
+Queda pendiente de su cierre: cargar las variables `S3_*` en el servicio de
+producción y mergear el PR._

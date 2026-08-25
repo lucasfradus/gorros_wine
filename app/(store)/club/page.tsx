@@ -1,64 +1,44 @@
 import type { Metadata } from "next";
-import { shop } from "@/lib/data";
+import { getContent } from "@/lib/content/get";
+import { Lineas } from "@/components/rich-text";
 import styles from "./club.module.css";
 
-export const metadata: Metadata = {
-  title: "Club Gorros",
-  description:
-    "Tres etiquetas seleccionadas cada mes, precios de socio y acceso prioritario a las catas. Sin permanencia.",
-};
+export async function generateMetadata(): Promise<Metadata> {
+  const c = await getContent("club");
+  return { title: c.seoTitulo, description: c.seoDescripcion };
+}
 
-const includes = [
-  {
-    title: "Tres etiquetas por mes",
-    body: "Una selección armada por nosotros, con notas de cata y maridajes para cada botella.",
-  },
-  {
-    title: "Precios de socio",
-    body: "Descuento sobre todo el catálogo, todo el año, también fuera de la caja mensual.",
-  },
-  {
-    title: "Catas primero",
-    body: "Acceso prioritario a los encuentros del local y lugares reservados antes de la venta general.",
-  },
-];
+export default async function ClubPage() {
+  const [c, local] = await Promise.all([
+    getContent("club"),
+    getContent("local"),
+  ]);
 
-const how = [
-  { n: "01", title: "Te sumás", body: "Nos escribís y armamos tu perfil de gusto." },
-  { n: "02", title: "Recibís", body: "Todos los meses preparamos tu caja: la retirás o te la llevamos." },
-  { n: "03", title: "Descubrís", body: "Probás, nos contás, y afinamos la selección del mes siguiente." },
-];
-
-export default function ClubPage() {
-  const waHref = `https://wa.me/${shop.whatsapp}?text=${encodeURIComponent(
-    "Hola! Quiero sumarme al Club Gorros.",
+  const waHref = `https://wa.me/${local.whatsapp}?text=${encodeURIComponent(
+    c.waMensaje,
   )}`;
 
   return (
     <>
       <section className={styles.head}>
-        <p className={`eyebrow ${styles.eyebrow}`}>Club Gorros</p>
+        <p className={`eyebrow ${styles.eyebrow}`}>{c.eyebrow}</p>
         <h1 className={styles.title}>
-          Una membresía para quienes <em className={styles.accent}>viven</em> el
-          vino.
+          <Lineas texto={c.titulo} clases={{ acento: styles.accent }} />
         </h1>
-        <p className={styles.lede}>
-          Tres etiquetas seleccionadas cada mes, precios de socio y acceso
-          prioritario a las catas. Cancelás cuando quieras, sin permanencia.
-        </p>
+        <p className={styles.lede}>{c.lede}</p>
         <a
           href={waHref}
           className="btn btnGold"
           target="_blank"
           rel="noopener noreferrer"
         >
-          Sumarme al club
+          {c.cta}
         </a>
       </section>
 
       <ul className={styles.includes}>
-        {includes.map((i) => (
-          <li key={i.title} className={styles.include}>
+        {c.incluye.map((i, n) => (
+          <li key={n} className={styles.include}>
             <h2 className={styles.includeTitle}>{i.title}</h2>
             <p className={styles.includeBody}>{i.body}</p>
           </li>
@@ -67,13 +47,15 @@ export default function ClubPage() {
 
       <section className={styles.how} aria-labelledby="como-funciona">
         <h2 id="como-funciona" className={styles.howTitle}>
-          Cómo funciona
+          <Lineas texto={c.comoTitulo} />
         </h2>
         <ol className={styles.steps}>
-          {how.map((s) => (
-            <li key={s.n} className={styles.step}>
+          {c.pasos.map((s, i) => (
+            <li key={i} className={styles.step}>
+              {/* El número sale del orden, no de un campo que se pueda
+                  desalinear al agregar un paso en el medio. */}
               <p className={styles.num} aria-hidden="true">
-                {s.n}
+                {String(i + 1).padStart(2, "0")}
               </p>
               <h3 className={styles.stepTitle}>{s.title}</h3>
               <p className={styles.stepBody}>{s.body}</p>
@@ -84,7 +66,7 @@ export default function ClubPage() {
 
       <section className={styles.closing}>
         <p className={styles.closingTitle}>
-          ¿Lo querés de regalo? También armamos membresías para regalar.
+          <Lineas texto={c.cierreTitulo} />
         </p>
         <a
           href={waHref}
@@ -92,7 +74,7 @@ export default function ClubPage() {
           target="_blank"
           rel="noopener noreferrer"
         >
-          Escribinos
+          {c.cierreCta}
         </a>
       </section>
     </>

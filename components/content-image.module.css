@@ -1,0 +1,12 @@
+/* Marco de una foto del CMS. Sólo aporta el contexto de posicionamiento que
+   `next/image` con `fill` necesita: el tamaño lo sigue poniendo la clase que
+   pasa cada sección, que es la misma que usaba el hueco rayado. */
+.marco {
+  position: relative;
+  width: 100%;
+  overflow: hidden;
+}
+
+.img {
+  object-fit: cover;
+}

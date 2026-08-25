@@ -13,6 +13,8 @@ un panel de administración.
 | Tipografías | `next/font/google` (Fraunces + Jost), autoalojadas en el build |
 | Autenticación | Propia: sesiones en base, cookie `gw_session`, bcrypt |
 | Validación | zod v4 |
+| Contenido | CMS propio: tabla clave/valor + registro tipado en `lib/content/` |
+| Imágenes | Bucket S3 de Railway (privado), servidas por `/media/[...key]` |
 
 Sin Prisma, sin NextAuth, sin Tailwind. Ver `AGENTS.md` antes de escribir código.
 
@@ -32,27 +34,63 @@ app/
 │   ├── club/  eventos/  nosotros/  cuenta/
 │   └── terminos/  privacidad/
 │
+├── media/[...key]/       sirve las imágenes del CMS desde el bucket
+│
 └── (admin)/              panel — su propio layout, sin nav de tienda
     └── admin/
         ├── login/        pantalla de ingreso
         └── (panel)/      todo lo que exige sesión
             ├── page.tsx  inicio del panel
+            ├── contenido/ textos e imágenes del sitio
             ├── usuarios/ alta, edición, roles, activar/desactivar
             └── cuenta/   mi perfil y cambio de contraseña
 ```
 
 ## De dónde salen los datos
 
-Hoy conviven dos fuentes, y conviene tenerlo claro:
+Hoy conviven tres fuentes, y conviene tenerlo claro:
 
-- **El catálogo de vinos vive en `lib/data.ts`**, como un array de TypeScript.
-  No está en la base. Es la razón por la que `/catalogo` y las fichas se pueden
-  generar estáticas.
-- **La base sólo tiene `users` y `sessions`** (`lib/db/schema.ts`): existe para
-  el panel, no para la tienda.
+- **El catálogo de vinos y los eventos viven en `lib/data.ts`**, como arrays de
+  TypeScript. No están en la base. Es la razón por la que `/catalogo` y las
+  fichas se pueden generar estáticas.
+- **Los textos y las fotos del sitio salen del CMS** (ver abajo).
+- **La base tiene `users`, `sessions`, `content` y `media`** (`lib/db/schema.ts`).
 
 Mover el catálogo a la base es una iteración pendiente, y de las grandes: toca
 schema, panel de edición y render de la tienda. Va en worktree.
+
+## El CMS de contenido
+
+Todo el copy fijo del sitio —hero, Nosotros, Club, Eventos, pie de página, age
+gate, legales y la metadata de SEO— se edita desde **Contenido** en el panel.
+
+Tres piezas, en `lib/content/`:
+
+| Archivo | Qué hace |
+| --- | --- |
+| `registry.ts` | Declara **qué** se puede editar y **qué dice hoy**. El único archivo que se toca para sumar un campo |
+| `get.ts` | `getContent(grupo)` — mezcla lo editado con los originales, en una consulta cacheada |
+| `bucket.ts` · `image-size.ts` | Subida al bucket S3 y medidas leídas de la cabecera del archivo |
+
+Dos decisiones que explican el resto:
+
+- **Los textos originales viven en el registro, no en un seed de la base.** La
+  tabla `content` guarda **sólo lo que alguien cambió**: una fila por campo
+  editado, no por campo del sitio. Con la tabla vacía el sitio se ve exactamente
+  como vino con el diseño, un deploy nuevo no arranca en blanco, y "restaurar el
+  original" es borrar la fila.
+- **La lectura va envuelta en `unstable_cache` con el tag `contenido`.** Sin eso,
+  leer contenido volvería dinámica cada página que hoy se prerenderiza. Guardar
+  en el panel invalida el tag y las rutas que declara el grupo.
+
+Las imágenes van a un bucket de Railway, que es **privado**: no hay URL pública.
+Se sirven proxeadas por `app/media/[...key]/route.ts`, y la clave de cada archivo
+es el hash de su contenido — por eso la ruta puede responder con un año de caché
+inmutable sin riesgo de mostrar una foto vieja.
+
+El formato de texto es mínimo y propio (`components/rich-text.tsx`): `*acento*`,
+`**destacado**`, `## subtítulo`, `- viñeta`, `[texto](destino)`. Se renderiza a
+nodos de React, nunca con `dangerouslySetInnerHTML`.
 
 ## Autenticación y permisos
 
@@ -64,7 +102,7 @@ Tres capas, y sólo una de ellas es control de acceso:
    contra la base. Es el punto único de verdad, y va tanto en la página como en
    la Server Action. Nunca alcanza con ponerlo en una sola de las dos.
 3. **`lib/auth/permissions.ts`** — quién puede qué, en funciones puras
-   (`canManageUsers`, `canEditUser`, `canAssignRole`).
+   (`canManageUsers`, `canEditContent`).
 
 ### Sesiones
 
@@ -81,12 +119,11 @@ o un Route Handler, nunca desde el layout que hace la verificación.
 
 | Rol | Alcance |
 | --- | --- |
-| `owner` | Todo, incluido nombrar otros dueños |
-| `admin` | Contenido y usuarios, pero no toca a los `owner` |
-| `editor` | Sólo contenido. No ve la sección Usuarios |
+| `admin` | Todo: contenido, catálogo y usuarios. Puede nombrar otros admin |
+| `editor` | Sólo contenido del sitio. No ve la sección Usuarios |
 
 Dos invariantes que el código defiende explícitamente: **siempre queda al menos
-un `owner` activo**, y **nadie se cambia el rol ni se desactiva a sí mismo**.
+un `admin` activo**, y **nadie se cambia el rol ni se desactiva a sí mismo**.
 
 ## Server Actions
 
@@ -124,8 +161,9 @@ los tokens de `app/globals.css` (`--night`, `--gold`, `--heading`, `--text`,
 | Script | Para qué |
 | --- | --- |
 | `scripts/worktree.ps1` | Abrir, listar y cerrar worktrees — ver [WORKTREES.md](WORKTREES.md) |
-| `scripts/create-admin.ts` | Crear el primer dueño, o recuperarlo si quedó afuera |
-| `scripts/_*.ts` | One-off temporales. Dry-run por defecto, escriben sólo con `APPLY=1` |
+| `scripts/create-admin.mjs` | Crear el primer admin, o recuperarlo si quedó afuera |
+| `scripts/migrate.mjs` | Aplicar migraciones en el deploy, sin dependencias de desarrollo |
+| `scripts/_*.mjs` | One-off temporales. Dry-run por defecto, escriben sólo con `APPLY=1` |
 
 ```powershell
 npm run db:up         # base local en :5432

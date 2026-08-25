@@ -1,31 +1,38 @@
 import Link from "next/link";
-import { pastEvents, upcomingEvents } from "@/lib/data";
-import { PhotoSlot } from "./photo-slot";
+import { upcomingEvents } from "@/lib/data";
+import { getContent } from "@/lib/content/get";
+import { ContentImage } from "./content-image";
+import { Lineas } from "./rich-text";
 import styles from "./home-events.module.css";
 
-export function HomeEvents() {
+export async function HomeEvents() {
+  const c = await getContent("home");
+
   return (
     <section className={styles.section} aria-labelledby="eventos">
       <header className={styles.head}>
-        <p className={`eyebrow ${styles.eyebrow}`}>Eventos</p>
+        <p className={`eyebrow ${styles.eyebrow}`}>{c.eventosEyebrow}</p>
         <h2 id="eventos" className={`sectionTitle ${styles.title}`}>
-          Se toma, se aprende, se comparte
+          <Lineas texto={c.eventosTitulo} />
         </h2>
-        <p className={styles.lede}>
-          Todos los meses organizamos catas y encuentros en el local. Así se
-          vive Gorros Wine.
-        </p>
+        <p className={styles.lede}>{c.eventosLede}</p>
       </header>
 
       <div className={styles.gallery}>
-        {pastEvents.map((e) => (
-          <figure key={e.id} className={styles.shot}>
-            <PhotoSlot label="Arrastrá una foto de un evento" height={360} />
-            <figcaption className={styles.caption}>{e.caption}</figcaption>
+        {c.eventosGaleria.map((e, i) => (
+          <figure key={i} className={styles.shot}>
+            <ContentImage
+              imagen={e.imagen}
+              etiqueta="Arrastrá una foto de un evento"
+              height={360}
+              sizes="(max-width: 900px) 100vw, 560px"
+            />
+            <figcaption className={styles.caption}>{e.epigrafe}</figcaption>
           </figure>
         ))}
       </div>
 
+      {/* Los eventos siguen escritos a mano: el ABM es otra iteración. */}
       <ul className={styles.upcoming}>
         {upcomingEvents.map((e) => (
           <li key={e.title} className={styles.event}>

@@ -28,3 +28,18 @@ export const ROLE_DESCRIPTION: Record<UserRole, string> = {
 export function canManageUsers(actor: PublicUser): boolean {
   return actor.role === "admin";
 }
+
+/**
+ * ¿Puede editar los textos y las fotos del sitio?
+ *
+ * Hoy, cualquiera del panel: el rol `editor` existe exactamente para esto y
+ * hasta ahora no tenía ninguna pantalla propia.
+ *
+ * Queda como función y no como un `true` suelto en la UI por el mismo motivo
+ * que el resto de este archivo: el día que haya que afinarlo —por ejemplo, que
+ * las legales las toque sólo un admin— se cambia acá y no en cada pantalla que
+ * pregunta.
+ */
+export function canEditContent(_actor: PublicUser): boolean {
+  return true;
+}

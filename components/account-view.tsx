@@ -1,16 +1,16 @@
 "use client";
 
 import { useState } from "react";
-import { shop } from "@/lib/data";
 import styles from "./account-view.module.css";
 
 type Mode = "ingresar" | "crear";
 
-export function AccountView() {
+/** El número llega por props: acá no se puede leer la base. */
+export function AccountView({ whatsapp }: { whatsapp: string }) {
   const [mode, setMode] = useState<Mode>("ingresar");
   const [sent, setSent] = useState(false);
 
-  const waHref = `https://wa.me/${shop.whatsapp}`;
+  const waHref = `https://wa.me/${whatsapp}`;
 
   return (
     <div className={styles.page}>

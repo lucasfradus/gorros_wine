@@ -1,45 +1,52 @@
 import type { Metadata } from "next";
+import { getContent } from "@/lib/content/get";
 import { CartProvider } from "@/components/cart-context";
 import { AgeGate, ageGateScript } from "@/components/age-gate";
 import { Nav } from "@/components/nav";
 import { Footer } from "@/components/footer";
 
-const title = "Gorros Wine — Vinoteca boutique en Pilar";
-const description =
-  "Selección curada de tintos, blancos y espumantes. Comprá online con retiro en el local o envío a domicilio en Pilar y zona.";
+export async function generateMetadata(): Promise<Metadata> {
+  const c = await getContent("sitio");
+  const title = c.titulo;
+  const description = c.descripcion;
 
-export const metadata: Metadata = {
-  title: { default: title, template: "%s · Gorros Wine" },
-  description,
-  openGraph: {
-    type: "website",
-    locale: "es_AR",
-    siteName: "Gorros Wine",
-    title,
+  return {
+    title: { default: title, template: "%s · Gorros Wine" },
     description,
-    images: [
-      {
-        url: "/hero-home.webp",
-        width: 1200,
-        height: 800,
-        alt: "La cava de Gorros Wine",
-      },
-    ],
-  },
-  twitter: { card: "summary_large_image" },
-};
+    openGraph: {
+      type: "website",
+      locale: "es_AR",
+      siteName: "Gorros Wine",
+      title,
+      description,
+      images: c.imagenCompartir
+        ? [
+            {
+              url: c.imagenCompartir.src,
+              width: c.imagenCompartir.width ?? 1200,
+              height: c.imagenCompartir.height ?? 800,
+              alt: c.imagenCompartir.alt,
+            },
+          ]
+        : undefined,
+    },
+    twitter: { card: "summary_large_image" },
+  };
+}
 
 /** Sitio público: age gate, carrito y el marco de nav + footer. */
-export default function StoreLayout({
+export default async function StoreLayout({
   children,
 }: {
   children: React.ReactNode;
 }) {
+  const edad = await getContent("edad");
+
   return (
     <>
       {/* Corre antes de que se pinte el resto del body. */}
       <script dangerouslySetInnerHTML={{ __html: ageGateScript }} />
-      <AgeGate />
+      <AgeGate copy={edad} />
       <CartProvider>
         <div className="shell">
           <Nav />
