@@ -1,0 +1,244 @@
+/* Lo que admin.module.css no cubre: la ficha de cuenta corriente y el extracto.
+   Los colores salen siempre de los tokens de app/globals.css. */
+
+/* ---------- formulario ---------- */
+
+/* Mismo aire que .radioRow, pero para un checkbox suelto. */
+.check {
+  display: flex;
+  gap: 10px;
+  align-items: flex-start;
+  padding: 11px 13px;
+  border: 1px solid var(--field-line);
+  border-radius: 3px;
+  cursor: pointer;
+}
+
+.check:hover {
+  border-color: var(--gold);
+}
+
+.check input {
+  margin-top: 3px;
+  accent-color: var(--gold);
+}
+
+.grupo {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin: 0;
+  padding: 16px 18px;
+  border: 1px solid var(--line-soft);
+  border-radius: 3px;
+}
+
+.grupo legend {
+  padding: 0 6px;
+}
+
+.dosColumnas {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 14px;
+}
+
+/* Selector compacto para elegir entre pocas opciones sin gastar una fila por
+   cada una, como sí hace .radioRow. El radio real queda oculto pero presente:
+   el teclado y los lectores de pantalla lo siguen usando. */
+.tipoSelector {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.tipoOpcion {
+  padding: 8px 15px;
+  border: 1px solid var(--field-line);
+  border-radius: 999px;
+  font-size: 13px;
+  color: var(--muted);
+  cursor: pointer;
+}
+
+.tipoOpcion:hover {
+  border-color: var(--gold);
+  color: var(--text);
+}
+
+.tipoOpcion input {
+  position: absolute;
+  opacity: 0;
+  width: 0;
+  height: 0;
+}
+
+.tipoOpcion:focus-within {
+  outline: 2px solid var(--gold);
+  outline-offset: 2px;
+}
+
+.tipoOpcion:has(input:checked),
+.tipoOpcionActiva {
+  border-color: var(--gold);
+  background: var(--chip);
+  color: var(--heading);
+}
+
+.errorInline {
+  display: block;
+  margin-top: 6px;
+  font-size: 12px;
+  color: var(--danger);
+}
+
+/* ---------- cabecera de saldos ---------- */
+
+.saldos {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 1px;
+  background: var(--line-soft);
+  border: 1px solid var(--line-soft);
+  border-radius: 4px;
+  overflow: hidden;
+}
+
+.saldo {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 20px 22px;
+  background: var(--panel);
+}
+
+.saldoMoneda {
+  font-size: 10px;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+.saldoImporte {
+  font-family: var(--font-fraunces), Georgia, serif;
+  font-size: 26px;
+  line-height: 1.1;
+  color: var(--heading);
+}
+
+/* Deber es el estado que hay que ver de lejos; a favor es información. */
+.saldoDeuda {
+  color: var(--red);
+}
+
+.saldoFavor {
+  color: var(--ok);
+}
+
+.saldoNota {
+  font-size: 12px;
+  color: var(--dim);
+}
+
+.excedido {
+  font-size: 12px;
+  color: var(--danger);
+}
+
+/* ---------- extracto ---------- */
+
+.importeCelda {
+  text-align: right;
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+}
+
+.negativo {
+  color: var(--red);
+}
+
+.positivo {
+  color: var(--ok);
+}
+
+/* Una operación anulada no se borra: se muestra tachada, y su contraria
+   también, para que no parezca que el saldo se movió. */
+.anulado {
+  color: var(--dim);
+  text-decoration: line-through;
+}
+
+.anuladoTag {
+  display: inline-block;
+  margin-left: 8px;
+  padding: 1px 7px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  font-size: 10px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--muted);
+  text-decoration: none;
+}
+
+/* Las patas de una misma operación van pegadas: se lee como un solo hecho. */
+.mismaOperacion td {
+  border-top: 0;
+}
+
+.detalleTipo {
+  display: block;
+  font-size: 11px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+.cotiz {
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+  color: var(--dim);
+}
+
+/* ---------- buscador ---------- */
+
+.buscador {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  align-items: flex-end;
+  margin-bottom: 18px;
+}
+
+.buscadorCampo {
+  flex: 1 1 240px;
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+}
+
+.filtros {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.filtro {
+  padding: 7px 13px;
+  border: 1px solid var(--field-line);
+  border-radius: 999px;
+  font-size: 12px;
+  color: var(--muted);
+  text-decoration: none;
+}
+
+.filtro:hover {
+  border-color: var(--gold);
+  color: var(--text);
+}
+
+.filtroActivo {
+  border-color: var(--gold);
+  background: var(--chip);
+  color: var(--heading);
+}

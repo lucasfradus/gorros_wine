@@ -41,6 +41,7 @@ app/
         ├── login/        pantalla de ingreso
         └── (panel)/      todo lo que exige sesión
             ├── page.tsx  inicio del panel
+            ├── clientes/ agenda del negocio y cuenta corriente
             ├── productos/ ABM del catálogo + cotización del dólar
             ├── categorias/ qué clase de cosa es cada producto (con árbol)
             ├── bodegas/  ABM de proveedores y su contacto comercial
@@ -64,6 +65,8 @@ Hoy conviven tres fuentes, y conviene tenerlo claro:
   desde la sección Catálogo del panel.
 - **Los eventos también viven en la base** (`eventos`), y a diferencia del
   catálogo **la tienda ya los lee**: ver la sección de abajo.
+- **Los clientes y su cuenta corriente también**: `clientes` y `movimientos_cc`
+  (ver más abajo).
 
 O sea que **el catálogo que se carga en el panel todavía no se ve en la
 tienda**. Fue a propósito: mover el render público a la base cambia
@@ -123,6 +126,46 @@ Tres cosas que no son obvias:
 Los textos que rodean a la agenda —volanta, título, bajada, galería, el aviso
 de "no hay fechas"— siguen siendo del CMS.
 
+## Clientes y cuenta corriente
+
+Los **clientes** son los del negocio y no los `users` del panel: un cliente
+compra vino y debe plata, un user entra al admin.
+
+Dos decisiones explican todo lo demás.
+
+**El saldo no es una columna: es la suma de los movimientos.** Un saldo guardado
+es la forma clásica de que la cuenta y el historial dejen de coincidir sin que
+nadie sepa cuál de los dos miente. De ahí sale gratis la corrección de errores:
+anular es agregar la operación inversa, el par se cancela solo al sumar, y el
+extracto de hace tres meses sigue diciendo lo que decía. Por eso acá **no hay
+`UPDATE` ni `DELETE`** sobre un movimiento.
+
+**La moneda es del movimiento, no del cliente.** Cada cliente tiene dos saldos
+que conviven —pesos y dólares— y el dólar no se pesifica solo: se pesifica el
+día que se decide, en una fila `conversion` que guarda el tipo de cambio que se
+arregló en ese momento. Por eso `movimientos_cc` no tiene una columna `moneda`
+sino dos de importe (`delta_ars_centavos` y `delta_usd_centavos`): es lo que
+permite que una conversión mueva las dos a la vez.
+
+Una operación del mundo real puede ser más de una fila. "Me dejó USD 2.000" y
+"los contamos contra la deuda en pesos" son dos hechos distintos, y el segundo
+es opcional, porque a veces esos dólares se quedan quietos como saldo a favor.
+Las filas de una misma operación comparten `grupo_id`, y es el grupo lo que se
+anula — nunca media operación.
+
+| Archivo | Qué hace |
+| --- | --- |
+| `lib/cuenta-corriente.ts` | Las reglas, **sin tocar la base**: saldo, signos, conversión, límite, parseo de importes |
+| `lib/db/cuenta.ts` | Las consultas (hoy, los saldos del listado en una sola agregada) |
+| `clientes/actions.ts` | Datos del cliente — los dos roles, `requireUser()` |
+| `clientes/cuenta-actions.ts` | Movimientos — **sólo admin**, detrás de `requireCuentaCorriente()` |
+
+Que las reglas no hagan I/O no es prolijidad: es lo que deja probar la
+aritmética de la plata sin levantar Postgres. `npm run prueba:cuenta` la cubre.
+
+El tipo de cambio de una operación **siempre** es el que se pactó en esa
+operación, y nunca uno de referencia.
+
 ## El CMS de contenido
 
 Todo el copy fijo del sitio —hero, Nosotros, Club, Eventos, pie de página, age
@@ -166,7 +209,7 @@ Tres capas, y sólo una de ellas es control de acceso:
    contra la base. Es el punto único de verdad, y va tanto en la página como en
    la Server Action. Nunca alcanza con ponerlo en una sola de las dos.
 3. **`lib/auth/permissions.ts`** — quién puede qué, en funciones puras
-   (`canManageUsers`, `canEditContent`).
+   (`canManageUsers`, `canEditContent`, `canManageCuentaCorriente`).
 
 ### Sesiones
 
@@ -183,8 +226,8 @@ o un Route Handler, nunca desde el layout que hace la verificación.
 
 | Rol | Alcance |
 | --- | --- |
-| `admin` | Todo: contenido, catálogo, precios y usuarios. Puede nombrar otros admin |
-| `editor` | Contenido del sitio y catálogo. No ve la sección Usuarios |
+| `admin` | Todo: contenido, catálogo, precios, clientes, plata y usuarios. Puede nombrar otros admin |
+| `editor` | Contenido del sitio, catálogo y la ficha de un cliente. No ve Usuarios, ni saldos, ni movimientos |
 
 Dos escalones y no tres: con un equipo chico, un nivel intermedio agrega estados
 que mantener sin agregar seguridad (el porqué largo está en `lib/db/schema.ts`).
@@ -230,6 +273,7 @@ los tokens de `app/globals.css` (`--night`, `--gold`, `--heading`, `--text`,
 | `scripts/worktree.ps1` | Abrir, listar y cerrar worktrees — ver [WORKTREES.md](WORKTREES.md) |
 | `scripts/create-admin.mjs` | Crear el primer admin, o recuperarlo si quedó afuera |
 | `scripts/migrate.mjs` | Aplicar migraciones en el deploy, sin dependencias de desarrollo |
+| `scripts/prueba-cuenta.ts` | `npm run prueba:cuenta` — la aritmética de la cuenta corriente |
 | `scripts/_*.mjs` | One-off temporales. Dry-run por defecto, escriben sólo con `APPLY=1` |
 
 ```powershell

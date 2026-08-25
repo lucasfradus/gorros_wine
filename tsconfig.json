@@ -11,6 +11,10 @@
     "moduleResolution": "bundler",
     "resolveJsonModule": true,
     "isolatedModules": true,
+    // Los scripts de `scripts/` corren con el stripeo de tipos de Node, que
+    // exige la extensión en los imports relativos. Habilitarlo no obliga a
+    // nada: el código de la app sigue importando sin extensión como siempre.
+    "allowImportingTsExtensions": true,
     "jsx": "preserve",
     "incremental": true,
     "plugins": [{ "name": "next" }],

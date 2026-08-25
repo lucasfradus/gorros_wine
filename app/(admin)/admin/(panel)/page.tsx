@@ -1,8 +1,13 @@
 import Link from "next/link";
 import { count, eq } from "drizzle-orm";
 import { db } from "@/lib/db";
-import { bodegas, productos, users } from "@/lib/db/schema";
-import { canManageUsers, requireUser } from "@/lib/auth";
+import { bodegas, clientes, productos, users } from "@/lib/db/schema";
+import {
+  canManageCuentaCorriente,
+  canManageUsers,
+  requireUser,
+} from "@/lib/auth";
+import { contarClientesConDeuda } from "@/lib/db/cuenta";
 import { getEditados } from "@/lib/content/get";
 import { wines } from "@/lib/data";
 import styles from "../admin.module.css";
@@ -23,13 +28,22 @@ export default async function DashboardPage() {
   const porGrupo = await getEditados();
   const editados = Object.values(porGrupo).reduce((n, c) => n + c.length, 0);
 
-  const [[productosActivos], [bodegasActivas]] = await Promise.all([
-    db
-      .select({ n: count() })
-      .from(productos)
-      .where(eq(productos.isActive, true)),
-    db.select({ n: count() }).from(bodegas).where(eq(bodegas.isActive, true)),
-  ]);
+  const puedePlata = canManageCuentaCorriente(user);
+
+  const [[productosActivos], [bodegasActivas], [clientesActivos], conDeuda] =
+    await Promise.all([
+      db
+        .select({ n: count() })
+        .from(productos)
+        .where(eq(productos.isActive, true)),
+      db.select({ n: count() }).from(bodegas).where(eq(bodegas.isActive, true)),
+      db
+        .select({ n: count() })
+        .from(clientes)
+        .where(eq(clientes.isActive, true)),
+      // La deuda es plata: para un editor ni se consulta.
+      puedePlata ? contarClientesConDeuda() : Promise.resolve(0),
+    ]);
 
   return (
     <>
@@ -82,6 +96,40 @@ export default async function DashboardPage() {
             >
               Editar contenido
             </Link>
+          </div>
+        </section>
+
+        <section className={styles.card}>
+          <h2 className={styles.label}>Clientes</h2>
+          <p style={{ margin: "10px 0 0", fontSize: 15 }}>
+            {clientesActivos.n === 0
+              ? "Todavía no hay clientes cargados."
+              : `${clientesActivos.n} ${
+                  clientesActivos.n === 1 ? "cliente activo" : "clientes activos"
+                }.`}
+          </p>
+          {puedePlata && conDeuda > 0 ? (
+            <p className={styles.hint} style={{ marginTop: 8 }}>
+              {conDeuda === 1
+                ? "1 tiene saldo pendiente."
+                : `${conDeuda} tienen saldo pendiente.`}
+            </p>
+          ) : null}
+          <div className={styles.btnRow} style={{ marginTop: 16 }}>
+            <Link
+              href="/admin/clientes"
+              className={`${styles.btn} ${styles.btnSmall}`}
+            >
+              Ver clientes
+            </Link>
+            {puedePlata && conDeuda > 0 ? (
+              <Link
+                href="/admin/clientes?filtro=deuda"
+                className={`${styles.btn} ${styles.btnSmall}`}
+              >
+                Los que deben
+              </Link>
+            ) : null}
           </div>
         </section>
 

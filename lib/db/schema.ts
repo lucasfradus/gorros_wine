@@ -1,8 +1,10 @@
 import {
+  bigint,
   boolean,
   index,
   integer,
   jsonb,
+  numeric,
   pgEnum,
   pgTable,
   primaryKey,
@@ -534,3 +536,198 @@ export const eventos = pgTable(
 
 export type Evento = typeof eventos.$inferSelect;
 export type NewEvento = typeof eventos.$inferInsert;
+
+/* ─────────────────────────────  Clientes  ───────────────────────────── */
+
+/**
+ * Acá **no** se declara un enum `moneda`, aunque el módulo trabaje con dos.
+ *
+ * Ninguna columna de la cuenta corriente guarda una moneda: los importes viven
+ * en dos columnas separadas (`deltaArsCentavos` y `deltaUsdCentavos`), que es
+ * lo que permite que una `conversion` mueva las dos a la vez. Un enum que no
+ * tipa ninguna columna sólo habría creado un tipo de Postgres al pedo — y uno
+ * que choca con el `moneda` del catálogo, que sí lo usa para el precio de
+ * lista. El tipo de TypeScript que necesitan los formularios está en
+ * `lib/cuenta-corriente.ts`.
+ */
+
+/**
+ * Los clientes del negocio, que no son los `users` del panel: un cliente compra
+ * vino y debe plata, un user entra al admin. Nunca fueron la misma cosa.
+ *
+ * No hay columna `saldo`, y es a propósito: el saldo se calcula sumando los
+ * movimientos (ver `movimientosCc`). Un saldo guardado es la forma clásica de
+ * que la cuenta y el historial dejen de coincidir sin que nadie sepa cuál de
+ * los dos miente.
+ */
+export const clientes = pgTable(
+  "clientes",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+
+    nombre: text("nombre").notNull(),
+
+    /** Cómo lo llaman de verdad: "Pepe el del restaurante". Se busca por acá
+     *  tanto como por el nombre, porque es lo que uno recuerda. */
+    apodo: text("apodo"),
+
+    telefono: text("telefono"),
+
+    /** Único cuando está: en Postgres un UNIQUE deja pasar varios NULL, así que
+     *  esto alcanza sin índice parcial. Se normaliza a minúscula al escribir,
+     *  igual que en `users`.
+     *
+     *  Está pensado para el día que el cliente entre a la web a mirar su
+     *  cuenta: ese login va a colgar de esta fila y no de `users`. */
+    email: text("email").unique(),
+
+    /** CUIT o DNI, y como **texto**: tiene ceros a la izquierda y guiones, y
+     *  ninguna de las dos cosas sobrevive a un tipo numérico. */
+    documento: text("documento"),
+    razonSocial: text("razon_social"),
+
+    direccion: text("direccion"),
+
+    /** El campo para lo que no entra en ningún casillero: "paga a fin de mes",
+     *  "prefiere tintos". Interno, no lo ve el cliente. */
+    notas: text("notas"),
+
+    /** Habilita fiar. Un flag y no un tipo de cliente aparte: el que hoy paga
+     *  todo y mañana pide fiado se habilita acá y no hay nada que migrar. */
+    cuentaCorriente: boolean("cuenta_corriente").notNull().default(false),
+
+    /** Límite por moneda y no uno solo, porque el sistema **no tiene** un tipo
+     *  de cambio de referencia —cada cotización se arregla por operación— y sin
+     *  eso un límite mixto no se puede evaluar sin inventar un número.
+     *  `null` es sin límite. Pasarse avisa, no bloquea: quien decide fiar de
+     *  más es el dueño. */
+    limiteArsCentavos: bigint("limite_ars_centavos", { mode: "number" }),
+    limiteUsdCentavos: bigint("limite_usd_centavos", { mode: "number" }),
+
+    /** Se archiva en vez de borrar: con movimientos colgando, borrar la fila
+     *  deja huérfano todo el historial de la cuenta. */
+    isActive: boolean("is_active").notNull().default(true),
+
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+  },
+  (t) => [
+    index("clientes_activos_idx").on(t.isActive),
+    index("clientes_nombre_idx").on(t.nombre),
+  ],
+);
+
+/**
+ * Qué clase de movimiento es. Sirve para etiquetar y filtrar; **el que mueve el
+ * saldo es el importe, no el tipo**, así que agregar un tipo nuevo no cambia
+ * ninguna cuenta.
+ *
+ * - `saldo_inicial` — lo que ya venía debiendo cuando se lo dio de alta.
+ * - `cargo`         — se llevó mercadería.
+ * - `pago`          — entregó plata.
+ * - `conversion`    — se acordó pasar saldo de una moneda a la otra.
+ * - `ajuste`        — corrección o redondeo, con motivo escrito.
+ */
+export const movimientoTipo = pgEnum("movimiento_tipo", [
+  "saldo_inicial",
+  "cargo",
+  "pago",
+  "conversion",
+  "ajuste",
+]);
+export type MovimientoTipo = (typeof movimientoTipo.enumValues)[number];
+
+/**
+ * El libro de la cuenta corriente. Se escribe y no se toca: acá no hay UPDATE
+ * ni DELETE de un movimiento. Un error se corrige agregando la operación
+ * inversa (`anulaGrupoId`), y así el saldo del mes pasado sigue siendo el que
+ * era cuando el cliente lo miró.
+ *
+ * **Los saldos son dos y viven separados**, uno por moneda. El dólar no se
+ * pesifica solo: se pesifica el día que se decide, y ese día es un movimiento
+ * `conversion` con la cotización que se arregló en el momento.
+ *
+ * Una operación del mundo real puede necesitar más de una fila. "Me dejó USD
+ * 2.000 y los contamos contra la deuda en pesos" son **dos hechos distintos**
+ * —recibí dólares; los apliqué— y el segundo es opcional, porque a veces esos
+ * dólares se quedan quietos como saldo a favor. Las filas de una misma
+ * operación comparten `grupoId`, y es el grupo lo que se anula, nunca media
+ * operación.
+ */
+export const movimientosCc = pgTable(
+  "movimientos_cc",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+
+    clienteId: uuid("cliente_id")
+      .notNull()
+      .references(() => clientes.id, { onDelete: "restrict" }),
+
+    /** La fecha del hecho, no la de la carga: la mercadería salió el viernes
+     *  aunque esto se anote el lunes. Por eso es editable y no un `defaultNow`
+     *  a secas. */
+    fecha: timestamp("fecha", { withTimezone: true }).notNull().defaultNow(),
+
+    tipo: movimientoTipo("tipo").notNull(),
+
+    /** Qué fue: "6 cajas Malbec Reserva", "efectivo en dólares". Hoy se escribe
+     *  a mano; cuando exista el módulo de ventas, el movimiento va a poder
+     *  colgar de una venta y esto se llena solo. */
+    detalle: text("detalle").notNull(),
+
+    /** Cuánto mueve, **en centavos** y con signo: positivo es a favor del
+     *  cliente, negativo es deuda. En centavos porque guardar plata en coma
+     *  flotante termina en $1999,9999999.
+     *
+     *  Casi siempre uno de los dos es 0. Los dos se mueven juntos sólo en una
+     *  `conversion`, que es justamente pasar de una moneda a la otra. */
+    deltaArsCentavos: bigint("delta_ars_centavos", { mode: "number" })
+      .notNull()
+      .default(0),
+    deltaUsdCentavos: bigint("delta_usd_centavos", { mode: "number" })
+      .notNull()
+      .default(0),
+
+    /** Pesos por dólar, tal como se pactó. Se guarda aunque se podría despejar
+     *  dividiendo los dos importes, porque **es el número que se estrecharon la
+     *  mano** y es el que el cliente va a discutir si discute algo. La
+     *  cotización es el dato de entrada; el importe en pesos sale de ella.
+     *  `numeric` y no `real`: acá tampoco entra un float. */
+    cotizacion: numeric("cotizacion", { precision: 14, scale: 4 }),
+
+    /** La operación a la que pertenece esta fila. Una operación simple es un
+     *  grupo de una sola. */
+    grupoId: uuid("grupo_id").notNull(),
+
+    /** Si esta operación anula otra, el `grupoId` de aquella. No es una foreign
+     *  key porque apunta a un grupo —varias filas— y no a un `id` único.
+     *
+     *  Anular no necesita ningún filtro al sumar: como el contramovimiento
+     *  tiene el importe invertido, el par se cancela solo. Esto sirve para
+     *  *mostrar* lo anulado tachado, no para calcular. */
+    anulaGrupoId: uuid("anula_grupo_id"),
+
+    /** Quién lo cargó. Queda en `null` si ese usuario se borra alguna vez: vale
+     *  más el movimiento sin autor que perder el movimiento. */
+    creadoPor: uuid("creado_por").references(() => users.id, {
+      onDelete: "set null",
+    }),
+
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+  },
+  (t) => [
+    index("movimientos_cliente_fecha_idx").on(t.clienteId, t.fecha),
+    index("movimientos_grupo_idx").on(t.grupoId),
+  ],
+);
+
+export type Cliente = typeof clientes.$inferSelect;
+export type NewCliente = typeof clientes.$inferInsert;
+export type MovimientoCc = typeof movimientosCc.$inferSelect;
+export type NewMovimientoCc = typeof movimientosCc.$inferInsert;
