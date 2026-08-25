@@ -16,7 +16,7 @@ Los checkboxes se marcan **allá**, que es donde está el detalle de cada paso.
 
 | Tarea | Estado |
 | --- | --- |
-| 1. Tabla `eventos` y migración | ☐ |
+| 1. Tabla `eventos` y migración | ☑ |
 | 2. Permisos (`canEditEvents`, `requireEventEditor`) | ☐ |
 | 3. Mudar `ImageField` y `uploadMediaAction` a un lugar compartido | ☐ |
 | 4. Fechas: `datetime-local` ↔ instante, con huso fijo | ☐ |
