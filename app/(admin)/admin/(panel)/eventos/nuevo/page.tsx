@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { requireEventEditor } from "@/lib/auth";
+import { requireUser } from "@/lib/auth";
 import { createEventoAction } from "../actions";
 import { EventoForm } from "../evento-forms";
 import styles from "../../../admin.module.css";
@@ -7,7 +7,7 @@ import styles from "../../../admin.module.css";
 export const metadata = { title: "Nuevo evento" };
 
 export default async function NuevoEventoPage() {
-  await requireEventEditor();
+  await requireUser();
 
   return (
     <>

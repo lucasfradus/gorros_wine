@@ -6,7 +6,7 @@ import { eq } from "drizzle-orm";
 import { z } from "zod";
 import { db } from "@/lib/db";
 import { eventos } from "@/lib/db/schema";
-import { canEditEvents, requireUser } from "@/lib/auth";
+import { requireUser } from "@/lib/auth";
 import { esquemaImagen } from "@/lib/content/esquema-imagen";
 import { EVENTOS_TAG } from "@/lib/eventos";
 import { desdeInputLocal } from "@/lib/format";
@@ -117,23 +117,16 @@ function leerFormulario(formData: FormData) {
   };
 }
 
-/** Autorizar es lo primero de todo, y va también acá y no sólo en la página:
- *  una Server Action es un endpoint HTTP y se invoca sin pasar por la
- *  pantalla que la muestra. */
-async function autorizar(): Promise<string | null> {
-  const actor = await requireUser();
-  if (!canEditEvents(actor)) return "No tenés permiso para editar los eventos.";
-  return null;
-}
-
 // ---------------------------------------------------------------- crear
 
 export async function createEventoAction(
   _prev: EventoFormState,
   formData: FormData,
 ): Promise<EventoFormState> {
-  const noPuede = await autorizar();
-  if (noPuede) return { error: noPuede };
+  // Autorizar es lo primero, y va también acá y no sólo en la página: una
+  // Server Action es un endpoint HTTP y se invoca sin pasar por la pantalla
+  // que la muestra. La agenda la editan los dos roles: con exigir sesión basta.
+  await requireUser();
 
   const parsed = esquema.safeParse(leerFormulario(formData));
   if (!parsed.success) return { error: parsed.error.issues[0].message };
@@ -161,8 +154,10 @@ export async function updateEventoAction(
   _prev: EventoFormState,
   formData: FormData,
 ): Promise<EventoFormState> {
-  const noPuede = await autorizar();
-  if (noPuede) return { error: noPuede };
+  // Autorizar es lo primero, y va también acá y no sólo en la página: una
+  // Server Action es un endpoint HTTP y se invoca sin pasar por la pantalla
+  // que la muestra. La agenda la editan los dos roles: con exigir sesión basta.
+  await requireUser();
 
   const parsed = conId.safeParse({
     ...leerFormulario(formData),
@@ -201,8 +196,10 @@ export async function deleteEventoAction(
   _prev: EventoFormState,
   formData: FormData,
 ): Promise<EventoFormState> {
-  const noPuede = await autorizar();
-  if (noPuede) return { error: noPuede };
+  // Autorizar es lo primero, y va también acá y no sólo en la página: una
+  // Server Action es un endpoint HTTP y se invoca sin pasar por la pantalla
+  // que la muestra. La agenda la editan los dos roles: con exigir sesión basta.
+  await requireUser();
 
   const parsed = z.uuid().safeParse(formData.get("id"));
   if (!parsed.success) return { error: "Ese evento ya no existe." };

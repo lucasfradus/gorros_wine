@@ -44,18 +44,8 @@ export function canEditContent(_actor: PublicUser): boolean {
   return true;
 }
 
-/**
- * ¿Puede cargar y publicar eventos?
- *
- * Los dos roles, y no es una concesión: el `ROLE_DESCRIPTION` de arriba ya le
- * promete al editor "catálogo, precios y eventos". Si esto devolviera sólo
- * `admin`, lo que estaría mal sería la descripción que lee la persona al
- * asignar el rol.
- *
- * Queda como función por lo mismo que las de arriba: el día que publicar exija
- * ser admin —y editar el borrador no— se cambia acá, y no en cada pantalla que
- * pregunta.
- */
-export function canEditEvents(_actor: PublicUser): boolean {
-  return true;
-}
+// La agenda de eventos no tiene función de permiso, y es a propósito: la
+// editan los dos roles, así que alcanza con `requireUser()`. Es lo mismo que
+// hacen Bodegas y Productos, y lo que pide la receta de
+// `docs/COMO-AGREGAR-MODULO.md`: un permiso que siempre devuelve `true` es una
+// indirección que hay que ir a leer para descubrir que no decidía nada.

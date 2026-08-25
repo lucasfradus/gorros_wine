@@ -4,7 +4,7 @@ import { createHash } from "node:crypto";
 import { eq } from "drizzle-orm";
 import { db } from "@/lib/db";
 import { media } from "@/lib/db/schema";
-import { canEditContent, canEditEvents, requireUser } from "@/lib/auth";
+import { canEditContent, requireUser } from "@/lib/auth";
 import { bucketReady, subirAlBucket } from "@/lib/content/bucket";
 import type { ImagenValor } from "@/lib/content/types";
 import {
@@ -35,10 +35,10 @@ export async function uploadMediaAction(
 ): Promise<SubidaState> {
   const actor = await requireUser();
 
-  // Alcanza con tener alguna pantalla que suba fotos. El permiso fino es de la
-  // pantalla que después guarda la referencia, no de la subida en sí: una
-  // imagen huérfana en el bucket no se ve en ningún lado.
-  if (!canEditContent(actor) && !canEditEvents(actor)) {
+  // El permiso fino es de la pantalla que después guarda la referencia, no de
+  // la subida en sí: una imagen huérfana en el bucket no se ve en ningún lado.
+  // Por eso alcanza con el permiso más laxo de los que llegan hasta acá.
+  if (!canEditContent(actor)) {
     return { error: "No tenés permiso para subir imágenes." };
   }
 

@@ -1,11 +1,12 @@
 # Cómo agregar una sección al panel
 
 Receta para sumar una sección nueva al panel de administración (por ejemplo
-Eventos o Pedidos), respetando las convenciones que ya usan Usuarios, Bodegas y
-Productos. El ejemplo de acá es **hipotético**: una sección Eventos que todavía
-no existe. Los tres módulos reales están en
-`app/(admin)/admin/(panel)/{usuarios,bodegas,productos}/` y son la referencia
-que manda si algo no coincide.
+Pedidos), respetando las convenciones que ya usan Usuarios, Bodegas, Productos y
+Eventos. El código de acá es **hipotético y simplificado**: usa una tabla
+`eventos` como ejemplo, pero no es el código real de esa sección ni de ninguna
+otra. Los módulos de verdad están en
+`app/(admin)/admin/(panel)/{usuarios,bodegas,productos,eventos}/` y son la
+referencia que manda si algo no coincide.
 
 Antes de arrancar: leer `AGENTS.md`, y si es una iteración grande, abrir worktree
 (`./scripts/worktree.ps1 nuevo <slug>`) y escribir el plan en `docs/planes/`.

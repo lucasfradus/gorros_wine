@@ -2,7 +2,7 @@ import Link from "next/link";
 import { asc, desc, gte, lt } from "drizzle-orm";
 import { db } from "@/lib/db";
 import { eventos, type Evento } from "@/lib/db/schema";
-import { requireEventEditor } from "@/lib/auth";
+import { requireUser } from "@/lib/auth";
 import { formatDia, formatHora, formatMes } from "@/lib/format";
 import { formatearPrecio } from "@/lib/precio";
 import styles from "../../admin.module.css";
@@ -18,7 +18,7 @@ export const metadata = { title: "Eventos" };
  * el panel el histórico completo es justamente lo que se viene a buscar.
  */
 export default async function EventosPage() {
-  await requireEventEditor();
+  await requireUser();
   const ahora = new Date();
 
   const [proximos, pasados] = await Promise.all([

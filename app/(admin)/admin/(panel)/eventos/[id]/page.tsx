@@ -4,7 +4,7 @@ import { eq } from "drizzle-orm";
 import { z } from "zod";
 import { db } from "@/lib/db";
 import { eventos } from "@/lib/db/schema";
-import { requireEventEditor } from "@/lib/auth";
+import { requireUser } from "@/lib/auth";
 import { aInputLocal, formatDateTime } from "@/lib/format";
 import { deleteEventoAction, updateEventoAction } from "../actions";
 import { BorrarEvento, EventoForm } from "../evento-forms";
@@ -18,7 +18,7 @@ export default async function EditarEventoPage({
   params: Promise<{ id: string }>;
 }) {
   const { id } = await params;
-  await requireEventEditor();
+  await requireUser();
 
   // Sin este filtro, un id que no es UUID llega a Postgres y revienta la
   // consulta en vez de dar un 404 limpio.
