@@ -8,6 +8,7 @@ import { content } from "@/lib/db/schema";
 import { canEditContent, requireUser } from "@/lib/auth";
 import { CONTENT_TAG } from "@/lib/content/get";
 import { iguales } from "@/lib/content/iguales";
+import { esquemaImagen } from "@/lib/content/esquema-imagen";
 import { REGISTRO, claveDe, esGrupo, type GrupoKey } from "@/lib/content/registry";
 import type { Campo, CampoLista, Grupo } from "@/lib/content/types";
 
@@ -159,27 +160,6 @@ function normalizarSaltos<T>(valor: T): T {
 // ---------- validación armada desde el registro ----------
 
 const LARGOS = { texto: 300, parrafo: 3000, rico: 20000 } as const;
-
-/**
- * La ruta de una imagen tiene que ser del propio sitio. Sin esto, alguien con
- * acceso al panel podría dejar apuntando las fotos a un dominio ajeno.
- */
-const rutaDeImagen = z
-  .string()
-  .min(1, "Falta la imagen.")
-  .refine(
-    (s) => s.startsWith("/") && !s.startsWith("//"),
-    "La imagen tiene que ser una ruta de este sitio.",
-  );
-
-const esquemaImagen = z
-  .object({
-    src: rutaDeImagen,
-    alt: z.string().max(300, "El texto alternativo es muy largo."),
-    width: z.number().int().positive().nullable(),
-    height: z.number().int().positive().nullable(),
-  })
-  .nullable();
 
 function zodDeCampo(campo: Campo): z.ZodType {
   switch (campo.tipo) {

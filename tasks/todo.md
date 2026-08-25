@@ -20,9 +20,9 @@ Los checkboxes se marcan **allá**, que es donde está el detalle de cada paso.
 | 2. Permisos (`canEditEvents`, `requireEventEditor`) | ☑ |
 | 3. Mudar `ImageField` y `uploadMediaAction` a un lugar compartido | ☑ |
 | 4. Fechas: `datetime-local` ↔ instante, con huso fijo | ☑ |
-| 5. Server Actions (crear, editar, borrar) | ☐ |
-| 6. Pantallas del panel | ☐ |
-| 7. Enlace en la navegación | ☐ |
+| 5. Server Actions (crear, editar, borrar) | ☑ |
+| 6. Pantallas del panel | ☑ (falta prueba en navegador) |
+| 7. Enlace en la navegación | ☑ |
 | 8. La tienda lee la agenda real | ☐ |
 | 9. Migrar los cuatro eventos de hoy | ☐ |
 
