@@ -54,19 +54,25 @@ app/
 
 Hoy conviven tres fuentes, y conviene tenerlo claro:
 
-- **El catálogo que muestra la tienda y los eventos viven en `lib/data.ts`**,
-  como arrays de TypeScript. Es la razón por la que `/catalogo` y las fichas se
-  pueden generar estáticas.
+- **El catálogo que muestra la tienda vive en `lib/data.ts`**, como arrays de
+  TypeScript. Es la razón por la que `/catalogo` y las fichas se pueden generar
+  estáticas.
 - **Los textos y las fotos del sitio salen del CMS** (ver abajo).
 - **El catálogo editable vive en la base**: además de `users`, `sessions`,
   `content` y `media` están `categorias`, `varietales`, `bodegas`, `productos`,
   `producto_varietales` y `cotizaciones` (`lib/db/schema.ts`), que se editan
   desde la sección Catálogo del panel.
+- **Los eventos también viven en la base** (`eventos`), y a diferencia del
+  catálogo **la tienda ya los lee**: ver la sección de abajo.
 
-O sea que **lo que se carga en el panel todavía no se ve en la tienda**. Fue a
-propósito: mover el render público a la base cambia `/catalogo`,
-`/producto/[id]`, `/buscar` y la home, y las saca del render estático. Es la
-iteración que sigue, y va en worktree.
+O sea que **el catálogo que se carga en el panel todavía no se ve en la
+tienda**. Fue a propósito: mover el render público a la base cambia
+`/catalogo`, `/producto/[id]`, `/buscar` y la home, y las saca del render
+estático. Es la iteración que sigue, y va en worktree.
+
+Los eventos son la excepción, y sirven de ensayo de ese camino: se cargan en el
+panel y **la tienda ya los lee**, sin perder el prerender. Cómo, en la sección
+que sigue.
 
 Sobre el modelo del catálogo, cuatro decisiones que se explican una sola vez:
 
@@ -87,6 +93,35 @@ Sobre el modelo del catálogo, cuatro decisiones que se explican una sola vez:
   se guardara, cada movimiento del dólar obligaría a reescribir el catálogo.
 - **`cotizaciones` es un historial**, no una fila que se pisa: la vigente es la
   última. No hay upsert que escribir y queda asentado quién movió el dólar.
+
+## La agenda de eventos
+
+Las catas y encuentros **sí** están en la base, desde la iteración del ABM. Se
+cargan en **Eventos**, en el panel, y se leen con `lib/eventos.ts`.
+
+Un evento es una fecha, no un rango: de `comienza` salen el día, el mes y la
+hora que muestra la tarjeta. La tienda lista los próximos con botón de reserva
+y, debajo, los seis últimos que ya pasaron, apagados y sin botón. El panel no
+tiene ese tope, que es donde el histórico completo se viene a buscar.
+
+Tres cosas que no son obvias:
+
+- **La lectura va cacheada con el tag `eventos`, y además con un techo de
+  quince minutos.** El tag cubre las ediciones del panel; el techo cubre el
+  paso del tiempo, porque la agenda cambia **sola** —un evento pasa de próximo
+  a pasado sin que nadie toque nada— y sin él una cata ya empezada seguiría
+  anunciándose como próxima hasta la siguiente edición.
+- **`unstable_cache` serializa a JSON: las `Date` vuelven como string.** Por eso
+  `lib/eventos.ts` declara la frontera de forma explícita: lo que se cachea
+  lleva `comienza` como ISO, y `getAgenda` es el único lugar que la reconvierte.
+  Sin eso, la primera lectura funciona —caché frío, objeto tal cual salió de
+  Drizzle— y la segunda rompe.
+- **La hora se guarda y se lee siempre en la zona de Buenos Aires**, fija en
+  `lib/format.ts`. El formulario usa `<input type="datetime-local">`, que
+  entrega un string sin zona, y producción corre en UTC.
+
+Los textos que rodean a la agenda —volanta, título, bajada, galería, el aviso
+de "no hay fechas"— siguen siendo del CMS.
 
 ## El CMS de contenido
 

@@ -1,40 +1,24 @@
 "use server";
 
-import { createHash } from "node:crypto";
 import { revalidatePath, revalidateTag } from "next/cache";
 import { eq } from "drizzle-orm";
 import { z } from "zod";
 import { db } from "@/lib/db";
-import { content, media } from "@/lib/db/schema";
+import { content } from "@/lib/db/schema";
 import { canEditContent, requireUser } from "@/lib/auth";
 import { CONTENT_TAG } from "@/lib/content/get";
 import { iguales } from "@/lib/content/iguales";
+import { esquemaImagen } from "@/lib/content/esquema-imagen";
 import { REGISTRO, claveDe, esGrupo, type GrupoKey } from "@/lib/content/registry";
-import type {
-  Campo,
-  CampoLista,
-  Grupo,
-  ImagenValor,
-} from "@/lib/content/types";
-import { bucketReady, subirAlBucket } from "@/lib/content/bucket";
-import {
-  FORMATOS,
-  detectarFormato,
-  medirImagen,
-} from "@/lib/content/image-size";
+import type { Campo, CampoLista, Grupo } from "@/lib/content/types";
 
 export interface ContentFormState {
   error?: string;
   ok?: string;
 }
 
-export interface SubidaState {
-  error?: string;
-  imagen?: ImagenValor;
-}
-
-/** 4 MB. El límite del cuerpo de una Server Action está en 6 en next.config. */
-const MAX_BYTES = 4 * 1024 * 1024;
+// La subida de imágenes vive en `../media-actions.ts`: la comparten el CMS y
+// la agenda de eventos.
 
 // ---------- guardar un grupo ----------
 
@@ -125,89 +109,6 @@ function invalidar(grupo: GrupoKey) {
   revalidatePath(`/admin/contenido/${grupo}`);
 }
 
-// ---------- subir una imagen ----------
-
-export async function uploadMediaAction(
-  formData: FormData,
-): Promise<SubidaState> {
-  const actor = await requireUser();
-  if (!canEditContent(actor)) {
-    return { error: "No tenés permiso para editar el contenido." };
-  }
-
-  if (!bucketReady()) {
-    return {
-      error:
-        "El almacenamiento de imágenes no está configurado en este entorno. Avisale a quien administra el sitio.",
-    };
-  }
-
-  const archivo = formData.get("file");
-  if (!(archivo instanceof File) || archivo.size === 0) {
-    return { error: "No llegó ningún archivo." };
-  }
-
-  if (archivo.size > MAX_BYTES) {
-    const mb = (archivo.size / 1024 / 1024).toFixed(1);
-    return {
-      error: `La imagen pesa ${mb} MB y el máximo son 4 MB. Achicala e intentá de nuevo.`,
-    };
-  }
-
-  const bytes = new Uint8Array(await archivo.arrayBuffer());
-
-  // El formato sale de los bytes, no del `type` que manda el navegador.
-  const formato = detectarFormato(bytes);
-  if (!formato) {
-    return { error: "Ese archivo no es una imagen JPG, PNG ni WebP." };
-  }
-
-  const { mime, ext } = FORMATOS[formato];
-  const hash = createHash("sha256").update(bytes).digest("hex").slice(0, 16);
-  const key = `img/${hash}.${ext}`;
-  const medidas = medirImagen(bytes);
-
-  // La clave es el contenido: si ya está, es exactamente la misma imagen.
-  const [ya] = await db
-    .select({ id: media.id })
-    .from(media)
-    .where(eq(media.key, key))
-    .limit(1);
-
-  if (!ya) {
-    try {
-      await subirAlBucket(key, bytes, mime);
-    } catch (error) {
-      console.error("[contenido] falló la subida al bucket:", error);
-      return {
-        error: "No se pudo guardar la imagen. Probá de nuevo en un momento.",
-      };
-    }
-
-    await db
-      .insert(media)
-      .values({
-        key,
-        mime,
-        bytes: bytes.length,
-        width: medidas?.width ?? null,
-        height: medidas?.height ?? null,
-        originalName: archivo.name.slice(0, 200),
-        createdBy: actor.id,
-      })
-      .onConflictDoNothing();
-  }
-
-  return {
-    imagen: {
-      src: `/media/${key}`,
-      alt: "",
-      width: medidas?.width ?? null,
-      height: medidas?.height ?? null,
-    },
-  };
-}
-
 // ---------- del formulario al valor ----------
 
 /**
@@ -259,27 +160,6 @@ function normalizarSaltos<T>(valor: T): T {
 // ---------- validación armada desde el registro ----------
 
 const LARGOS = { texto: 300, parrafo: 3000, rico: 20000 } as const;
-
-/**
- * La ruta de una imagen tiene que ser del propio sitio. Sin esto, alguien con
- * acceso al panel podría dejar apuntando las fotos a un dominio ajeno.
- */
-const rutaDeImagen = z
-  .string()
-  .min(1, "Falta la imagen.")
-  .refine(
-    (s) => s.startsWith("/") && !s.startsWith("//"),
-    "La imagen tiene que ser una ruta de este sitio.",
-  );
-
-const esquemaImagen = z
-  .object({
-    src: rutaDeImagen,
-    alt: z.string().max(300, "El texto alternativo es muy largo."),
-    width: z.number().int().positive().nullable(),
-    height: z.number().int().positive().nullable(),
-  })
-  .nullable();
 
 function zodDeCampo(campo: Campo): z.ZodType {
   switch (campo.tipo) {

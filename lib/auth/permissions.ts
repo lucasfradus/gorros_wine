@@ -43,3 +43,9 @@ export function canManageUsers(actor: PublicUser): boolean {
 export function canEditContent(_actor: PublicUser): boolean {
   return true;
 }
+
+// La agenda de eventos no tiene función de permiso, y es a propósito: la
+// editan los dos roles, así que alcanza con `requireUser()`. Es lo mismo que
+// hacen Bodegas y Productos, y lo que pide la receta de
+// `docs/COMO-AGREGAR-MODULO.md`: un permiso que siempre devuelve `true` es una
+// indirección que hay que ir a leer para descubrir que no decidía nada.

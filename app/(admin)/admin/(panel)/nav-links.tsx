@@ -27,6 +27,7 @@ export function NavLinks({ showUsers }: { showUsers: boolean }) {
     { href: "/admin/bodegas", label: "Bodegas" },
     { href: "/admin/varietales", label: "Varietales" },
     { href: "/admin/contenido", label: "Contenido", section: "Sitio" },
+    { href: "/admin/eventos", label: "Eventos" },
     ...(showUsers
       ? [{ href: "/admin/usuarios", label: "Usuarios", section: "Sistema" }]
       : []),

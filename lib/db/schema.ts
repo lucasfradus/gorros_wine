@@ -11,6 +11,7 @@ import {
   uuid,
   type AnyPgColumn,
 } from "drizzle-orm/pg-core";
+import type { ImagenValor } from "@/lib/content/types";
 
 /**
  * Roles del panel. Son los del *sistema*, no los del negocio: un cliente que
@@ -470,3 +471,66 @@ export type NewBodega = typeof bodegas.$inferInsert;
 export type Producto = typeof productos.$inferSelect;
 export type NewProducto = typeof productos.$inferInsert;
 export type Cotizacion = typeof cotizaciones.$inferSelect;
+
+/**
+ * La agenda de catas y encuentros.
+ *
+ * Antes eran cuatro objetos escritos a mano en `lib/data.ts`, con el día y el
+ * mes como texto suelto y el precio con el signo pesos adentro. Alcanzaba para
+ * maquetar, pero no para ordenar por fecha ni para que alguien corrija un
+ * horario sin abrir el editor y desplegar.
+ *
+ * Un evento es **una** fecha y no un rango: el diseño muestra "18 · Jul" y
+ * "19:30 hs", nada más. Los que duran dos días y los que se repiten todas las
+ * semanas no entran acá; cuando entren van a necesitar más que una columna, y
+ * conviene decidirlo con el caso real a la vista.
+ */
+export const eventos = pgTable(
+  "eventos",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    titulo: text("titulo").notNull(),
+
+    /**
+     * El instante en que arranca, y la única fecha que se guarda: el día, el
+     * mes y la hora del listado se derivan de acá. Tenerlos por separado —como
+     * estaban— es asegurarse de que algún día discrepen.
+     *
+     * Se lee y se escribe siempre en la zona de Buenos Aires, fija en
+     * `lib/format.ts`: producción corre en UTC y quien carga el evento está
+     * pensando en la hora del local.
+     */
+    comienza: timestamp("comienza", { withTimezone: true }).notNull(),
+
+    /** Aparte del detalle porque es lo que alguien mira primero para saber si
+     *  le queda cerca. */
+    lugar: text("lugar").notNull(),
+
+    /** La línea corta que acompaña al título: "8 etiquetas a ciegas". */
+    detalle: text("detalle"),
+
+    /** En centavos: guardar plata en float termina en $8999.9999999. */
+    precioCentavos: integer("precio_centavos").notNull(),
+
+    /** La misma forma que las imágenes del CMS, a propósito: así la sube el
+     *  mismo campo del panel y la pinta el mismo `<ContentImage>`. Nula
+     *  mientras nadie cargue una, y ahí queda el hueco rayado del diseño. */
+    imagen: jsonb("imagen").$type<ImagenValor | null>(),
+
+    /** Un evento a medio cargar no sale al aire. Arranca en `false` para que
+     *  el borrador sea el estado por omisión y publicar sea deliberado. */
+    publicado: boolean("publicado").notNull().default(false),
+
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+  },
+  /** La tienda siempre pregunta lo mismo: los publicados, por fecha. */
+  (t) => [index("eventos_agenda_idx").on(t.publicado, t.comienza)],
+);
+
+export type Evento = typeof eventos.$inferSelect;
+export type NewEvento = typeof eventos.$inferInsert;

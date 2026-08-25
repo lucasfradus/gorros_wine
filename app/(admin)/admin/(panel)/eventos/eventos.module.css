@@ -1,0 +1,14 @@
+/* Lo propio de la agenda. Todo lo demás —tarjetas, tablas, badges,
+   formularios— sale de `admin.module.css`, la hoja compartida del panel. */
+
+/* Un evento que ya pasó sigue listado, pero no compite por la atención con los
+   que todavía se pueden editar a tiempo. */
+.pasado td {
+  opacity: 0.62;
+}
+
+/* La columna de fecha no se parte: "18 Jul" y "19:30 hs" son dos renglones
+   cortos y quedan mal cortados a la mitad. */
+.cuando {
+  white-space: nowrap;
+}

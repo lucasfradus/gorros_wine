@@ -6,7 +6,7 @@ import type {
   ImagenValor,
   ItemValor,
 } from "@/lib/content/types";
-import { ImageField } from "./image-field";
+import { ImageField } from "../image-field";
 import styles from "../../admin.module.css";
 import cms from "./contenido.module.css";
 

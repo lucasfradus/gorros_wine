@@ -45,11 +45,48 @@
 
 .event {
   display: grid;
-  grid-template-columns: 110px 1fr auto;
+  grid-template-columns: 120px 110px 1fr auto;
   gap: 30px;
   align-items: center;
   border: 1px solid var(--line-card);
   padding: 28px 32px;
+}
+
+/* La foto va siempre, tenga o no imagen cargada: sin ella queda el hueco
+   rayado del diseño. Que la columna exista igual es lo que mantiene la fecha
+   de todos los renglones alineada en la misma vertical. */
+.shot {
+  width: 120px;
+}
+
+/* Un encuentro que ya pasó: se sigue viendo —vale como prueba de que esto
+   ocurre de verdad— pero no compite con los que todavía se pueden reservar. */
+.eventPast {
+  opacity: 0.6;
+  border-color: var(--line);
+}
+
+.past {
+  margin-top: 44px;
+}
+
+.pastTitle {
+  font-size: 13px;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--muted);
+  margin-bottom: 18px;
+}
+
+/* Cuando no hay ninguna fecha abierta. El texto se edita desde el panel. */
+.vacio {
+  margin: 0;
+  padding: 44px var(--gutter);
+  text-align: center;
+  font-size: 14px;
+  line-height: 1.75;
+  color: var(--muted);
+  border: 1px dashed var(--line-card);
 }
 
 .date {

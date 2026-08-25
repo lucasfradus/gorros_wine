@@ -5,7 +5,7 @@ import { useFormStatus } from "react-dom";
 import { iguales } from "@/lib/content/iguales";
 import type { Campo, ImagenValor, ItemValor } from "@/lib/content/types";
 import { saveGroupAction, type ContentFormState } from "./actions";
-import { ImageField } from "./image-field";
+import { ImageField } from "../image-field";
 import { ListEditor } from "./list-editor";
 import styles from "../../admin.module.css";
 import cms from "./contenido.module.css";

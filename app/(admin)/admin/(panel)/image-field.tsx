@@ -3,17 +3,20 @@
 import { useRef, useState, useTransition } from "react";
 import Image from "next/image";
 import type { ImagenValor } from "@/lib/content/types";
-import { uploadMediaAction } from "./actions";
-import styles from "../../admin.module.css";
-import cms from "./contenido.module.css";
+import { uploadMediaAction } from "./media-actions";
+import styles from "../admin.module.css";
+import campo from "./image-field.module.css";
 
 /**
  * Un campo de imagen: subir, ver, describir y quitar.
  *
  * La subida va por su propia action y no espera al submit del formulario: así
  * la vista previa aparece en el momento y el texto alternativo se escribe
- * mirando la foto. Lo que se guarda con el resto del grupo es la referencia
- * que quedó acá.
+ * mirando la foto. Lo que se guarda con el resto del formulario es la
+ * referencia que quedó acá.
+ *
+ * Está en la raíz del panel porque lo usan dos secciones que no se conocen
+ * entre sí, el CMS y la agenda de eventos.
  */
 export function ImageField({
   valor,
@@ -49,25 +52,25 @@ export function ImageField({
   }
 
   return (
-    <div className={cms.imagen}>
+    <div className={campo.imagen}>
       {valor ? (
-        <div className={cms.preview}>
+        <div className={campo.preview}>
           <Image
             src={valor.src}
             alt=""
             width={valor.width ?? 320}
             height={valor.height ?? 200}
-            className={cms.previewImg}
+            className={campo.previewImg}
             unoptimized
           />
-          <span className={cms.previewMeta}>
+          <span className={campo.previewMeta}>
             {valor.width && valor.height
               ? `${valor.width} × ${valor.height}`
               : "medidas desconocidas"}
           </span>
         </div>
       ) : (
-        <p className={cms.previewVacio}>
+        <p className={campo.previewVacio}>
           Sin foto. El sitio muestra el hueco rayado del diseño.
         </p>
       )}
@@ -76,7 +79,7 @@ export function ImageField({
         ref={input}
         type="file"
         accept="image/jpeg,image/png,image/webp"
-        className={cms.file}
+        className={campo.file}
         disabled={disabled || subiendo}
         onChange={(e) => {
           elegir(e.target.files?.[0]);
@@ -114,7 +117,7 @@ export function ImageField({
       ) : null}
 
       {valor ? (
-        <label className={cms.alt}>
+        <label className={campo.alt}>
           <span className={styles.label}>Texto alternativo</span>
           <input
             type="text"
