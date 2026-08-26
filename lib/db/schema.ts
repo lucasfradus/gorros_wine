@@ -287,9 +287,17 @@ export const bodegas = pgTable(
     slug: text("slug").notNull().unique(),
     nombre: text("nombre").notNull().unique(),
 
-    /** La **key** del objeto en el bucket, no una URL. Si mañana cambia cómo
-     *  se sirven las imágenes, no hay que migrar ninguna fila. */
-    logoKey: text("logo_key"),
+    /**
+     * El logo, con la misma forma que la foto de un evento: `jsonb` con
+     * `{ src, alt, width, height }`.
+     *
+     * Reemplaza a un `logo_key` de texto que se había pensado antes de que
+     * existiera el gateway de imágenes y que nunca llegó a usarse. Guardar sólo
+     * la key obligaría a rearmar el `src` en cada lectura y, peor, dejaría
+     * afuera el alto y el ancho: sin ellos `next/image` no puede reservar la
+     * caja y la maqueta salta al cargar.
+     */
+    logo: jsonb("logo").$type<ImagenValor | null>(),
 
     pais: text("pais"),
     sitioWeb: text("sitio_web"),
@@ -304,6 +312,19 @@ export const bodegas = pgTable(
      *  a propósito: es lo que hoy vive en un WhatsApp o en la cabeza de
      *  alguien, y estructurarlo antes de ver qué se repite es adivinar. */
     notas: text("notas"),
+
+    /**
+     * ¿Va en la franja de bodegas de la home?
+     *
+     * Todavía **no lo lee nadie**: la tienda sigue mostrando lo de
+     * `lib/data.ts`. Se modela ahora para que el dato se pueda ir cargando
+     * mientras tanto, y que el día que la franja exista no arranque vacía.
+     *
+     * Es una decisión editorial y por eso está separada de `isActive`: una
+     * bodega puede seguir activa —se le compra, tiene vinos publicados— sin
+     * ser una de las que se muestran en la portada.
+     */
+    mostrarEnHome: boolean("mostrar_en_home").notNull().default(false),
 
     /** Se archiva en vez de borrar, igual que los usuarios y por lo mismo:
      *  los productos cuelgan de acá. */

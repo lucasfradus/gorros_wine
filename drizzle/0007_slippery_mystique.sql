@@ -1,0 +1,1 @@
+ALTER TABLE "bodegas" DROP COLUMN "logo_key";

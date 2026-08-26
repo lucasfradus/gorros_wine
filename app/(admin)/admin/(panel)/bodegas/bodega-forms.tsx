@@ -1,6 +1,8 @@
 "use client";
 
-import { useActionState } from "react";
+import { useActionState, useState } from "react";
+import type { ImagenValor } from "@/lib/content/types";
+import { ImageField } from "../image-field";
 import { Aviso, Submit, type FormAction, type FormState } from "../form-ui";
 import styles from "../../admin.module.css";
 
@@ -8,12 +10,14 @@ export interface BodegaDefaults {
   id?: string;
   nombre?: string;
   slug?: string;
+  logo?: ImagenValor | null;
   pais?: string | null;
   sitioWeb?: string | null;
   contactoNombre?: string | null;
   contactoEmail?: string | null;
   contactoTelefono?: string | null;
   notas?: string | null;
+  mostrarEnHome?: boolean;
 }
 
 /** Alta y edición: la misma pantalla, distinto action. */
@@ -27,6 +31,11 @@ export function BodegaForm({
   submitLabel: string;
 }) {
   const [state, formAction] = useActionState<FormState, FormData>(action, {});
+
+  // El logo se elige y se sube antes del submit, así que su valor vive acá y
+  // viaja al servidor como JSON en un input oculto: un `<input>` sólo sabe de
+  // strings y esto es una estructura. Igual que la foto de un evento.
+  const [logo, setLogo] = useState<ImagenValor | null>(defaults?.logo ?? null);
 
   return (
     <form action={formAction} className={styles.form}>
@@ -65,6 +74,16 @@ export function BodegaForm({
           Cómo va a aparecer en la URL. Si lo dejás vacío sale del nombre:
           &ldquo;Bodega Andina&rdquo; ⇒ <code>bodega-andina</code>.
         </span>
+      </div>
+
+      <div className={styles.field}>
+        <span className={styles.label}>Logo</span>
+        <ImageField valor={logo} onChange={setLogo} />
+        <input
+          type="hidden"
+          name="logo"
+          value={logo ? JSON.stringify(logo) : ""}
+        />
       </div>
 
       <div className={styles.field}>
@@ -160,6 +179,27 @@ export function BodegaForm({
           Plazos de entrega, mínimos de compra, condiciones de pago — lo que
           hoy vive en un WhatsApp.
         </span>
+      </div>
+
+      <div className={styles.field}>
+        {/* `radioRow` es el estilo de la fila, no del tipo de control: la misma
+            caja con borde que usa el selector de rol. */}
+        <label className={styles.radioRow}>
+          <input
+            type="checkbox"
+            name="mostrarEnHome"
+            defaultChecked={defaults?.mostrarEnHome ?? false}
+          />
+          <span>
+            <span className={styles.radioName}>Mostrar en la home</span>
+            <span className={styles.radioDesc}>
+              Marca cuáles son las bodegas de la portada.{" "}
+              <strong>Todavía no se ve en el sitio</strong>: la franja no
+              existe. Se puede ir cargando para que el día que exista no
+              arranque vacía.
+            </span>
+          </span>
+        </label>
       </div>
 
       <div className={styles.btnRow}>

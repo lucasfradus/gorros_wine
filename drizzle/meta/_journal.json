@@ -43,6 +43,20 @@
       "when": 1787682742396,
       "tag": "0005_flaky_terror",
       "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1787760894553,
+      "tag": "0006_calm_satana",
+      "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "7",
+      "when": 1787760904160,
+      "tag": "0007_slippery_mystique",
+      "breakpoints": true
     }
   ]
 }
