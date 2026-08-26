@@ -34,7 +34,9 @@ export const FORMATOS: Record<Formato, { mime: string; ext: string }> = {
 export class ImagenIlegible extends Error {}
 
 export interface ImagenPreparada {
-  bytes: Uint8Array;
+  /** Con su propio `ArrayBuffer`, que es lo que `subirAlBucket` necesita para
+   *  poder mandar un `content-length`. */
+  bytes: Uint8Array<ArrayBuffer>;
   mime: string;
   ext: string;
   /** Del archivo ya normalizado: es el que se va a servir y a maquetar. */
@@ -108,10 +110,11 @@ export async function prepararImagen(
       .toBuffer({ resolveWithObject: true });
 
     return {
-      // Copia a un `Uint8Array` propio: `subirAlBucket` arma el cuerpo con
-      // `bytes.slice().buffer`, y en un `Buffer` de Node `slice` devuelve una
-      // vista de la memoria compartida del pool, no una copia. Subiríamos el
-      // pool entero en vez de la imagen.
+      // Copia a un `Uint8Array` propio. Lo que devuelve sharp es un `Buffer`
+      // de Node, que puede ser una vista sobre el pool de memoria compartida:
+      // copiarlo deja unos bytes con su propio `ArrayBuffer` exacto, que es lo
+      // que `subirAlBucket` necesita para mandar el `content-length`, y de paso
+      // suelta el pool en vez de mantenerlo vivo por una foto.
       bytes: new Uint8Array(data),
       mime: FORMATOS.webp.mime,
       ext: FORMATOS.webp.ext,

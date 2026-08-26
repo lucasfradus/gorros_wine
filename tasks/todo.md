@@ -41,7 +41,7 @@ final, está en
   duplicación: `formatearPrecio` **pierde el signo de los negativos**
   (`-50` → `"$0,50"`), y el dólar se muestra `US$` de un lado y `USD` del otro.
   El detalle y qué conservar de cada uno están en el Review del plan.
-## Gateway de imágenes — en curso
+## Gateway de imágenes — mergeado, con un 411 arreglándose aparte
 
 Toda imagen que se sube al sitio pasa por una sola función que la endereza, le
 saca los metadatos, la achica y la comprime a WebP antes de tocar el bucket. El
@@ -63,8 +63,31 @@ Worktree `../Gorros-media-gateway` · rama `feat/media-gateway` · puerto `:3005
       celular: ese es el bug que dispara la iteración. El comportamiento ya
       está verificado por script (ver el Review del plan); falta la
       confirmación visual del campo del panel.
-- [ ] **Cierre** — PR a `main`, confirmar que `media` está vacío en producción
-      y `./scripts/worktree.ps1 borrar media-gateway -borrarRama`.
+- [x] **Cierre** — PR [#7](https://github.com/lucasfradus/gorros_wine/pull/7)
+      mergeado en `742505c`.
+- [ ] **Confirmar que `media` está vacío en producción**, y después
+      `./scripts/worktree.ps1 borrar media-gateway -borrarRama`.
+
+### El 411 del bucket (visto en producción el 2026-08-26)
+
+Con el gateway ya desplegado, **las subidas fallaban en producción**: el bucket
+contestaba `411 MissingContentLength` y la imagen no se guardaba. En local, el
+mismo código daba 200.
+
+**Por qué.** aws4fetch firma S3 con `X-Amz-Content-Sha256: UNSIGNED-PAYLOAD`
+(lo pone solo, en su constructor). Sin el cuerpo dentro de la firma, el bucket
+**exige** `Content-Length` y rechaza un PUT en chunked. `subirAlBucket` mandaba
+el cuerpo como `Blob`, y eso deja que el runtime decida: si `new Request` no lo
+acepta, aws4fetch reintenta con `duplex: "half"` y el cuerpo sale como stream,
+sin largo. Node 24 —el de la máquina de desarrollo— manda el largo igual; el
+del contenedor, no.
+
+**Lo que sí funcionó**: la key del error era `.webp`, o sea que sharp corrió
+bien en el contenedor y produjo el archivo. Sólo falló el PUT.
+
+**La lección**: verificar contra el bucket desde la máquina de desarrollo no
+prueba que la subida ande en producción. El runtime del contenedor manda otro
+request con el mismo código.
 
 `npx tsc --noEmit` y `npm run build` en verde. Medido de punta a punta:
 **1.17 MB / 4032×3024 → 129 KB / 1800×2400**, derecha y sin metadatos.
