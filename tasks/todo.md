@@ -52,6 +52,39 @@ Con sesión real en `:3005`, por el camino sin JavaScript de las Server Actions:
   este sitio"*.
 - El listado muestra la miniatura y la marca "en home".
 
+## Backfill de bodegas
+
+Se aprovechó la iteración para cargar las bodegas reales, con
+`scripts/_bodegas-seed.mjs` + `_bodegas-seed.json`.
+
+- [x] **33 bodegas** en la base local: 32 con logo y sitio web verificado.
+- [x] Los logos salieron de los archivos que mandó cada bodega (un Drive con
+      una carpeta por proveedor). Los que venían en PDF o `.ai` se rasterizaron
+      con `mupdf` —instalado con `--no-save`, el repo no quedó tocado— y se
+      recortaron al contenido: sin eso, un logo centrado en una hoja A4 queda
+      diminuto adentro de un lienzo enorme.
+- [x] Los cinco que no tenían archivo se bajaron del sitio oficial, y **cada
+      uno se miró antes de usarlo**. Son más chicos que los del Drive: conviene
+      reemplazarlos cuando la bodega mande el suyo.
+- [x] Los sitios web no se adivinaron: se pidió cada dominio candidato y se
+      comparó el `<title>` con el nombre de la bodega.
+- [ ] **Cargar en producción**: mismo script apuntando a Railway. Los bytes ya
+      están en el bucket, que es compartido; el script repone las filas de
+      `media` que allá faltan.
+
+### Lo que quedó sin cargar, y por qué
+
+- **Doce carpetas son portfolios**, con varias marcas adentro: Aldos, Casa
+  Pirque, Clos, Ernesto, Grand Cru, Ivini, Lui - Infesta, Punto (y Punto/Áurea),
+  Selectos, Sottano, y **Tapiz - El Porvenir**, que son dos bodegas con un solo
+  `.ai`. Hay que decidir qué es bodega y qué es marca antes de cargarlas.
+- **Spiritu no es una bodega**: es un kit de aromas para cata. Su logo ya está
+  subido al bucket, listo para cuando se cargue como producto.
+- **Zuccardi Aceites** es la línea de aceite de oliva de la misma familia, no
+  una bodega aparte.
+- **Bemberg quedó sin logo**: el SVG de su sitio rasteriza sin la palabra
+  "BEMBERG" porque el texto va como fuente y no como trazo.
+
 ## Pendiente
 
 - **`productos.imagen_key` sigue con la forma vieja** (texto con la key, sin
