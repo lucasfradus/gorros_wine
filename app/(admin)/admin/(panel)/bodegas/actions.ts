@@ -14,6 +14,7 @@ import {
   slugOpcional,
   textoOpcional,
 } from "@/lib/campos";
+import { esquemaImagen } from "@/lib/content/esquema-imagen";
 
 export interface BodegaFormState {
   error?: string;
@@ -23,24 +24,44 @@ export interface BodegaFormState {
 const esquema = z.object({
   nombre: z.string().trim().min(2, "El nombre de la bodega es muy corto."),
   slug: slugOpcional,
+  logo: esquemaImagen,
   pais: textoOpcional,
   sitioWeb: sitioOpcional,
   contactoNombre: textoOpcional,
   contactoEmail: emailOpcional,
   contactoTelefono: textoOpcional,
   notas: textoOpcional,
+  mostrarEnHome: z.boolean(),
 });
 
 function leer(formData: FormData) {
+  // El logo viaja como JSON en un input oculto, porque un `<input>` sólo sabe
+  // de strings y ésta es una estructura. Mismo camino que la foto de un
+  // evento. Si el JSON viene roto queda `undefined`, que no valida contra
+  // ningún esquema y cae como error del campo.
+  const crudo = formData.get("logo");
+  let logo: unknown = null;
+
+  if (typeof crudo === "string" && crudo.trim() !== "") {
+    try {
+      logo = JSON.parse(crudo);
+    } catch {
+      logo = undefined;
+    }
+  }
+
   return esquema.safeParse({
     nombre: formData.get("nombre") ?? "",
     slug: formData.get("slug") ?? "",
+    logo,
     pais: formData.get("pais") ?? "",
     sitioWeb: formData.get("sitioWeb") ?? "",
     contactoNombre: formData.get("contactoNombre") ?? "",
     contactoEmail: formData.get("contactoEmail") ?? "",
     contactoTelefono: formData.get("contactoTelefono") ?? "",
     notas: formData.get("notas") ?? "",
+    // Un checkbox que nadie tildó no viaja en el formulario.
+    mostrarEnHome: formData.get("mostrarEnHome") === "on",
   });
 }
 

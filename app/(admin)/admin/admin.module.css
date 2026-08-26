@@ -623,6 +623,23 @@
   padding-left: 22px;
 }
 
+/* Miniatura de un listado (el logo de una bodega). `contain` y no `cover`
+   porque un logo recortado deja de ser el logo. */
+.thumb,
+.thumbVacio {
+  display: block;
+  width: 40px;
+  height: 40px;
+  border-radius: 3px;
+  object-fit: contain;
+}
+
+/* El hueco cuando no hay logo: ocupa el mismo lugar, así la columna de
+   nombres no se desalinea fila por fila. */
+.thumbVacio {
+  border: 1px dashed var(--field-line);
+}
+
 /* Dos o tres campos cortos en la misma línea (precio y moneda, stock y
    volumen). Con auto-fit se apilan solos en pantalla angosta: no hace falta
    una media query. */

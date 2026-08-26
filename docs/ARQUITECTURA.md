@@ -34,7 +34,7 @@ app/
 │   ├── club/  eventos/  nosotros/  cuenta/
 │   └── terminos/  privacidad/
 │
-├── media/[...key]/       sirve las imágenes del CMS desde el bucket
+├── media/[...key]/       sirve desde el bucket toda imagen subida al panel
 │
 └── (admin)/              panel — su propio layout, sin nav de tienda
     └── admin/

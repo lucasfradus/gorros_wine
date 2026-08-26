@@ -1,4 +1,5 @@
 import Link from "next/link";
+import Image from "next/image";
 import { asc, count, eq } from "drizzle-orm";
 import { db } from "@/lib/db";
 import { bodegas, productos } from "@/lib/db/schema";
@@ -22,10 +23,12 @@ export default async function BodegasPage() {
     .select({
       id: bodegas.id,
       nombre: bodegas.nombre,
+      logo: bodegas.logo,
       pais: bodegas.pais,
       contactoNombre: bodegas.contactoNombre,
       contactoEmail: bodegas.contactoEmail,
       isActive: bodegas.isActive,
+      mostrarEnHome: bodegas.mostrarEnHome,
       productos: count(productos.id),
     })
     .from(bodegas)
@@ -61,6 +64,9 @@ export default async function BodegasPage() {
             <table className={styles.table}>
               <thead>
                 <tr>
+                  <th scope="col">
+                    <span className="srOnly">Logo</span>
+                  </th>
                   <th scope="col">Bodega</th>
                   <th scope="col">Contacto</th>
                   <th scope="col">Productos</th>
@@ -72,7 +78,29 @@ export default async function BodegasPage() {
                 {lista.map((b) => (
                   <tr key={b.id}>
                     <td>
-                      <span className={styles.cellName}>{b.nombre}</span>
+                      {b.logo ? (
+                        // `unoptimized`: son miniaturas de 40px sobre imágenes
+                        // que ya salen del gateway como WebP chico. Pasarlas
+                        // por el optimizador es trabajo sin diferencia visible.
+                        <Image
+                          src={b.logo.src}
+                          alt=""
+                          width={40}
+                          height={40}
+                          className={styles.thumb}
+                          unoptimized
+                        />
+                      ) : (
+                        <span className={styles.thumbVacio} aria-hidden="true" />
+                      )}
+                    </td>
+                    <td>
+                      <span className={styles.cellName}>
+                        {b.nombre}
+                        {b.mostrarEnHome ? (
+                          <span className={styles.you}>en home</span>
+                        ) : null}
+                      </span>
                       {b.pais ? (
                         <span className={styles.cellMail}>{b.pais}</span>
                       ) : null}
