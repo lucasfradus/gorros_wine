@@ -41,6 +41,38 @@ final, está en
   duplicación: `formatearPrecio` **pierde el signo de los negativos**
   (`-50` → `"$0,50"`), y el dólar se muestra `US$` de un lado y `USD` del otro.
   El detalle y qué conservar de cada uno están en el Review del plan.
+## Gateway de imágenes — en curso
+
+Toda imagen que se sube al sitio pasa por una sola función que la endereza, le
+saca los metadatos, la achica y la comprime a WebP antes de tocar el bucket. El
+plan completo —contexto, las diez decisiones ya tomadas y qué queda fuera de
+alcance— está en
+[docs/planes/2026-08-25-media-gateway.md](../docs/planes/2026-08-25-media-gateway.md).
+
+Worktree `../Gorros-media-gateway` · rama `feat/media-gateway` · puerto `:3005`
+
+- [x] **0. Worktree** — abierto en `:3005`, desde `origin/main`.
+- [x] **1. `lib/content/imagen.ts`** — `prepararImagen()` (rotar por EXIF,
+      achicar a 2400 px, WebP, ICC sí y EXIF no) y `detectarFormato()` mudado.
+      Se borró `image-size.ts` con sus ~150 líneas de parser a mano.
+- [x] **2. Cablear `media-actions.ts`** — preparar antes de subir, y hashear
+      **la salida** para que la key siga siendo el contenido.
+- [x] **3. Los límites de alrededor** — `bodySizeLimit` a 12 MB, tope de subida
+      a 10 MB en `lib/content/limites.ts`, `sharp` como dependencia explícita.
+- [ ] **4. Probarlo a mano en el navegador** — sobre todo una foto vertical de
+      celular: ese es el bug que dispara la iteración. El comportamiento ya
+      está verificado por script (ver el Review del plan); falta la
+      confirmación visual del campo del panel.
+- [ ] **Cierre** — PR a `main`, confirmar que `media` está vacío en producción
+      y `./scripts/worktree.ps1 borrar media-gateway -borrarRama`.
+
+`npx tsc --noEmit` y `npm run build` en verde. Medido de punta a punta:
+**1.17 MB / 4032×3024 → 129 KB / 1800×2400**, derecha y sin metadatos.
+
+**Lo que arregla, además de comprimir**: hoy `medirImagen` ignora el EXIF
+Orientation, así que una foto vertical de celular se guarda con las medidas
+apaisadas y `next/image` le reserva la caja al revés. Y el EXIF —con las
+coordenadas GPS adentro— se publica tal cual.
 
 ## ABM de eventos — desplegado
 
