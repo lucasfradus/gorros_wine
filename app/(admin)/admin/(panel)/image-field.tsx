@@ -3,6 +3,10 @@
 import { useRef, useState, useTransition } from "react";
 import Image from "next/image";
 import type { ImagenValor } from "@/lib/content/types";
+import {
+  MAX_BYTES_SUBIDA,
+  mensajeDemasiadoPesada,
+} from "@/lib/content/limites";
 import { uploadMediaAction } from "./media-actions";
 import styles from "../admin.module.css";
 import campo from "./image-field.module.css";
@@ -35,19 +39,33 @@ export function ImageField({
     if (!archivo) return;
     setError(null);
 
+    // Se mide acá antes de mandar nada: pasado el `bodySizeLimit` de Next la
+    // action ni siquiera corre, así que su mensaje no llegaría nunca.
+    if (archivo.size > MAX_BYTES_SUBIDA) {
+      setError(mensajeDemasiadoPesada(archivo.size));
+      return;
+    }
+
     empezarSubida(async () => {
       const fd = new FormData();
       fd.set("file", archivo);
 
-      const res = await uploadMediaAction(fd);
-      if (res.error || !res.imagen) {
-        setError(res.error ?? "No se pudo subir la imagen.");
-        return;
-      }
+      try {
+        const res = await uploadMediaAction(fd);
+        if (res.error || !res.imagen) {
+          setError(res.error ?? "No se pudo subir la imagen.");
+          return;
+        }
 
-      // Se conserva el texto alternativo si ya había uno escrito: casi siempre
-      // reemplazar la foto es cambiar la toma, no cambiar lo que muestra.
-      onChange({ ...res.imagen, alt: valor?.alt ?? "" });
+        // Se conserva el texto alternativo si ya había uno escrito: casi
+        // siempre reemplazar la foto es cambiar la toma, no cambiar lo que
+        // muestra.
+        onChange({ ...res.imagen, alt: valor?.alt ?? "" });
+      } catch {
+        // Si la subida se corta antes de que la action conteste, el botón no
+        // se puede quedar en "Subiendo…" para siempre.
+        setError("Se cortó la subida. Probá de nuevo.");
+      }
     });
   }
 

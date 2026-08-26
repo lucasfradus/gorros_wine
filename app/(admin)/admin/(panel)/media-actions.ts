@@ -6,12 +6,17 @@ import { db } from "@/lib/db";
 import { media } from "@/lib/db/schema";
 import { canEditContent, requireUser } from "@/lib/auth";
 import { bucketReady, subirAlBucket } from "@/lib/content/bucket";
+import {
+  MAX_BYTES_SUBIDA,
+  mensajeDemasiadoPesada,
+} from "@/lib/content/limites";
 import type { ImagenValor } from "@/lib/content/types";
 import {
-  FORMATOS,
+  ImagenIlegible,
+  type ImagenPreparada,
   detectarFormato,
-  medirImagen,
-} from "@/lib/content/image-size";
+  prepararImagen,
+} from "@/lib/content/imagen";
 
 /**
  * Subir una foto al bucket, desde cualquier sección del panel.
@@ -26,9 +31,6 @@ export interface SubidaState {
   error?: string;
   imagen?: ImagenValor;
 }
-
-/** 4 MB. El límite del cuerpo de una Server Action está en 6 en next.config. */
-const MAX_BYTES = 4 * 1024 * 1024;
 
 export async function uploadMediaAction(
   formData: FormData,
@@ -54,25 +56,39 @@ export async function uploadMediaAction(
     return { error: "No llegó ningún archivo." };
   }
 
-  if (archivo.size > MAX_BYTES) {
-    const mb = (archivo.size / 1024 / 1024).toFixed(1);
-    return {
-      error: `La imagen pesa ${mb} MB y el máximo son 4 MB. Achicala e intentá de nuevo.`,
-    };
+  // El campo del panel ya frena esto antes de mandarlo, pero el control que
+  // vale es el de acá: el cliente se puede editar.
+  if (archivo.size > MAX_BYTES_SUBIDA) {
+    return { error: mensajeDemasiadoPesada(archivo.size) };
   }
 
   const bytes = new Uint8Array(await archivo.arrayBuffer());
 
   // El formato sale de los bytes, no del `type` que manda el navegador.
-  const formato = detectarFormato(bytes);
-  if (!formato) {
+  if (!detectarFormato(bytes)) {
     return { error: "Ese archivo no es una imagen JPG, PNG ni WebP." };
   }
 
-  const { mime, ext } = FORMATOS[formato];
-  const hash = createHash("sha256").update(bytes).digest("hex").slice(0, 16);
-  const key = `img/${hash}.${ext}`;
-  const medidas = medirImagen(bytes);
+  let preparada: ImagenPreparada;
+  try {
+    preparada = await prepararImagen(bytes);
+  } catch (error) {
+    // Lo que el archivo tiene de malo se cuenta; cualquier otra cosa es
+    // nuestra y no le sirve a quien está subiendo una foto.
+    if (error instanceof ImagenIlegible) return { error: error.message };
+    console.error("[media] falló la normalización:", error);
+    return { error: "No se pudo procesar la imagen. Probá de nuevo." };
+  }
+
+  // El hash es el de la imagen **ya preparada**, no el del archivo que llegó.
+  // La key es lo que `app/media/[...key]/route.ts` sirve con caché inmutable de
+  // un año: si hasheáramos el original, el día que cambie la calidad la misma
+  // URL devolvería bytes distintos, y esa caché no se purga.
+  const hash = createHash("sha256")
+    .update(preparada.bytes)
+    .digest("hex")
+    .slice(0, 16);
+  const key = `img/${hash}.${preparada.ext}`;
 
   // La clave es el contenido: si ya está, es exactamente la misma imagen.
   const [ya] = await db
@@ -83,7 +99,7 @@ export async function uploadMediaAction(
 
   if (!ya) {
     try {
-      await subirAlBucket(key, bytes, mime);
+      await subirAlBucket(key, preparada.bytes, preparada.mime);
     } catch (error) {
       console.error("[media] falló la subida al bucket:", error);
       return {
@@ -95,10 +111,10 @@ export async function uploadMediaAction(
       .insert(media)
       .values({
         key,
-        mime,
-        bytes: bytes.length,
-        width: medidas?.width ?? null,
-        height: medidas?.height ?? null,
+        mime: preparada.mime,
+        bytes: preparada.bytes.length,
+        width: preparada.width,
+        height: preparada.height,
         originalName: archivo.name.slice(0, 200),
         createdBy: actor.id,
       })
@@ -109,8 +125,8 @@ export async function uploadMediaAction(
     imagen: {
       src: `/media/${key}`,
       alt: "",
-      width: medidas?.width ?? null,
-      height: medidas?.height ?? null,
+      width: preparada.width,
+      height: preparada.height,
     },
   };
 }

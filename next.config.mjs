@@ -12,11 +12,13 @@ const nextConfig = {
   },
 
   experimental: {
-    // Las imágenes del CMS se suben por una Server Action, y el límite de
+    // Las imágenes del panel se suben por una Server Action, y el límite de
     // cuerpo que trae Next por defecto es 1 MB: no entra una foto de celular.
-    // El tope real de la subida lo pone `uploadMediaAction` (4 MB); acá se deja
-    // un poco de aire para el resto del formulario.
-    serverActions: { bodySizeLimit: "6mb" },
+    // El tope real de la subida está en `lib/content/limites.ts` (10 MB de
+    // entrada, que después se comprimen); acá se deja aire para el resto del
+    // formulario. Este número tiene que quedar por encima de aquél: pasado
+    // este límite la action no corre, y su mensaje de error no se ve.
+    serverActions: { bodySizeLimit: "12mb" },
   },
 };
 
