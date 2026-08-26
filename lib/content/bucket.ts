@@ -62,14 +62,29 @@ function urlDe(key: string): string {
 
 export async function subirAlBucket(
   key: string,
-  bytes: Uint8Array,
+  /** Respaldado por un `ArrayBuffer` y no por memoria compartida: es lo que
+   *  `fetch` acepta como cuerpo, y lo que garantiza que tenga un largo. */
+  bytes: Uint8Array<ArrayBuffer>,
   mime: string,
 ): Promise<void> {
   const res = await getCliente().fetch(urlDe(key), {
     method: "PUT",
-    // BlobPart pide un ArrayBuffer: `bytes` puede ser una vista de uno mayor.
-    body: new Blob([bytes.slice().buffer], { type: mime }),
-    headers: { "content-type": mime },
+    // Los bytes van crudos y no envueltos en un `Blob`, y el `content-length`
+    // va escrito a mano. Las dos cosas son por lo mismo: aws4fetch firma S3 con
+    // `X-Amz-Content-Sha256: UNSIGNED-PAYLOAD`, y como entonces el bucket no
+    // puede validar el cuerpo por la firma, **exige** saber cuánto mide y
+    // rechaza un PUT en chunked con un 411 `MissingContentLength`. Un `Blob`
+    // deja que el runtime decida: si `new Request` no lo acepta, aws4fetch
+    // reintenta con `duplex: "half"` y ahí el cuerpo sale como stream, sin
+    // largo. Un `Uint8Array` tiene `byteLength` y no da lugar a esa decisión.
+    //
+    // Se vio en producción el 2026-08-26: 411 en cada subida, con el mismo
+    // código que en local daba 200 — Node 24 acá, otro en el contenedor.
+    body: bytes,
+    headers: {
+      "content-type": mime,
+      "content-length": String(bytes.byteLength),
+    },
   });
 
   if (!res.ok) {
