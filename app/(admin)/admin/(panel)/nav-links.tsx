@@ -22,6 +22,7 @@ export function NavLinks({ showUsers }: { showUsers: boolean }) {
   // dice que el editor maneja "catálogo, precios y eventos".
   const items: Item[] = [
     { href: "/admin", label: "Inicio" },
+    { href: "/admin/clientes", label: "Clientes", section: "Negocio" },
     { href: "/admin/productos", label: "Productos", section: "Catálogo" },
     { href: "/admin/categorias", label: "Categorías" },
     { href: "/admin/bodegas", label: "Bodegas" },
@@ -33,7 +34,6 @@ export function NavLinks({ showUsers }: { showUsers: boolean }) {
       : []),
     { href: "/admin/cuenta", label: "Mi cuenta", section: "Cuenta" },
   ];
-
 
   return (
     <nav className={styles.nav}>

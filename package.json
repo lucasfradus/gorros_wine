@@ -12,7 +12,8 @@
     "db:generate": "drizzle-kit generate",
     "db:migrate": "node scripts/migrate.mjs",
     "db:studio": "drizzle-kit studio",
-    "admin:crear": "node scripts/create-admin.mjs"
+    "admin:crear": "node scripts/create-admin.mjs",
+    "prueba:cuenta": "node --experimental-strip-types --no-warnings scripts/prueba-cuenta.ts"
   },
   "dependencies": {
     "aws4fetch": "^1.0.20",

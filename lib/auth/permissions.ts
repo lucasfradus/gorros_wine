@@ -44,8 +44,23 @@ export function canEditContent(_actor: PublicUser): boolean {
   return true;
 }
 
-// La agenda de eventos no tiene función de permiso, y es a propósito: la
-// editan los dos roles, así que alcanza con `requireUser()`. Es lo mismo que
-// hacen Bodegas y Productos, y lo que pide la receta de
-// `docs/COMO-AGREGAR-MODULO.md`: un permiso que siempre devuelve `true` es una
-// indirección que hay que ir a leer para descubrir que no decidía nada.
+// Ni la agenda de eventos ni la ficha de un cliente tienen función de permiso,
+// y es a propósito: las editan los dos roles, así que alcanza con
+// `requireUser()`. Es lo mismo que hacen Bodegas y Productos, y lo que pide la
+// receta de `docs/COMO-AGREGAR-MODULO.md`: un permiso que siempre devuelve
+// `true` es una indirección que hay que ir a leer para descubrir que no
+// decidía nada.
+//
+// La **plata** de esa ficha sí decide algo, y por eso la de abajo existe.
+
+/**
+ * ¿Puede ver saldos y mover plata en la cuenta corriente?
+ *
+ * Sólo admin, y es la diferencia que importa en este módulo: un editor carga el
+ * teléfono de un cliente, pero no se entera de cuánto debe ni le registra un
+ * pago. Por eso las actions de la cuenta viven en su propio archivo
+ * (`cuenta-actions.ts`), detrás de `requireCuentaCorriente()`.
+ */
+export function canManageCuentaCorriente(actor: PublicUser): boolean {
+  return actor.role === "admin";
+}

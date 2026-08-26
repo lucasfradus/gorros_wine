@@ -6,6 +6,42 @@
 > Antes de tocar código: leer `AGENTS.md` (este Next.js y este Drizzle no son
 > los del training data) y `tasks/lessons.md`.
 
+## Clientes y cuenta corriente
+
+Worktree `../Gorros-clientes` · rama `feat/clientes` · puerto `:3003` · PR
+[#3](https://github.com/lucasfradus/gorros_wine/pull/3).
+
+El plan completo, con el modelo de datos, las decisiones tomadas y el Review
+final, está en
+[docs/planes/2026-08-25-clientes-cuenta-corriente.md](../docs/planes/2026-08-25-clientes-cuenta-corriente.md).
+
+- [x] **Tarea 1** — Schema: tablas `clientes` y `movimientos_cc`, enum
+      `movimiento_tipo`. Migración aditiva generada y aplicada.
+- [x] **Tarea 2** — Permisos, formato de plata, `lib/cuenta-corriente.ts` (reglas)
+      y `lib/db/cuenta.ts` (consultas).
+- [x] **Tarea 3** — CRUD de clientes: listado con buscador y filtros, alta, ficha,
+      archivar.
+- [x] **Tarea 4** — Cuenta corriente: cargo, pago, conversión, ajuste y anulación.
+- [x] **Tarea 5** — `docs/ARQUITECTURA.md` al día, con su sección propia.
+- [x] **Rebase sobre `origin/main`** — cuatro veces: CMS, catálogo, eventos y el
+      cierre del deploy. Migración regenerada cada vez; quedó en `0005`.
+
+**Falta para cerrarlo:**
+
+1. Probar los formularios haciendo clic en `:3003`, con los dos roles. Es lo
+   único que no se pudo verificar sin un navegador; el resto está cubierto (ver
+   el Review). Las tablas quedaron vacías, así que el primer cliente lo crea esa
+   prueba.
+2. Mergear el PR #3 y `./scripts/worktree.ps1 borrar clientes -borrarRama`.
+
+**Deuda que deja:**
+
+- **Unificar el formateo de plata.** Conviven `lib/precio.ts` (catálogo) y
+  `formatARS`/`formatUSD`/`importeACentavos` (cuenta corriente). No es sólo
+  duplicación: `formatearPrecio` **pierde el signo de los negativos**
+  (`-50` → `"$0,50"`), y el dólar se muestra `US$` de un lado y `USD` del otro.
+  El detalle y qué conservar de cada uno están en el Review del plan.
+
 ## ABM de eventos — desplegado
 
 Mergeado en `a466bad` y andando en producción. El plan completo —contexto,
