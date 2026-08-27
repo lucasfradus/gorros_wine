@@ -72,6 +72,22 @@ Se aprovechó la iteración para cargar las bodegas reales, con
       están en el bucket, que es compartido; el script repone las filas de
       `media` que allá faltan.
 
+### Segundo lote
+
+- [x] **82 bodegas** en total, local y producción: 62 con logo, 59 con sitio.
+- [x] Quince logos salieron de las carpetas "portfolio" del Drive, que resultaron
+      ser justamente las marcas de la lista pedida. La carpeta CLOS traía una
+      lámina con cinco logos juntos y se recortaron de ahí.
+- [x] Quince más del sitio oficial, revisados en una **lámina de contactos**
+      antes de usarlos: ese paso descartó un badge de TripAdvisor que venía como
+      logo de Sottano y un ícono de calorías en Dom Pérignon.
+- [x] El país deja de ser siempre Argentina: hay dos francesas, una española y
+      una neozelandesa.
+- [ ] **Diecinueve quedaron sin logo**: Antucura, De Angeles, Rimapere, Costa &
+      Pampa, Altocedro, Abras, Teho, TintoNegro, Matías Riccitelli, Bressia,
+      Manos Negras, Codorníu, Tapiz, LTU, Achaval Ferrer, Mil Demonios, Alandes,
+      Fernando Dupont y Piatelli. Se agregan desde el panel.
+
 ### Lo que quedó sin cargar, y por qué
 
 - **Doce carpetas son portfolios**, con varias marcas adentro: Aldos, Casa
