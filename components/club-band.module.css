@@ -1,9 +1,46 @@
 .club {
+  position: relative;
   margin-top: 70px;
   padding: 70px var(--gutter);
   text-align: center;
   border-top: 1px solid var(--line);
   background: var(--hatch-panel);
+}
+
+/* Con foto del CMS la banda deja de ser una superficie y pasa a ser una
+   imagen. El negro de abajo es sólo el respaldo mientras la foto carga: la
+   trama no se ve más, y por eso el texto de acá abajo cambia de tono. */
+.conFoto {
+  background: var(--night);
+  overflow: hidden;
+}
+
+.foto {
+  object-fit: cover;
+}
+
+.velo {
+  position: absolute;
+  inset: 0;
+  background: var(--scrim);
+}
+
+/* Alcanza con posicionarlo para que quede por encima de la foto y del velo:
+   entre elementos posicionados sin z-index manda el orden del DOM, y este es
+   el último. Un z-index acá sería un número que nadie sabría por qué está. */
+.inner {
+  position: relative;
+}
+
+/* Sobre una foto velada, el dorado de la volanta y el gris de la bajada se
+   quedan cortos —2 y 3 a 1—, así que suben un escalón cada uno. El texto es el
+   mismo; lo que cambia es el fondo que tienen debajo. */
+.conFoto .eyebrow {
+  color: var(--gold-hover);
+}
+
+.conFoto .lede {
+  color: var(--text);
 }
 
 .eyebrow {
