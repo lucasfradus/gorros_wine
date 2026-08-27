@@ -91,7 +91,7 @@ export const REGISTRO = {
 
   home: {
     label: "Home",
-    help: "La portada: hero, beneficios, banda del Club, eventos, quiénes somos, reseñas y cómo comprar.",
+    help: "La portada: hero, beneficios, banda del Club, eventos, quiénes somos, bodegas, reseñas y cómo comprar.",
     revalidate: ["/"],
     campos: {
       heroEyebrow: {
@@ -234,6 +234,25 @@ export const REGISTRO = {
         label: "Nosotros · foto",
         help: "Foto del local o del equipo.",
         original: null,
+      },
+
+      bodegasEyebrow: {
+        tipo: "texto",
+        label: "Bodegas · volanta",
+        original: "Nuestras bodegas",
+      },
+      bodegasTitulo: {
+        tipo: "parrafo",
+        label: "Bodegas · título",
+        help: "Cada salto de línea es un renglón.",
+        original: "Las bodegas con las que trabajamos",
+      },
+      bodegasLede: {
+        tipo: "parrafo",
+        label: "Bodegas · bajada",
+        help: "Qué bodegas se muestran no se elige acá: se tilda «mostrar en el home» en cada una, en Bodegas.",
+        original:
+          "Trabajamos con productores que elegimos uno por uno. Tocá un logo para conocer la bodega.",
       },
 
       resenasEyebrow: {

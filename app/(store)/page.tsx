@@ -4,6 +4,7 @@ import { FeaturedWines } from "@/components/featured-wines";
 import { ClubBand } from "@/components/club-band";
 import { HomeEvents } from "@/components/home-events";
 import { AboutTeaser } from "@/components/about-teaser";
+import { HomeBodegas } from "@/components/home-bodegas";
 import { Reviews } from "@/components/reviews";
 import { HowToBuy } from "@/components/how-to-buy";
 
@@ -16,6 +17,7 @@ export default function Home() {
       <ClubBand />
       <HomeEvents />
       <AboutTeaser />
+      <HomeBodegas />
       <Reviews />
       <HowToBuy />
     </>

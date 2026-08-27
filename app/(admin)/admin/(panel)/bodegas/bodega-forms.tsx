@@ -193,10 +193,10 @@ export function BodegaForm({
           <span>
             <span className={styles.radioName}>Mostrar en la home</span>
             <span className={styles.radioDesc}>
-              Marca cuáles son las bodegas de la portada.{" "}
-              <strong>Todavía no se ve en el sitio</strong>: la franja no
-              existe. Se puede ir cargando para que el día que exista no
-              arranque vacía.
+              La suma a la franja de logos de la portada, donde el logo lleva
+              al sitio de la bodega. <strong>Necesita un logo cargado</strong>:
+              sin logo no hay nada que mostrar y la bodega no entra, aunque
+              esto esté tildado. Una bodega archivada tampoco.
             </span>
           </span>
         </label>

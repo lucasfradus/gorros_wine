@@ -1,0 +1,151 @@
+.section {
+  padding: 76px 0 20px;
+  border-top: 1px solid var(--line);
+}
+
+/* El encabezado lleva la sangría del sitio; la franja no, porque va de borde a
+   borde y se desvanece contra los costados. */
+.head {
+  text-align: center;
+  margin-bottom: 44px;
+  padding: 0 var(--gutter);
+}
+
+.eyebrow {
+  margin-bottom: 14px;
+}
+
+.title {
+  margin-bottom: 14px;
+}
+
+.lede {
+  font-size: 14px;
+  line-height: 1.75;
+  color: var(--muted);
+  max-width: 520px;
+  margin: 0 auto;
+}
+
+.viewport {
+  overflow: hidden;
+  /* Los logos entran y salen desvanecidos en vez de cortarse contra el borde:
+     sin esto el loop se nota, porque se ve el corte exacto donde empieza la
+     segunda vuelta. */
+  mask-image: linear-gradient(
+    90deg,
+    transparent,
+    #000 90px,
+    #000 calc(100% - 90px),
+    transparent
+  );
+}
+
+.track {
+  display: flex;
+  width: max-content;
+  /* `--dur` la calcula el componente a partir de cuántas bodegas hay. */
+  animation: desliza var(--dur, 40s) linear infinite;
+}
+
+/* Con el mouse encima o con el foco adentro, se frena. Lo segundo no es un
+   detalle: un enlace que se está moviendo no hay forma de apuntarlo, y con
+   teclado el foco entra sin que el mouse pase por ningún lado. */
+.viewport:hover .track,
+.viewport:focus-within .track {
+  animation-play-state: paused;
+}
+
+.fila {
+  display: flex;
+  gap: 16px;
+  /* Media sangría de cada lado: sumadas, las dos vueltas dejan el mismo hueco
+     entre el último logo y el primero que entre dos logos cualesquiera. */
+  padding: 0 8px;
+  margin: 0;
+  list-style: none;
+}
+
+.item {
+  flex: none;
+}
+
+.chip {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 168px;
+  height: 96px;
+  padding: 16px 20px;
+  background: var(--tile);
+  border: 1px solid var(--line-card);
+  text-decoration: none;
+  transition: border-color 0.18s ease;
+}
+
+/* El hover mueve el borde y nada más. Aclarar u oscurecer el fondo delataría
+   el rectángulo blanco de los logos que vienen opacos. */
+a.chip:hover {
+  border-color: var(--gold);
+}
+
+.logo {
+  /* El logo se acomoda adentro del chip sin recortarse ni deformarse: vienen
+     de todas las proporciones, desde casi cuadrados hasta apaisados 5:1. */
+  max-width: 100%;
+  max-height: 100%;
+  width: auto;
+  height: auto;
+  object-fit: contain;
+}
+
+@keyframes desliza {
+  from {
+    transform: translateX(0);
+  }
+  /* Media vuelta exacta: ahí la copia quedó donde arrancó el original, y el
+     salto al reiniciar no se ve. */
+  to {
+    transform: translateX(-50%);
+  }
+}
+
+/*
+ * Si el visitante pidió menos movimiento, la franja no se mueve **nunca**: se
+ * acomoda en varias filas centradas y se esconde la copia. No alcanza con
+ * frenar la animación, porque entonces la mitad de los logos quedarían fuera
+ * de la pantalla y sin manera de llegar a ellos.
+ */
+@media (prefers-reduced-motion: reduce) {
+  .viewport {
+    mask-image: none;
+    padding: 0 var(--gutter);
+  }
+
+  .track {
+    animation: none;
+    width: 100%;
+  }
+
+  .fila {
+    flex-wrap: wrap;
+    justify-content: center;
+    padding: 0;
+  }
+
+  .clon {
+    display: none;
+  }
+}
+
+@media (max-width: 560px) {
+  .section {
+    padding-top: 56px;
+  }
+
+  .chip {
+    width: 140px;
+    height: 84px;
+    padding: 14px 16px;
+  }
+}

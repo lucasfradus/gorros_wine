@@ -316,9 +316,9 @@ export const bodegas = pgTable(
     /**
      * ¿Va en la franja de bodegas de la home?
      *
-     * Todavía **no lo lee nadie**: la tienda sigue mostrando lo de
-     * `lib/data.ts`. Se modela ahora para que el dato se pueda ir cargando
-     * mientras tanto, y que el día que la franja exista no arranque vacía.
+     * Lo lee `lib/bodegas.ts`, que además exige logo cargado y `isActive`: sin
+     * logo no hay nada que dibujar, y una bodega archivada es un proveedor al
+     * que se dejó de comprarle.
      *
      * Es una decisión editorial y por eso está separada de `isActive`: una
      * bodega puede seguir activa —se le compra, tiene vinos publicados— sin
