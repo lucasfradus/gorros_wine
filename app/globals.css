@@ -43,6 +43,13 @@
   --hatch-bottle: repeating-linear-gradient(135deg, #171412, #171412 9px, #131110 9px, #131110 18px);
   --hatch-shot: repeating-linear-gradient(135deg, #171412, #171412 11px, #131110 11px, #131110 22px);
 
+  /* velo de las fotos que llevan texto encima */
+  /* El 72% no es una decisión estética sino el piso que hace falta para que,
+     con la peor foto posible —una clara y pareja—, --heading y --text sigan
+     pasando AA. Las fotos las elige quien usa el panel: el contraste no puede
+     depender de que acierte. */
+  --scrim: rgba(6, 5, 5, 0.72);
+
   /* métricas */
   --maxw: 1180px;
   --gutter: 44px;

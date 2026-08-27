@@ -168,6 +168,12 @@ export const REGISTRO = {
         label: "Club · texto del botón",
         original: "Sumarme al club",
       },
+      clubFondo: {
+        tipo: "imagen",
+        label: "Club · foto de fondo",
+        help: "La foto detrás de la banda del Club. Va a sangre y con un velo oscuro encima para que se lea el texto, así que conviene una apaisada, sin letras y sin nada importante en el centro. Sin foto, queda la trama del diseño.",
+        original: null,
+      },
 
       eventosEyebrow: {
         tipo: "texto",
