@@ -1,12 +1,13 @@
 "use server";
 
-import { revalidatePath } from "next/cache";
+import { revalidatePath, revalidateTag } from "next/cache";
 import { redirect } from "next/navigation";
 import { and, count, eq, ne } from "drizzle-orm";
 import { z } from "zod";
 import { db } from "@/lib/db";
 import { bodegas, productos } from "@/lib/db/schema";
 import { requireUser } from "@/lib/auth";
+import { BODEGAS_TAG } from "@/lib/bodegas";
 import { slugify } from "@/lib/catalogo";
 import {
   emailOpcional,
@@ -98,6 +99,24 @@ async function buscarChoque(
   return null;
 }
 
+/**
+ * Lo que hay que invalidar cuando cambia una bodega.
+ *
+ * El tag es el que hace el trabajo: de él cuelga el `unstable_cache` de
+ * `lib/bodegas.ts`, y sin invalidarlo la portada sigue sirviendo la franja
+ * vieja por más que se marquen las rutas. La home va igual, porque es la
+ * convención del repo y deja explícito qué pantalla cambia.
+ *
+ * Aplica a las tres acciones y no sólo a la de editar: dar de alta una bodega
+ * ya tildada la mete en la portada, y archivar una que estaba tildada la saca.
+ */
+function invalidar(id?: string) {
+  revalidateTag(BODEGAS_TAG);
+  revalidatePath("/");
+  revalidatePath("/admin/bodegas");
+  if (id) revalidatePath(`/admin/bodegas/${id}`);
+}
+
 // ---------------------------------------------------------------- crear
 
 export async function crearBodegaAction(
@@ -122,7 +141,7 @@ export async function crearBodegaAction(
 
   await db.insert(bodegas).values({ nombre, slug: slugFinal, ...resto });
 
-  revalidatePath("/admin/bodegas");
+  invalidar();
   redirect("/admin/bodegas");
 }
 
@@ -158,8 +177,7 @@ export async function editarBodegaAction(
 
   if (actualizadas.length === 0) return { error: "Esa bodega ya no existe." };
 
-  revalidatePath("/admin/bodegas");
-  revalidatePath(`/admin/bodegas/${id.data}`);
+  invalidar(id.data);
   return { ok: "Cambios guardados." };
 }
 
@@ -198,8 +216,7 @@ export async function archivarBodegaAction(
     .set({ isActive: !bodega.isActive, updatedAt: new Date() })
     .where(eq(bodegas.id, id.data));
 
-  revalidatePath("/admin/bodegas");
-  revalidatePath(`/admin/bodegas/${id.data}`);
+  invalidar(id.data);
 
   if (!archivando) return { ok: "Bodega reactivada." };
 

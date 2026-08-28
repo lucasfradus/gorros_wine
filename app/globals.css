@@ -8,6 +8,12 @@
   /* superficies */
   --night: #0d0c0b;
   --panel: #131110;
+  /* El chip donde va el logo de una bodega en la franja de la portada. Es
+     blanco puro y no un crema de la paleta porque 33 de los logos cargados
+     vienen con su propio fondo blanco opaco: con cualquier otro tono se les
+     vería el rectángulo recortado adentro del chip. Por lo mismo, el hover de
+     la franja mueve el borde y nunca el fondo. */
+  --tile: #ffffff;
 
   /* tinta */
   --heading: #f5efe4;
