@@ -9,7 +9,6 @@ import { eventos } from "@/lib/db/schema";
 import { requireUser } from "@/lib/auth";
 import { esquemaImagen } from "@/lib/content/esquema-imagen";
 import { EVENTOS_TAG } from "@/lib/eventos";
-import { desdeInputLocal } from "@/lib/format";
 
 export interface EventoFormState {
   error?: string;
@@ -35,36 +34,23 @@ function invalidar() {
 // ---------------------------------------------------------------- validación
 
 /**
- * La fecha llega de un `<input type="datetime-local">`: `"2026-09-18T19:30"`,
- * sin zona. `desdeInputLocal` la ancla a Buenos Aires; ver el comentario largo
- * en `lib/format.ts` sobre por qué no alcanza con `new Date(valor)`.
+ * La fecha llega de un `<input type="date">` como `"2026-09-18"`, que es
+ * exactamente lo que guarda la columna: acá no hay nada que convertir, sólo
+ * que validar.
  *
- * El `refine` de después no es redundante con el regex: `"2026-02-31T19:30"`
- * tiene la forma correcta y no es un día que exista.
+ * El `refine` no es redundante con el regex: `"2026-02-31"` tiene la forma
+ * correcta y no es un día que exista. Se chequea contra un `Date` en UTC —el
+ * único de todo el módulo, y a propósito: se construye y se lee en la misma
+ * zona, así que no hay corrimiento posible—. El guarda de `NaN` va primero
+ * porque `toISOString()` de una fecha inválida tira.
  */
 const cuando = z
   .string()
-  .regex(
-    /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}$/,
-    "Poné la fecha y la hora del evento.",
-  )
-  .transform(desdeInputLocal)
-  .refine((d) => !Number.isNaN(d.getTime()), "Esa fecha no existe.");
-
-/**
- * El precio se escribe en pesos enteros y se guarda en centavos.
- *
- * Se valida como texto y no con `coerce.number()` para poder explicar el
- * formato en castellano: "sin puntos ni centavos" es más útil que el mensaje
- * que sale solo cuando `"9.000"` no se convierte en número.
- *
- * El cero se acepta a propósito: un evento puede ser gratis.
- */
-const precio = z
-  .string()
-  .trim()
-  .regex(/^\d{1,8}$/, "El precio va en pesos, sin puntos ni centavos.")
-  .transform((s) => Number(s) * 100);
+  .regex(/^\d{4}-\d{2}-\d{2}$/, "Poné la fecha del evento.")
+  .refine((v) => {
+    const d = new Date(`${v}T00:00:00Z`);
+    return !Number.isNaN(d.getTime()) && d.toISOString().startsWith(v);
+  }, "Esa fecha no existe.");
 
 const esquema = z.object({
   titulo: z
@@ -79,7 +65,6 @@ const esquema = z.object({
     .min(2, "Poné dónde es.")
     .max(200, "El lugar es muy largo."),
   detalle: z.string().trim().max(300, "El detalle es muy largo."),
-  precio,
   imagen: esquemaImagen,
   publicado: z.boolean(),
 });
@@ -110,7 +95,6 @@ function leerFormulario(formData: FormData) {
     comienza: formData.get("comienza"),
     lugar: formData.get("lugar"),
     detalle: formData.get("detalle") ?? "",
-    precio: formData.get("precio"),
     imagen,
     // Un checkbox que nadie tildó no viaja en el formulario.
     publicado: formData.get("publicado") === "on",
@@ -131,15 +115,13 @@ export async function createEventoAction(
   const parsed = esquema.safeParse(leerFormulario(formData));
   if (!parsed.success) return { error: parsed.error.issues[0].message };
 
-  const { titulo, comienza, lugar, detalle, precio, imagen, publicado } =
-    parsed.data;
+  const { titulo, comienza, lugar, detalle, imagen, publicado } = parsed.data;
 
   await db.insert(eventos).values({
     titulo,
     comienza,
     lugar,
     detalle: detalle === "" ? null : detalle,
-    precioCentavos: precio,
     imagen,
     publicado,
   });
@@ -165,7 +147,7 @@ export async function updateEventoAction(
   });
   if (!parsed.success) return { error: parsed.error.issues[0].message };
 
-  const { id, titulo, comienza, lugar, detalle, precio, imagen, publicado } =
+  const { id, titulo, comienza, lugar, detalle, imagen, publicado } =
     parsed.data;
 
   const actualizadas = await db
@@ -175,7 +157,6 @@ export async function updateEventoAction(
       comienza,
       lugar,
       detalle: detalle === "" ? null : detalle,
-      precioCentavos: precio,
       imagen,
       publicado,
       updatedAt: new Date(),

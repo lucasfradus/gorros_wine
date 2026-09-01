@@ -3,6 +3,7 @@ import { unstable_cache } from "next/cache";
 import { asc, eq } from "drizzle-orm";
 import { db } from "@/lib/db";
 import { eventos, type Evento } from "@/lib/db/schema";
+import { hoyEnArgentina } from "@/lib/format";
 
 /** El tag con el que el panel invalida la agenda entera. */
 export const EVENTOS_TAG = "eventos";
@@ -16,29 +17,19 @@ export const EVENTOS_TAG = "eventos";
  */
 const PASADOS_VISIBLES = 6;
 
-/** Un evento tal como lo muestra la tienda. */
+/**
+ * Un evento tal como lo muestra la tienda.
+ *
+ * `comienza` es el string `"2026-09-18"`, y eso es lo que hace que este tipo
+ * pueda cruzar el `unstable_cache` sin traducción. El caché serializa a JSON:
+ * una `Date` entra como objeto y **vuelve como string**, lo que no se nota en
+ * la lectura fría y revienta en la segunda. Como acá no hay ninguna, el
+ * problema no existe.
+ */
 export type EventoPublico = Pick<
   Evento,
-  | "id"
-  | "titulo"
-  | "comienza"
-  | "lugar"
-  | "detalle"
-  | "precioCentavos"
-  | "imagen"
+  "id" | "titulo" | "comienza" | "lugar" | "detalle" | "imagen"
 >;
-
-/**
- * Lo mismo, pero como sobrevive al caché.
- *
- * `unstable_cache` guarda su resultado serializado a JSON, así que una `Date`
- * entra como objeto y **vuelve como string**. Eso no se nota en la primera
- * lectura —la del caché frío, que devuelve el objeto tal cual salió de
- * Drizzle— y revienta en la segunda. Por eso la frontera está declarada acá
- * en vez de quedar como un accidente: lo que se cachea son strings, y
- * `getAgenda` es el único lugar que las vuelve a convertir.
- */
-type EventoGuardado = Omit<EventoPublico, "comienza"> & { comienza: string };
 
 /**
  * Los eventos publicados, en una sola consulta.
@@ -48,29 +39,25 @@ type EventoGuardado = Omit<EventoPublico, "comienza"> & { comienza: string };
  * prerenderiza, la home incluida.
  *
  * El `revalidate` en cambio es propio de esta tabla. El contenido sólo cambia
- * cuando alguien lo edita, pero la agenda cambia **sola**: un evento pasa de
- * próximo a pasado sin que nadie toque nada. El tag cubre las ediciones; este
- * techo de quince minutos cubre el paso del tiempo, y acota cuánto puede
- * quedar una cata que ya empezó mostrándose como próxima.
+ * cuando alguien lo edita, pero la agenda cambia **sola**: a la medianoche el
+ * evento de ayer pasa a la lista de pasados sin que nadie toque nada. El tag
+ * cubre las ediciones; este techo de quince minutos cubre el cambio de día.
  */
 const leerPublicados = unstable_cache(
-  async (): Promise<EventoGuardado[]> => {
+  async (): Promise<EventoPublico[]> => {
     try {
-      const filas = await db
+      return await db
         .select({
           id: eventos.id,
           titulo: eventos.titulo,
           comienza: eventos.comienza,
           lugar: eventos.lugar,
           detalle: eventos.detalle,
-          precioCentavos: eventos.precioCentavos,
           imagen: eventos.imagen,
         })
         .from(eventos)
         .where(eq(eventos.publicado, true))
         .orderBy(asc(eventos.comienza));
-
-      return filas.map((f) => ({ ...f, comienza: f.comienza.toISOString() }));
     } catch (error) {
       // Si la base no contesta, la página se sirve sin agenda en vez de
       // romperse: se ve el aviso de que no hay fechas, y el resto del sitio
@@ -96,21 +83,23 @@ export interface Agenda {
 /**
  * La agenda partida en dos.
  *
- * El corte es `comienza` contra ahora, sin gracia de horas: una cata que
- * arrancó hace media hora ya cuenta como pasada. Se calcula al renderizar y no
- * en SQL para que la consulta cacheada sirva a las dos mitades.
+ * El corte es el día, no el instante: una cata de hoy sigue siendo próxima
+ * hasta que el día termine. Es lo que corresponde ahora que un evento no
+ * guarda hora — no se puede saber si ya pasó— y además es lo que alguien
+ * espera al abrir la página la mañana de la cata.
+ *
+ * Las dos fechas son strings `"AAAA-MM-DD"`, así que se comparan como strings:
+ * ese formato ordena igual alfabéticamente que cronológicamente. Se calcula al
+ * renderizar y no en SQL para que la consulta cacheada sirva a las dos mitades.
  */
 export async function getAgenda(): Promise<Agenda> {
-  const todos: EventoPublico[] = (await publicados()).map((f) => ({
-    ...f,
-    comienza: new Date(f.comienza),
-  }));
-  const ahora = Date.now();
+  const todos = await publicados();
+  const hoy = hoyEnArgentina();
 
   return {
-    proximos: todos.filter((e) => e.comienza.getTime() >= ahora),
+    proximos: todos.filter((e) => e.comienza >= hoy),
     pasados: todos
-      .filter((e) => e.comienza.getTime() < ahora)
+      .filter((e) => e.comienza < hoy)
       .reverse()
       .slice(0, PASADOS_VISIBLES),
   };

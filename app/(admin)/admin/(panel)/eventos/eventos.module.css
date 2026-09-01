@@ -7,8 +7,8 @@
   opacity: 0.62;
 }
 
-/* La columna de fecha no se parte: "18 Jul" y "19:30 hs" son dos renglones
-   cortos y quedan mal cortados a la mitad. */
+/* La columna de fecha no se parte: "18 Jul" es corto y queda mal cortado
+   entre el día y el mes. */
 .cuando {
   white-space: nowrap;
 }

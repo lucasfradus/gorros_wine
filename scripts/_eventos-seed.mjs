@@ -35,38 +35,33 @@ const APPLY = process.env.APPLY === "1";
  * etiquetas a ciegas"— y acá va partido en los campos que ahora existen. Dos
  * de ellos no aclaraban el lugar: va "Local Pilar", que es donde son.
  *
- * La hora lleva el offset de Buenos Aires explícito. Sin él, Postgres la
- * interpreta en el huso del servidor y en producción, que corre en UTC, las
- * catas quedarían tres horas corridas.
+ * De la frase original se perdieron por el camino el horario y el precio: la
+ * tabla dejó de guardarlos, porque ninguno de los dos se usaba.
  */
 const EVENTOS = [
   {
     titulo: "Cata de Malbecs de altura",
-    comienza: "2026-07-18T19:30:00-03:00",
+    comienza: "2026-07-18",
     lugar: "Local Pilar",
     detalle: "8 etiquetas a ciegas",
-    pesos: 9000,
   },
   {
     titulo: "Espumantes & quesos",
-    comienza: "2026-08-02T20:00:00-03:00",
+    comienza: "2026-08-02",
     lugar: "Local Pilar",
     detalle: "con sommelier invitada",
-    pesos: 11000,
   },
   {
     titulo: "Iniciación al vino",
-    comienza: "2026-08-16T19:00:00-03:00",
+    comienza: "2026-08-16",
     lugar: "Local Pilar",
     detalle: "para arrancar sin vueltas",
-    pesos: 7500,
   },
   {
     titulo: "Noche de Patagonia",
-    comienza: "2026-08-30T20:30:00-03:00",
+    comienza: "2026-08-30",
     lugar: "Local Pilar",
     detalle: "Pinot y Merlot del sur",
-    pesos: 10500,
   },
 ];
 
@@ -98,16 +93,14 @@ try {
     }
 
     nuevos++;
-    console.log(
-      `  ${APPLY ? "+" : "·"} ${e.titulo} — ${e.comienza} — $${e.pesos}`,
-    );
+    console.log(`  ${APPLY ? "+" : "·"} ${e.titulo} — ${e.comienza}`);
 
     if (APPLY) {
       await pool.query(
         `INSERT INTO eventos
-           (titulo, comienza, lugar, detalle, precio_centavos, publicado)
-         VALUES ($1, $2, $3, $4, $5, true)`,
-        [e.titulo, e.comienza, e.lugar, e.detalle, e.pesos * 100],
+           (titulo, comienza, lugar, detalle, publicado)
+         VALUES ($1, $2, $3, $4, true)`,
+        [e.titulo, e.comienza, e.lugar, e.detalle],
       );
     }
   }
