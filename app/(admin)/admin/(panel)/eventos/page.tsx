@@ -3,8 +3,7 @@ import { asc, desc, gte, lt } from "drizzle-orm";
 import { db } from "@/lib/db";
 import { eventos, type Evento } from "@/lib/db/schema";
 import { requireUser } from "@/lib/auth";
-import { formatDia, formatHora, formatMes } from "@/lib/format";
-import { formatearPrecio } from "@/lib/precio";
+import { formatDia, formatMes, hoyEnArgentina } from "@/lib/format";
 import styles from "../../admin.module.css";
 import propios from "./eventos.module.css";
 
@@ -12,25 +11,25 @@ export const metadata = { title: "Eventos" };
 
 /**
  * La agenda, partida en dos por la misma línea que usa la tienda: `comienza`
- * contra el momento de abrir la pantalla.
+ * contra el día de hoy, con el evento de hoy todavía del lado de los próximos.
  *
  * Acá se listan todos los pasados y no los últimos seis como en el sitio: en
  * el panel el histórico completo es justamente lo que se viene a buscar.
  */
 export default async function EventosPage() {
   await requireUser();
-  const ahora = new Date();
+  const hoy = hoyEnArgentina();
 
   const [proximos, pasados] = await Promise.all([
     db
       .select()
       .from(eventos)
-      .where(gte(eventos.comienza, ahora))
+      .where(gte(eventos.comienza, hoy))
       .orderBy(asc(eventos.comienza)),
     db
       .select()
       .from(eventos)
-      .where(lt(eventos.comienza, ahora))
+      .where(lt(eventos.comienza, hoy))
       .orderBy(desc(eventos.comienza)),
   ]);
 
@@ -93,7 +92,6 @@ function Tabla({
               <tr>
                 <th scope="col">Cuándo</th>
                 <th scope="col">Evento</th>
-                <th scope="col">Precio</th>
                 <th scope="col">Estado</th>
                 <th scope="col" />
               </tr>
@@ -105,9 +103,6 @@ function Tabla({
                     <span className={styles.cellName}>
                       {formatDia(e.comienza)} {formatMes(e.comienza)}
                     </span>
-                    <span className={styles.cellMail}>
-                      {formatHora(e.comienza)}
-                    </span>
                   </td>
                   <td>
                     <span className={styles.cellName}>{e.titulo}</span>
@@ -115,9 +110,6 @@ function Tabla({
                       {e.lugar}
                       {e.detalle ? ` · ${e.detalle}` : ""}
                     </span>
-                  </td>
-                  <td className={styles.cellDim}>
-                    {formatearPrecio(e.precioCentavos, "ARS")}
                   </td>
                   <td>
                     <span

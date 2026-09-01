@@ -1,8 +1,7 @@
 import type { Metadata } from "next";
 import type { EventoPublico } from "@/lib/eventos";
-import { formatearPrecio } from "@/lib/precio";
 import { getAgenda } from "@/lib/eventos";
-import { formatDia, formatHora, formatMes } from "@/lib/format";
+import { formatDia, formatMes } from "@/lib/format";
 import { getContent } from "@/lib/content/get";
 import { ContentImage } from "@/components/content-image";
 import { Lineas } from "@/components/rich-text";
@@ -98,11 +97,7 @@ export default async function EventsPage() {
  * hecho vale como prueba de que esto pasa de verdad, pero no se puede reservar.
  */
 function Fila({ evento, pasado = false }: { evento: EventoPublico; pasado?: boolean }) {
-  const meta = [
-    formatHora(evento.comienza),
-    evento.lugar,
-    evento.detalle,
-  ].filter(Boolean);
+  const meta = [evento.lugar, evento.detalle].filter(Boolean);
 
   // Los próximos cuelgan del h1 de la página; los pasados, del h2 de su
   // sección. Saltear un nivel deja la navegación por encabezados mal armada
@@ -131,7 +126,7 @@ function Fila({ evento, pasado = false }: { evento: EventoPublico; pasado?: bool
 
       {pasado ? null : (
         <button type="button" className={styles.book}>
-          Reservar · {formatearPrecio(evento.precioCentavos, "ARS")}
+          Reservar
           <span className="srOnly"> {evento.titulo}</span>
         </button>
       )}
