@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { CatalogView } from "@/components/catalog-view";
 import { wineTypes, type WineType } from "@/lib/data";
+import { requireVentas } from "@/lib/ventas";
 
 export const metadata: Metadata = {
   title: "Catálogo",
@@ -13,6 +14,8 @@ export default async function CatalogPage({
 }: {
   searchParams: Promise<{ tipo?: string }>;
 }) {
+  requireVentas();
+
   // Se lee acá, en el servidor, y no con useSearchParams en el cliente: así
   // la grilla llega ya renderizada en el HTML en vez de aparecer al hidratar.
   const { tipo } = await searchParams;

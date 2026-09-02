@@ -91,7 +91,7 @@ export const REGISTRO = {
 
   home: {
     label: "Home",
-    help: "La portada: hero, beneficios, banda del Club, eventos, quiénes somos, bodegas, reseñas y cómo comprar.",
+    help: "La portada: hero, beneficios, banda del Club, eventos, quiénes somos, bodegas y reseñas. Las etiquetas destacadas y el «cómo comprar» están apagados hasta que haya catálogo (ver lib/ventas.ts).",
     revalidate: ["/"],
     campos: {
       heroEyebrow: {
@@ -109,7 +109,8 @@ export const REGISTRO = {
       heroCta: {
         tipo: "texto",
         label: "Hero · texto del botón",
-        original: "Ver catálogo",
+        help: "Mientras el catálogo no esté público, el botón abre el WhatsApp del local (ver lib/ventas.ts).",
+        original: "Escribinos",
       },
       heroImagen: {
         tipo: "imagen",
@@ -413,7 +414,8 @@ export const REGISTRO = {
       cierreCta: {
         tipo: "texto",
         label: "Cierre · texto del botón",
-        original: "Explorar el catálogo",
+        help: "Mientras el catálogo no esté público, el botón abre el WhatsApp del local (ver lib/ventas.ts).",
+        original: "Escribinos",
       },
       seoTitulo: {
         tipo: "texto",

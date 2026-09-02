@@ -1,11 +1,17 @@
 import Link from "next/link";
 import { getContent } from "@/lib/content/get";
+import { VENTAS_ACTIVAS } from "@/lib/ventas";
 import { ContentImage } from "./content-image";
 import { Lineas } from "./rich-text";
 import styles from "./hero.module.css";
 
 export async function Hero() {
-  const c = await getContent("home");
+  const [c, local] = await Promise.all([
+    getContent("home"),
+    getContent("local"),
+  ]);
+
+  const claseCta = `btn btnOutline ${styles.cta}`;
 
   return (
     <section className={styles.hero}>
@@ -26,9 +32,22 @@ export async function Hero() {
           />
         </h1>
 
-        <Link href="/catalogo" className={`btn btnOutline ${styles.cta}`}>
-          {c.heroCta}
-        </Link>
+        {/* Sin catálogo público no hay adónde mandar a alguien que quiere
+            comprar, salvo al WhatsApp del local. */}
+        {VENTAS_ACTIVAS ? (
+          <Link href="/catalogo" className={claseCta}>
+            {c.heroCta}
+          </Link>
+        ) : (
+          <a
+            href={`https://wa.me/${local.whatsapp}`}
+            className={claseCta}
+            target="_blank"
+            rel="noopener noreferrer"
+          >
+            {c.heroCta}
+          </a>
+        )}
       </div>
     </section>
   );

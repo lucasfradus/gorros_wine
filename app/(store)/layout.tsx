@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { getContent } from "@/lib/content/get";
+import { VENTAS_ACTIVAS } from "@/lib/ventas";
 import { CartProvider } from "@/components/cart-context";
 import { AgeGate, ageGateScript } from "@/components/age-gate";
 import { Nav } from "@/components/nav";
@@ -42,18 +43,24 @@ export default async function StoreLayout({
 }) {
   const edad = await getContent("edad");
 
+  const marco = (
+    <div className="shell">
+      <Nav />
+      <main>{children}</main>
+      <Footer />
+    </div>
+  );
+
   return (
     <>
       {/* Corre antes de que se pinte el resto del body. */}
       <script dangerouslySetInnerHTML={{ __html: ageGateScript }} />
       <AgeGate copy={edad} />
-      <CartProvider>
-        <div className="shell">
-          <Nav />
-          <main>{children}</main>
-          <Footer />
-        </div>
-      </CartProvider>
+      {/* Sin ventas no queda quien consuma el carrito, así que no se monta:
+          ninguna página del sitio lee el localStorage ni arma un contexto que
+          nadie va a usar. El módulo igual viaja en el bundle — webpack no
+          propaga una constante entre módulos para descartar el import. */}
+      {VENTAS_ACTIVAS ? <CartProvider>{marco}</CartProvider> : marco}
     </>
   );
 }

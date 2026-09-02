@@ -8,11 +8,15 @@ import {
   relatedWines,
   wines,
 } from "@/lib/data";
+import { VENTAS_ACTIVAS, requireVentas } from "@/lib/ventas";
 import { WineCard } from "@/components/wine-card";
 import { ProductPurchase } from "@/components/product-purchase";
 import styles from "@/components/product.module.css";
 
 export function generateStaticParams() {
+  // Sin ventas la ficha da 404: no hay nada que prerenderizar.
+  if (!VENTAS_ACTIVAS) return [];
+
   return wines.map((w) => ({ id: String(w.id) }));
 }
 
@@ -36,6 +40,8 @@ export default async function ProductPage({
 }: {
   params: Promise<{ id: string }>;
 }) {
+  requireVentas();
+
   const { id } = await params;
   const wine = getWine(Number(id));
   if (!wine) notFound();
