@@ -1,6 +1,7 @@
 import {
   bigint,
   boolean,
+  date,
   index,
   integer,
   jsonb,
@@ -500,13 +501,13 @@ export type Cotizacion = typeof cotizaciones.$inferSelect;
  *
  * Antes eran cuatro objetos escritos a mano en `lib/data.ts`, con el día y el
  * mes como texto suelto y el precio con el signo pesos adentro. Alcanzaba para
- * maquetar, pero no para ordenar por fecha ni para que alguien corrija un
- * horario sin abrir el editor y desplegar.
+ * maquetar, pero no para ordenar por fecha ni para que alguien corrija una
+ * fecha sin abrir el editor y desplegar.
  *
- * Un evento es **una** fecha y no un rango: el diseño muestra "18 · Jul" y
- * "19:30 hs", nada más. Los que duran dos días y los que se repiten todas las
- * semanas no entran acá; cuando entren van a necesitar más que una columna, y
- * conviene decidirlo con el caso real a la vista.
+ * Un evento es **un día** y no un rango: el diseño muestra "18 · Jul" y nada
+ * más. Los que duran dos días y los que se repiten todas las semanas no entran
+ * acá; cuando entren van a necesitar más que una columna, y conviene decidirlo
+ * con el caso real a la vista.
  */
 export const eventos = pgTable(
   "eventos",
@@ -515,15 +516,16 @@ export const eventos = pgTable(
     titulo: text("titulo").notNull(),
 
     /**
-     * El instante en que arranca, y la única fecha que se guarda: el día, el
-     * mes y la hora del listado se derivan de acá. Tenerlos por separado —como
-     * estaban— es asegurarse de que algún día discrepen.
+     * El día del evento, y la única fecha que se guarda: el día y el mes de la
+     * tarjeta salen de acá. Tenerlos por separado —como estaban— es asegurarse
+     * de que algún día discrepen.
      *
-     * Se lee y se escribe siempre en la zona de Buenos Aires, fija en
-     * `lib/format.ts`: producción corre en UTC y quien carga el evento está
-     * pensando en la hora del local.
+     * `date` y no `timestamp`, y en modo string: el valor viaja como
+     * "2026-09-18" desde Postgres hasta el `<input type="date">` y de vuelta,
+     * sin pasar nunca por un `Date`. Es lo que hace que la agenda no tenga que
+     * saber nada de husos horarios, con producción corriendo en UTC.
      */
-    comienza: timestamp("comienza", { withTimezone: true }).notNull(),
+    comienza: date("comienza", { mode: "string" }).notNull(),
 
     /** Aparte del detalle porque es lo que alguien mira primero para saber si
      *  le queda cerca. */
@@ -531,9 +533,6 @@ export const eventos = pgTable(
 
     /** La línea corta que acompaña al título: "8 etiquetas a ciegas". */
     detalle: text("detalle"),
-
-    /** En centavos: guardar plata en float termina en $8999.9999999. */
-    precioCentavos: integer("precio_centavos").notNull(),
 
     /** La misma forma que las imágenes del CMS, a propósito: así la sube el
      *  mismo campo del panel y la pinta el mismo `<ContentImage>`. Nula

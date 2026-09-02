@@ -5,7 +5,7 @@ import { z } from "zod";
 import { db } from "@/lib/db";
 import { eventos } from "@/lib/db/schema";
 import { requireUser } from "@/lib/auth";
-import { aInputLocal, formatDateTime } from "@/lib/format";
+import { formatDateTime, hoyEnArgentina } from "@/lib/format";
 import { deleteEventoAction, updateEventoAction } from "../actions";
 import { BorrarEvento, EventoForm } from "../evento-forms";
 import styles from "../../../admin.module.css";
@@ -32,7 +32,7 @@ export default async function EditarEventoPage({
 
   if (!evento) notFound();
 
-  const yaPaso = evento.comienza.getTime() < Date.now();
+  const yaPaso = evento.comienza < hoyEnArgentina();
 
   return (
     <>
@@ -64,10 +64,9 @@ export default async function EditarEventoPage({
             defaults={{
               id: evento.id,
               titulo: evento.titulo,
-              comienza: aInputLocal(evento.comienza),
+              comienza: evento.comienza,
               lugar: evento.lugar,
               detalle: evento.detalle ?? "",
-              precio: String(Math.round(evento.precioCentavos / 100)),
               imagen: evento.imagen,
               publicado: evento.publicado,
             }}

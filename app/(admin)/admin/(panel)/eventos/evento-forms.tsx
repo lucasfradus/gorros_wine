@@ -11,12 +11,10 @@ import styles from "../../admin.module.css";
 export interface EventoDefaults {
   id?: string;
   titulo?: string;
-  /** Ya convertida a hora de acá con `aInputLocal`: el input la toma tal cual. */
+  /** `"2026-09-18"`, tal como sale de la base y como lo quiere el input. */
   comienza?: string;
   lugar?: string;
   detalle?: string;
-  /** En pesos enteros, que es como se escribe y como se lee. */
-  precio?: string;
   imagen?: ImagenValor | null;
   publicado?: boolean;
 }
@@ -66,19 +64,18 @@ export function EventoForm({
 
       <div className={styles.field}>
         <label className={styles.label} htmlFor="comienza">
-          Cuándo empieza
+          Qué día es
         </label>
         <input
           id="comienza"
           name="comienza"
-          type="datetime-local"
+          type="date"
           required
           defaultValue={defaults?.comienza ?? ""}
           className={styles.input}
         />
         <span className={styles.hint}>
-          La hora de acá, la del local. De esta fecha salen el día y el mes que
-          se ven en la tarjeta del sitio.
+          De acá salen el día y el mes que se ven en la tarjeta del sitio.
         </span>
       </div>
 
@@ -111,27 +108,7 @@ export function EventoForm({
           className={styles.input}
         />
         <span className={styles.hint}>
-          Opcional. La línea corta que va junto al horario y el lugar.
-        </span>
-      </div>
-
-      <div className={styles.field}>
-        <label className={styles.label} htmlFor="precio">
-          Precio
-        </label>
-        <input
-          id="precio"
-          name="precio"
-          type="number"
-          required
-          min={0}
-          step={1}
-          defaultValue={defaults?.precio ?? ""}
-          placeholder="9000"
-          className={styles.input}
-        />
-        <span className={styles.hint}>
-          En pesos enteros, sin puntos ni centavos. Cero si el evento es gratis.
+          Opcional. La línea corta que va junto al lugar.
         </span>
       </div>
 

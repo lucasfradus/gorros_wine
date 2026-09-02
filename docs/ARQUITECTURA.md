@@ -136,26 +136,29 @@ Sobre el modelo del catálogo, cuatro decisiones que se explican una sola vez:
 Las catas y encuentros **sí** están en la base, desde la iteración del ABM. Se
 cargan en **Eventos**, en el panel, y se leen con `lib/eventos.ts`.
 
-Un evento es una fecha, no un rango: de `comienza` salen el día, el mes y la
-hora que muestra la tarjeta. La tienda lista los próximos con botón de reserva
-y, debajo, los seis últimos que ya pasaron, apagados y sin botón. El panel no
-tiene ese tope, que es donde el histórico completo se viene a buscar.
+Un evento es **un día**, no un rango ni un instante: de `comienza` salen el día
+y el mes que muestra la tarjeta, y nada más. La tienda lista los próximos con
+botón de reserva y, debajo, los seis últimos que ya pasaron, apagados y sin
+botón. El panel no tiene ese tope, que es donde el histórico completo se viene
+a buscar.
 
 Tres cosas que no son obvias:
 
+- **`comienza` es una columna `date` en modo string**, no un `timestamp`. El
+  valor viaja como `"2026-09-18"` de Postgres al `<input type="date">` y de
+  vuelta, sin pasar nunca por un `Date`, y ésa es toda la razón por la que la
+  agenda no tiene una sola línea de huso horario pese a que producción corre en
+  UTC. Vale al revés también: convertir esa fecha a `Date` para formatearla la
+  ancla a medianoche UTC y la muestra **un día antes** en Buenos Aires. Por eso
+  `formatDia` y `formatMes` en `lib/format.ts` leen el string a mano.
+- **El corte entre próximos y pasados es el día, no el instante**: una cata de
+  hoy sigue siendo próxima hasta que el día termina. Se compara `comienza`
+  contra `hoyEnArgentina()` como strings, que en formato `AAAA-MM-DD` ordenan
+  igual alfabética que cronológicamente.
 - **La lectura va cacheada con el tag `eventos`, y además con un techo de
   quince minutos.** El tag cubre las ediciones del panel; el techo cubre el
-  paso del tiempo, porque la agenda cambia **sola** —un evento pasa de próximo
-  a pasado sin que nadie toque nada— y sin él una cata ya empezada seguiría
-  anunciándose como próxima hasta la siguiente edición.
-- **`unstable_cache` serializa a JSON: las `Date` vuelven como string.** Por eso
-  `lib/eventos.ts` declara la frontera de forma explícita: lo que se cachea
-  lleva `comienza` como ISO, y `getAgenda` es el único lugar que la reconvierte.
-  Sin eso, la primera lectura funciona —caché frío, objeto tal cual salió de
-  Drizzle— y la segunda rompe.
-- **La hora se guarda y se lee siempre en la zona de Buenos Aires**, fija en
-  `lib/format.ts`. El formulario usa `<input type="datetime-local">`, que
-  entrega un string sin zona, y producción corre en UTC.
+  cambio de día, porque la agenda cambia **sola**: a la medianoche el evento de
+  ayer se pasa a la lista de pasados sin que nadie toque nada.
 
 Los textos que rodean a la agenda —volanta, título, bajada, galería, el aviso
 de "no hay fechas"— siguen siendo del CMS.

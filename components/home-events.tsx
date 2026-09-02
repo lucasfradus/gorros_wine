@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { getProximos } from "@/lib/eventos";
-import { formatDia, formatHora, formatMes } from "@/lib/format";
+import { formatDia, formatMes } from "@/lib/format";
 import { getContent } from "@/lib/content/get";
 import { ContentImage } from "./content-image";
 import { Lineas } from "./rich-text";
@@ -53,9 +53,7 @@ export async function HomeEvents() {
               <div className={styles.detail}>
                 <h3 className={styles.name}>{e.titulo}</h3>
                 <p className={styles.meta}>
-                  {[formatHora(e.comienza), e.lugar, e.detalle]
-                    .filter(Boolean)
-                    .join(" · ")}
+                  {[e.lugar, e.detalle].filter(Boolean).join(" · ")}
                 </p>
               </div>
               <Link href="/eventos" className={styles.book}>
