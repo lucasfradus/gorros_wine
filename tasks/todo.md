@@ -50,19 +50,30 @@ las seis decisiones y el Review— está en
 ## Sin resolver: la agenda de producción sale vacía
 
 `/eventos` en producción no muestra **ningún** evento —ni próximos ni la sección
-"Ya pasaron"—, con cuatro filas publicadas en la base. Es anterior a la
-iteración de los campos, no lo causó.
+"Ya pasaron"—. Es anterior a la iteración de los campos, no lo causó.
 
-La explicación conocida está en el plan de eventos: las páginas se prerenderizan
-en el build, el build de Railway **no tiene acceso a la red privada**, la
-consulta falla, `lib/eventos.ts` la atrapa y hornea una agenda vacía hasta que
-vence el `revalidate: 900`. Medido el 2026-08-25: quince minutos justos.
+**No es** el problema conocido del prerender —el build de Railway no ve la red
+privada, la consulta falla y la página se hornea vacía—, aunque en el log del
+build de `67176a8` ese error aparece igual (`getaddrinfo ENOTFOUND
+postgres.railway.internal`). Esa parte se cura sola y se curó.
 
-**Lo que no cierra**: el deploy anterior fue el 2026-08-28, cuatro días antes, y
-la agenda seguía vacía igual. O el `revalidate` no está regenerando, o la
-consulta falla también en runtime. Antes de tocar nada hay que mirar los logs
-del servidor buscando `[eventos] no se pudo leer la agenda`, que es lo que
-imprime el `catch`.
+Lo que queda, medido el 2026-09-02 a las 12:00 UTC, catorce horas y media
+después del deploy:
+
+- `/eventos` responde `x-nextjs-cache: HIT` con entrada **fresca**: la página
+  **sí** se está regenerando en runtime, donde la base sí se alcanza.
+- En los logs de runtime **no** aparece `[eventos] no se pudo leer la agenda`,
+  que es lo que imprimiría el `catch`. La consulta no falla.
+- Y aun así renderiza cero eventos.
+
+Las tres cosas juntas dicen que la consulta corre bien y **devuelve cero filas
+publicadas**. O sea que no es un problema de caché ni de código: es el dato.
+
+**El paso que sigue** es abrir `/admin/eventos` en producción —es una página
+dinámica, lee la base en vivo y muestra publicados y borradores— y ver si las
+cuatro filas están y con qué `publicado`. No se pudo hacer desde acá: consultar
+la base de producción por `railway ssh` queda bloqueado, y hace falta sesión
+para entrar al panel.
 
 ## Worktrees viejos sin borrar
 
