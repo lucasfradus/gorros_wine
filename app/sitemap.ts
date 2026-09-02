@@ -1,11 +1,13 @@
 import type { MetadataRoute } from "next";
 import { wines } from "@/lib/data";
 import { siteUrl } from "@/lib/site";
+import { VENTAS_ACTIVAS } from "@/lib/ventas";
 
 export default function sitemap(): MetadataRoute.Sitemap {
   const staticPaths = [
     { path: "/", priority: 1 },
-    { path: "/catalogo", priority: 0.9 },
+    // La tienda apagada no se le ofrece a Google: sus rutas dan 404.
+    ...(VENTAS_ACTIVAS ? [{ path: "/catalogo", priority: 0.9 }] : []),
     { path: "/eventos", priority: 0.7 },
     { path: "/nosotros", priority: 0.7 },
     { path: "/club", priority: 0.7 },
@@ -18,9 +20,11 @@ export default function sitemap(): MetadataRoute.Sitemap {
       url: `${siteUrl}${p.path}`,
       priority: p.priority,
     })),
-    ...wines.map((w) => ({
-      url: `${siteUrl}/producto/${w.id}`,
-      priority: 0.6,
-    })),
+    ...(VENTAS_ACTIVAS
+      ? wines.map((w) => ({
+          url: `${siteUrl}/producto/${w.id}`,
+          priority: 0.6,
+        }))
+      : []),
   ];
 }

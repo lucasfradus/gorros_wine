@@ -51,6 +51,9 @@ app/
             └── cuenta/   mi perfil y cambio de contraseña
 ```
 
+Las rutas de venta —`catalogo/`, `producto/[id]/`, `buscar/`, `carrito/` y
+`cuenta/`— están **apagadas**: responden 404. El porqué, abajo.
+
 ## De dónde salen los datos
 
 Hoy conviven tres fuentes, y conviene tenerlo claro:
@@ -72,6 +75,37 @@ O sea que **el catálogo que se carga en el panel todavía no se ve en la
 tienda**. Fue a propósito: mover el render público a la base cambia
 `/catalogo`, `/producto/[id]`, `/buscar` y la home, y las saca del render
 estático. Es la iteración que sigue, y va en worktree.
+
+### Mientras tanto, la tienda está apagada
+
+Lo que un visitante vería hoy es el catálogo de muestra de `lib/data.ts`:
+veintiséis vinos con precios inventados. Prometer envíos y precios que no
+existen es peor que no tener catálogo, así que la mitad de venta del sitio
+público cuelga de una constante, en `lib/ventas.ts`:
+
+```ts
+export const VENTAS_ACTIVAS = false;
+```
+
+Con eso en `false`:
+
+- La home pierde las etiquetas destacadas y el "cómo comprar".
+- El nav pierde Catálogo, Buscar, Cuenta y Carrito; el footer, Catálogo.
+- El layout de `(store)` no monta el `CartProvider`: sin quien lo consuma, no
+  hay lectura de `localStorage` en ninguna página.
+- `/catalogo`, `/producto/:id`, `/carrito`, `/buscar` y `/cuenta` responden 404
+  (`requireVentas()`, al estilo de `requireUser()`) y salen del sitemap.
+- Los botones del hero y del cierre de Nosotros, que llevaban al catálogo,
+  abren el WhatsApp del local.
+
+No se borró nada: la grilla, la ficha, el carrito y la búsqueda esperan enteras
+del otro lado del flag, para enchufarse a los datos reales cuando el catálogo de
+la base salga a la tienda. `robots.txt` **no** las menciona a propósito: un
+`Disallow` le impediría a Google entrar, ver el 404 y sacar esas URLs del
+índice.
+
+Para volver a prenderla alcanza con poner `true`, y revisar desde el panel el
+texto de los dos botones que mientras tanto dicen "Escribinos".
 
 Los eventos son la excepción, y sirven de ensayo de ese camino: se cargan en el
 panel y **la tienda ya los lee**, sin perder el prerender. Cómo, en la sección

@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { getContent } from "@/lib/content/get";
+import { VENTAS_ACTIVAS } from "@/lib/ventas";
 import { ContentImage } from "@/components/content-image";
 import { Lineas, Parrafos } from "@/components/rich-text";
 import styles from "./nosotros.module.css";
@@ -11,7 +12,10 @@ export async function generateMetadata(): Promise<Metadata> {
 }
 
 export default async function AboutPage() {
-  const c = await getContent("nosotros");
+  const [c, local] = await Promise.all([
+    getContent("nosotros"),
+    getContent("local"),
+  ]);
 
   return (
     <>
@@ -53,9 +57,22 @@ export default async function AboutPage() {
           <Lineas texto={c.cierreTitulo} clases={{ acento: styles.accent }} />
         </p>
         <p className={styles.closingSub}>{c.cierreSub}</p>
-        <Link href="/catalogo" className="btn btnGold">
-          {c.cierreCta}
-        </Link>
+        {/* Mientras no haya catálogo público, el cierre lleva al WhatsApp del
+            local, igual que el del Club. */}
+        {VENTAS_ACTIVAS ? (
+          <Link href="/catalogo" className="btn btnGold">
+            {c.cierreCta}
+          </Link>
+        ) : (
+          <a
+            href={`https://wa.me/${local.whatsapp}`}
+            className="btn btnGold"
+            target="_blank"
+            rel="noopener noreferrer"
+          >
+            {c.cierreCta}
+          </a>
+        )}
       </section>
     </>
   );

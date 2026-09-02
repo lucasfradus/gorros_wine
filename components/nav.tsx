@@ -3,12 +3,28 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { navLinks } from "@/lib/data";
+import { VENTAS_ACTIVAS } from "@/lib/ventas";
 import { Isotipo } from "./isotipo";
 import { useCart } from "./cart-context";
 import styles from "./nav.module.css";
 
-export function Nav() {
+/* El contador vive en su propio componente y no en `Nav`: así `useCart()` se
+   llama sólo cuando el carrito se muestra, y sin ventas no hace falta que el
+   layout monte el proveedor. */
+function CartLink() {
   const { count } = useCart();
+
+  return (
+    <Link href="/carrito" className={styles.cart}>
+      Carrito ({count})
+      <span className="srOnly">
+        {count === 1 ? " 1 producto" : ` ${count} productos`}
+      </span>
+    </Link>
+  );
+}
+
+export function Nav() {
   const pathname = usePathname();
 
   return (
@@ -40,20 +56,19 @@ export function Nav() {
         </ul>
       </nav>
 
-      <div className={styles.right}>
-        <Link href="/buscar" className={styles.util}>
-          Buscar
-        </Link>
-        <Link href="/cuenta" className={styles.util}>
-          Cuenta
-        </Link>
-        <Link href="/carrito" className={styles.cart}>
-          Carrito ({count})
-          <span className="srOnly">
-            {count === 1 ? " 1 producto" : ` ${count} productos`}
-          </span>
-        </Link>
-      </div>
+      {/* Buscar, Cuenta y Carrito son las tres puertas a la tienda: sin ventas
+          no hay nada del otro lado y el bloque entero no se pinta. */}
+      {VENTAS_ACTIVAS && (
+        <div className={styles.right}>
+          <Link href="/buscar" className={styles.util}>
+            Buscar
+          </Link>
+          <Link href="/cuenta" className={styles.util}>
+            Cuenta
+          </Link>
+          <CartLink />
+        </div>
+      )}
     </header>
   );
 }

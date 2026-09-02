@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { getContent } from "@/lib/content/get";
+import { VENTAS_ACTIVAS } from "@/lib/ventas";
 import { Isotipo } from "./isotipo";
 import { NewsletterForm } from "./newsletter-form";
 import { Lineas } from "./rich-text";
@@ -25,11 +26,14 @@ export async function Footer() {
         <div>
           <h2 className={styles.colTitle}>{c.tiendaTitulo}</h2>
           <ul className={styles.list}>
-            <li>
-              <Link href="/catalogo" className={styles.link}>
-                Catálogo
-              </Link>
-            </li>
+            {/* Sin catálogo público no hay adónde llevar: ver lib/ventas.ts. */}
+            {VENTAS_ACTIVAS && (
+              <li>
+                <Link href="/catalogo" className={styles.link}>
+                  Catálogo
+                </Link>
+              </li>
+            )}
             <li>
               <Link href="/#club" className={styles.link}>
                 Club Gorros

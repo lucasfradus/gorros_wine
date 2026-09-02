@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { getContent } from "@/lib/content/get";
 import { CartView } from "@/components/cart-view";
+import { requireVentas } from "@/lib/ventas";
 
 export const metadata: Metadata = {
   title: "Carrito",
@@ -9,6 +10,8 @@ export const metadata: Metadata = {
 };
 
 export default async function CartPage() {
+  requireVentas();
+
   const local = await getContent("local");
   return <CartView whatsapp={local.whatsapp} />;
 }

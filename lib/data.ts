@@ -1,3 +1,5 @@
+import { VENTAS_ACTIVAS } from "./ventas";
+
 // Los datos del local (WhatsApp, mail, dirección, horarios) se editan desde el
 // panel: viven en `lib/content/registry.ts`, grupo `local`.
 
@@ -193,7 +195,8 @@ export type SortValue = (typeof sortOptions)[number]["value"];
 
 // En v2 "Club" no es una página: es un ancla a la banda del club en la home.
 export const navLinks = [
-  { label: "Catálogo", href: "/catalogo" },
+  // El catálogo no está público todavía: ver lib/ventas.ts.
+  ...(VENTAS_ACTIVAS ? [{ label: "Catálogo", href: "/catalogo" }] : []),
   { label: "Eventos", href: "/eventos" },
   { label: "Club", href: "/#club" },
   { label: "Nosotros", href: "/nosotros" },
