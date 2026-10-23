@@ -144,7 +144,7 @@ export default async function ComprobantesPage({
                 {filas.map((c) => (
                   <tr key={c.id}>
                     <td>{formatDateTime(c.createdAt)}</td>
-                    <td>
+                    <td data-label="Comprobante">
                       <span className={styles.cellName}>
                         {c.tipo === "factura" ? "Factura" : "NC"} {c.letra}{" "}
                         {c.numeroCompleto && c.pdfUrl ? (
@@ -160,7 +160,7 @@ export default async function ComprobantesPage({
                         {c.cae ? ` CAE ${c.cae}` : null}
                       </span>
                     </td>
-                    <td>
+                    <td data-label="Receptor">
                       <span className={styles.cellName}>{c.receptorNombre ?? "Consumidor final"}</span>
                       <span className={styles.cellDim}>
                         {c.receptorDocTipo === "ninguno"
@@ -170,10 +170,10 @@ export default async function ComprobantesPage({
                             : `DNI ${c.receptorDocNumero}`}
                       </span>
                     </td>
-                    <td className={propios.importe}>
+                    <td data-label="Total" className={propios.importe}>
                       {formatARS(c.tipo === "nota_credito" ? -c.totalCentavos : c.totalCentavos)}
                     </td>
-                    <td>
+                    <td data-label="Estado">
                       <span className={propios.estado}>
                         <Link href={`/admin/facturacion/${c.movimientoId}`}>{ESTADOS[c.estado]}</Link>
                         {c.errorMensaje && c.estado !== "autorizado" ? (

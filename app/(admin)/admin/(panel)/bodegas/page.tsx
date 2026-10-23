@@ -105,7 +105,7 @@ export default async function BodegasPage() {
                         <span className={styles.cellMail}>{b.pais}</span>
                       ) : null}
                     </td>
-                    <td>
+                    <td data-label="Contacto">
                       {b.contactoNombre || b.contactoEmail ? (
                         <>
                           <span className={styles.cellName}>
@@ -121,8 +121,8 @@ export default async function BodegasPage() {
                         <span className={styles.cellDim}>Sin cargar</span>
                       )}
                     </td>
-                    <td className={styles.cellDim}>{b.productos}</td>
-                    <td>
+                    <td data-label="Productos" className={styles.cellDim}>{b.productos}</td>
+                    <td data-label="Estado">
                       <span
                         className={`${styles.badge} ${
                           b.isActive ? styles.badgeOn : styles.badgeOff

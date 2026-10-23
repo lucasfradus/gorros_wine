@@ -9,11 +9,10 @@ import styles from "./admin.module.css";
  */
 export function ThemeSwitch({ current }: { current: Theme }) {
   return (
-    <form action={setThemeAction} className={styles.themeForm}>
-      <span className={styles.themeLabel} id="modo-visual">
-        Modo
-      </span>
-      <div className={styles.themeSwitch} role="group" aria-labelledby="modo-visual">
+    <form action={setThemeAction}>
+      {/* Los tres nombres (Claro, Oscuro, Sistema) se explican solos a la
+          vista; el rótulo queda para el lector de pantalla. */}
+      <div className={styles.themeSwitch} role="group" aria-label="Modo visual">
         {THEMES.map((t) => (
           <button
             key={t}

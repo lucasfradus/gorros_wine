@@ -207,16 +207,16 @@ export default async function ClientesPage({
                           <span className={styles.cellMail}>{c.apodo}</span>
                         ) : null}
                       </td>
-                      <td className={styles.cellDim}>{c.telefono ?? "—"}</td>
+                      <td data-label="Contacto" className={styles.cellDim}>{c.telefono ?? "—"}</td>
                       {puedeVerPlata ? (
                         <>
-                          <td className={propios.importeCelda}>
+                          <td data-label="Pesos" className={propios.importeCelda}>
                             <Importe
                               centavos={saldo.arsCentavos}
                               formato={formatARS}
                             />
                           </td>
-                          <td className={propios.importeCelda}>
+                          <td data-label="Dólares" className={propios.importeCelda}>
                             <Importe
                               centavos={saldo.usdCentavos}
                               formato={formatUSD}

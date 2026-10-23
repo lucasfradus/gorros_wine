@@ -104,14 +104,14 @@ function Tabla({
                       {formatDia(e.comienza)} {formatMes(e.comienza)}
                     </span>
                   </td>
-                  <td>
+                  <td data-label="Evento">
                     <span className={styles.cellName}>{e.titulo}</span>
                     <span className={styles.cellMail}>
                       {e.lugar}
                       {e.detalle ? ` · ${e.detalle}` : ""}
                     </span>
                   </td>
-                  <td>
+                  <td data-label="Estado">
                     <span
                       className={`${styles.badge} ${
                         e.publicado ? styles.badgeOn : styles.badgeOff

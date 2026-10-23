@@ -225,7 +225,8 @@ html:not([data-age-ok="1"]) body:has(.js-age-gate) {
  * claro. Sin data-theme —la tienda— no cambia nada.
  */
 body:has([data-theme]) {
-  background: light-dark(#f7f4ed, #0d0c0b);
+  /* Los mismos valores que --bg en admin.module.css. */
+  background: light-dark(#f6f6f7, #111113);
 }
 
 body:has([data-theme="dark"]) {
