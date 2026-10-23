@@ -8,7 +8,7 @@ export const ROLE_LABEL: Record<UserRole, string> = {
 };
 
 export const ROLE_DESCRIPTION: Record<UserRole, string> = {
-  admin: "Todo: catálogo, precios, pedidos y usuarios. Puede nombrar otros admin.",
+  admin: "Todo: catálogo, precios, facturación y usuarios. Puede nombrar otros admin.",
   editor: "Sólo contenido: catálogo, precios y eventos. No ve la sección Usuarios.",
 };
 
@@ -62,5 +62,20 @@ export function canEditContent(_actor: PublicUser): boolean {
  * (`cuenta-actions.ts`), detrás de `requireCuentaCorriente()`.
  */
 export function canManageCuentaCorriente(actor: PublicUser): boolean {
+  return actor.role === "admin";
+}
+
+/**
+ * ¿Ve los cobros de Mercado Pago y emite comprobantes?
+ *
+ * Sólo admin, por dos motivos distintos. Los cobros son plata, igual que la
+ * cuenta corriente. Y una factura es un hecho fiscal que no se borra: la que
+ * sale mal se anula con una nota de crédito, que también queda en ARCA. No es
+ * algo que el rol pensado para cargar catálogo deba poder hacer por error.
+ *
+ * Es una regla aparte de `canManageCuentaCorriente` aunque hoy decidan lo
+ * mismo: el día que haya alguien que factura pero no fía, se separan acá.
+ */
+export function canFacturar(actor: PublicUser): boolean {
   return actor.role === "admin";
 }

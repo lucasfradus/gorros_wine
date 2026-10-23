@@ -203,6 +203,53 @@ aritmética de la plata sin levantar Postgres. `npm run prueba:cuenta` la cubre.
 El tipo de cambio de una operación **siempre** es el que se pactó en esa
 operación, y nunca uno de referencia.
 
+## Facturación de los cobros de Mercado Pago
+
+Los cobros que entran por MP se traen a `movimientos_mp` y se facturan uno por
+uno desde **Facturación** (sólo admin, `requireFacturacion()`). La factura la
+emite **Facturante.com**, que habla con ARCA: certificado, numeración, CAE, PDF.
+Gorros es Responsable Inscripto y factura con un solo CUIT y un solo punto de
+venta, configurados por entorno (`.env.example`).
+
+**La letra no se elige: sale del receptor.** A un responsable inscripto le
+corresponde A; a un consumidor final o un exento, B. Monotributo queda afuera
+hasta verificar su código de Facturante con una emisión real.
+
+**Un cobro, una factura viva**, y lo garantiza la base: un índice único parcial
+sobre `comprobantes.movimiento_id` que ignora las rechazadas, las fallidas y las
+anuladas. Dos clics o dos pestañas no sacan dos facturas.
+
+**`en_proceso` no es un error.** Facturante tarda 13-20 s, así que la action
+reserva la fila (`pendiente`) y manda el POST en `after()`. Si no hay respuesta
+usable —timeout, red—, el comprobante pudo haberse emitido igual, y Facturante
+**no deduplica**: reintentar a ciegas saca la factura dos veces. Así que queda
+`en_proceso` y lo cierra:
+
+1. el **webhook** de Facturante (`/api/webhooks/facturante/…`), que llega con el
+   CAE. Sólo desplegado: a localhost no llega;
+2. "Consultar estado", si Facturante llegó a devolver su id interno;
+3. una persona, si no: después de 2 minutos la pantalla pide revisar el panel de
+   Facturante y ofrece marcarlo como no emitido, que libera el cobro.
+
+**Anular es emitir una nota de crédito** por el total, con la misma letra y
+asociada a la factura. Cuando la NC queda autorizada, la factura pasa a
+`anulado` y el cobro se puede volver a facturar. Ninguna fila se borra.
+
+El cron diario (`scripts/cron-diario.mjs` → `POST /api/cron/diario`) trae los
+cobros de la última semana, reconcilia lo que quedó en proceso y renueva **un**
+token de MP por vez: renovar en ráfaga da 429 e invalida los tokens vigentes.
+
+| Archivo | Qué hace |
+| --- | --- |
+| `lib/mercadopago/` | OAuth, renovación del token, búsqueda y sync de pagos |
+| `lib/facturante/` | Cliente HTTP, request y respuesta de Facturante, sin base |
+| `lib/facturacion/reglas.ts` | Letra y datos obligatorios del receptor, sin base |
+| `lib/facturacion/{emitir,enviar,guardar,reconciliar,webhook}.ts` | El ciclo de vida del comprobante |
+| `lib/facturacion/estado.ts` | Qué estado de facturación tiene un cobro, visto desde sus comprobantes |
+
+`npm run prueba:facturacion` arma los requests de una B, una A y su NC sin
+mandarlos, y chequea reglas y códigos.
+
 ## El CMS de contenido
 
 Todo el copy fijo del sitio —hero, Nosotros, Club, Eventos, pie de página, age

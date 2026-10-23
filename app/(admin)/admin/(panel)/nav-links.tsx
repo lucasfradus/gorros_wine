@@ -15,7 +15,13 @@ interface Item {
  * Cliente sólo por `usePathname`, que es lo único que necesita el navegador
  * acá: marcar cuál es la sección abierta.
  */
-export function NavLinks({ showUsers }: { showUsers: boolean }) {
+export function NavLinks({
+  showUsers,
+  showFacturacion,
+}: {
+  showUsers: boolean;
+  showFacturacion: boolean;
+}) {
   const pathname = usePathname();
 
   // En orden de pantalla. Catálogo lo ven los dos roles: `ROLE_DESCRIPTION`
@@ -23,6 +29,9 @@ export function NavLinks({ showUsers }: { showUsers: boolean }) {
   const items: Item[] = [
     { href: "/admin", label: "Inicio" },
     { href: "/admin/clientes", label: "Clientes", section: "Negocio" },
+    ...(showFacturacion
+      ? [{ href: "/admin/facturacion", label: "Facturación" }]
+      : []),
     { href: "/admin/productos", label: "Productos", section: "Catálogo" },
     { href: "/admin/categorias", label: "Categorías" },
     { href: "/admin/bodegas", label: "Bodegas" },

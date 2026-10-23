@@ -11,9 +11,11 @@ import {
   primaryKey,
   text,
   timestamp,
+  uniqueIndex,
   uuid,
   type AnyPgColumn,
 } from "drizzle-orm/pg-core";
+import { sql } from "drizzle-orm";
 import type { ImagenValor } from "@/lib/content/types";
 
 /**
@@ -572,6 +574,20 @@ export type NewEvento = typeof eventos.$inferInsert;
  */
 
 /**
+ * Condición frente al IVA, del cliente o del receptor de un comprobante. Decide
+ * qué letra se le puede hacer: a un RI o a un monotributista se le hace A, a un
+ * consumidor final (o a un exento) se le hace B. El emisor es siempre RI, así
+ * que la C no existe en este sistema.
+ */
+export const condicionIva = pgEnum("condicion_iva", [
+  "responsable_inscripto",
+  "monotributo",
+  "exento",
+  "consumidor_final",
+]);
+export type CondicionIva = (typeof condicionIva.enumValues)[number];
+
+/**
  * Los clientes del negocio, que no son los `users` del panel: un cliente compra
  * vino y debe plata, un user entra al admin. Nunca fueron la misma cosa.
  *
@@ -605,6 +621,10 @@ export const clientes = pgTable(
      *  ninguna de las dos cosas sobrevive a un tipo numérico. */
     documento: text("documento"),
     razonSocial: text("razon_social"),
+
+    /** Hace falta para hacerle Factura A. Nullable porque los clientes de antes
+     *  no la tienen: se completa la primera vez que se le factura. */
+    condicionIva: condicionIva("condicion_iva"),
 
     direccion: text("direccion"),
 
@@ -751,3 +771,228 @@ export type Cliente = typeof clientes.$inferSelect;
 export type NewCliente = typeof clientes.$inferInsert;
 export type MovimientoCc = typeof movimientosCc.$inferSelect;
 export type NewMovimientoCc = typeof movimientosCc.$inferInsert;
+
+// ─── Mercado Pago y facturación ─────────────────────────────────────────────
+
+/**
+ * Una cuenta de Mercado Pago vinculada por OAuth. Hoy es una sola —la del
+ * local— pero la tabla admite más porque el día que haya una segunda no se
+ * vuelve a migrar nada.
+ *
+ * Los tokens van **cifrados** (`lib/crypto/tokens.ts`): con el access token se
+ * leen todos los cobros de la cuenta, y un dump de la base no debería alcanzar
+ * para eso.
+ */
+export const cuentasMp = pgTable("cuentas_mp", {
+  id: uuid("id").primaryKey().defaultRandom(),
+
+  alias: text("alias").notNull(),
+
+  /** El `user_id` de MP. **Único**: en Clicnet faltó, la misma cuenta quedó
+   *  vinculada dos veces y el sync se quedaba con la última que veía. */
+  mpUserId: text("mp_user_id").notNull().unique(),
+
+  accessTokenCifrado: text("access_token_cifrado").notNull(),
+  refreshTokenCifrado: text("refresh_token_cifrado").notNull(),
+  publicKey: text("public_key"),
+
+  /** Vence a los 180 días. El cron renueva de a una cuenta por corrida:
+   *  refrescar en ráfaga da 429 y además invalida los tokens vigentes. */
+  expiresAt: timestamp("expires_at", { withTimezone: true }).notNull(),
+
+  isActive: boolean("is_active").notNull().default(true),
+
+  vinculadaPor: uuid("vinculada_por").references(() => users.id, {
+    onDelete: "set null",
+  }),
+
+  createdAt: timestamp("created_at", { withTimezone: true })
+    .notNull()
+    .defaultNow(),
+  updatedAt: timestamp("updated_at", { withTimezone: true })
+    .notNull()
+    .defaultNow(),
+});
+
+/**
+ * Un cobro aprobado que entró por Mercado Pago. Es una **copia** de lo que dice
+ * MP, que es la fuente de verdad: el sync la pisa cada vez que corre. Existe
+ * porque la factura necesita algo local de qué colgar, y porque listar desde la
+ * base es instantáneo y desde la API de MP no.
+ */
+export const movimientosMp = pgTable(
+  "movimientos_mp",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+
+    cuentaId: uuid("cuenta_id")
+      .notNull()
+      .references(() => cuentasMp.id, { onDelete: "restrict" }),
+
+    /** El id del pago en MP. Texto: son enteros de 11+ dígitos y no se opera
+     *  con ellos. Es la clave del upsert. */
+    mpPagoId: text("mp_pago_id").notNull().unique(),
+
+    /** Lo que pagó el cliente, que es lo que se factura. */
+    montoCentavos: bigint("monto_centavos", { mode: "number" }).notNull(),
+    /** Lo que le queda al local después de la comisión. Informativo. */
+    netoCentavos: bigint("neto_centavos", { mode: "number" }),
+    comisionCentavos: bigint("comision_centavos", { mode: "number" }),
+
+    titular: text("titular"),
+    email: text("email"),
+
+    /** Documento del pagador según MP, cuando viene. Sólo sirve para precargar
+     *  el receptor de la factura: nunca se usa sin que alguien lo vea. */
+    docTipo: text("doc_tipo"),
+    docNumero: text("doc_numero"),
+
+    metodoPago: text("metodo_pago"),
+    descripcion: text("descripcion"),
+
+    /** `date_approved` de MP. Es la fecha que vale para facturar, no
+     *  `date_created`: un pago puede crearse un día y acreditarse otro. */
+    fechaAprobacion: timestamp("fecha_aprobacion", {
+      withTimezone: true,
+    }).notNull(),
+
+    /** El pago tal como vino, para no tener que volver a pedirlo el día que
+     *  haga falta un campo que hoy no se copia. */
+    raw: jsonb("raw").notNull(),
+
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+  },
+  (t) => [index("movimientos_mp_fecha_idx").on(t.fechaAprobacion)],
+);
+
+export const comprobanteTipo = pgEnum("comprobante_tipo", [
+  "factura",
+  "nota_credito",
+]);
+export type ComprobanteTipo = (typeof comprobanteTipo.enumValues)[number];
+
+export const comprobanteLetra = pgEnum("comprobante_letra", ["A", "B"]);
+export type ComprobanteLetra = (typeof comprobanteLetra.enumValues)[number];
+
+/**
+ * - `pendiente`  — reservado, el POST a Facturante todavía no salió.
+ * - `en_proceso` — salió y no hubo respuesta clara. **No es un error**: puede
+ *   estar autorizado del otro lado. Reintentar a ciegas duplica la factura; se
+ *   resuelve consultando el estado.
+ * - `autorizado` — tiene CAE.
+ * - `rechazado`  — Facturante o ARCA lo rechazaron con un motivo fiscal.
+ * - `error`      — falló antes de salir (validación, credenciales). Seguro de
+ *   reintentar.
+ * - `anulado`    — factura con nota de crédito autorizada.
+ */
+export const comprobanteEstado = pgEnum("comprobante_estado", [
+  "pendiente",
+  "en_proceso",
+  "autorizado",
+  "rechazado",
+  "error",
+  "anulado",
+]);
+export type ComprobanteEstado = (typeof comprobanteEstado.enumValues)[number];
+
+/**
+ * Una factura o nota de crédito emitida (o en camino) por Facturante. No se
+ * edita ni se borra: una factura mal hecha se anula con su nota de crédito, y
+ * las dos filas quedan.
+ */
+export const comprobantes = pgTable(
+  "comprobantes",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+
+    movimientoId: uuid("movimiento_id")
+      .notNull()
+      .references(() => movimientosMp.id, { onDelete: "restrict" }),
+
+    tipo: comprobanteTipo("tipo").notNull(),
+    letra: comprobanteLetra("letra").notNull(),
+    estado: comprobanteEstado("estado").notNull().default("pendiente"),
+
+    /** El id que le mandamos a Facturante. Único: es lo que permite preguntar
+     *  "¿esto salió?" después de un timeout sin emitirlo de nuevo. */
+    externalId: text("external_id").notNull().unique(),
+
+    /** El id interno de Facturante, cuando responde. */
+    facturanteId: text("facturante_id"),
+
+    cae: text("cae"),
+    caeVencimiento: date("cae_vencimiento"),
+    /** Como lo imprime Facturante: "FB 00015-00000217". */
+    numeroCompleto: text("numero_completo"),
+    pdfUrl: text("pdf_url"),
+    qrUrl: text("qr_url"),
+
+    totalCentavos: bigint("total_centavos", { mode: "number" }).notNull(),
+
+    /** El receptor se copia al comprobante aunque venga de `clientes`: la
+     *  factura dice lo que decía el día que se emitió, aunque el cliente cambie
+     *  de razón social después. */
+    receptorDocTipo: text("receptor_doc_tipo").notNull(),
+    receptorDocNumero: text("receptor_doc_numero").notNull(),
+    receptorNombre: text("receptor_nombre"),
+    receptorCondicionIva: condicionIva("receptor_condicion_iva").notNull(),
+    clienteId: uuid("cliente_id").references(() => clientes.id, {
+      onDelete: "set null",
+    }),
+
+    /** En una nota de crédito, la factura que anula. */
+    origenId: uuid("origen_id").references((): AnyPgColumn => comprobantes.id, {
+      onDelete: "restrict",
+    }),
+
+    errorCodigo: text("error_codigo"),
+    errorMensaje: text("error_mensaje"),
+
+    /** Lo que se mandó y lo que volvió, enteros. Cuando ARCA rechaza algo, el
+     *  porqué casi siempre está en un campo que nadie pensó en copiar. */
+    requestPayload: jsonb("request_payload"),
+    responsePayload: jsonb("response_payload"),
+
+    emitidoPor: uuid("emitido_por").references(() => users.id, {
+      onDelete: "set null",
+    }),
+    enviadoEn: timestamp("enviado_en", { withTimezone: true }),
+
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+  },
+  (t) => [
+    /** Un cobro, una factura viva. Lo garantiza la base y no la pantalla: dos
+     *  clics seguidos, o dos pestañas, no pueden sacar dos facturas del mismo
+     *  pago. Las rechazadas, las fallidas y las anuladas no cuentan, para que
+     *  se pueda volver a facturar. */
+    uniqueIndex("comprobantes_factura_viva_idx")
+      .on(t.movimientoId)
+      .where(
+        sql`${t.tipo} = 'factura' and ${t.estado} not in ('rechazado', 'error', 'anulado')`,
+      ),
+    /** Lo mismo para la nota de crédito: una sola viva por factura. */
+    uniqueIndex("comprobantes_nc_viva_idx")
+      .on(t.origenId)
+      .where(
+        sql`${t.tipo} = 'nota_credito' and ${t.estado} not in ('rechazado', 'error')`,
+      ),
+    index("comprobantes_estado_idx").on(t.estado),
+    index("comprobantes_created_idx").on(t.createdAt),
+  ],
+);
+
+export type CuentaMp = typeof cuentasMp.$inferSelect;
+export type MovimientoMp = typeof movimientosMp.$inferSelect;
+export type NewMovimientoMp = typeof movimientosMp.$inferInsert;
+export type Comprobante = typeof comprobantes.$inferSelect;
+export type NewComprobante = typeof comprobantes.$inferInsert;

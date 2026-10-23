@@ -1,0 +1,116 @@
+/* Lo que admin.module.css no cubre en Facturación. Los colores salen siempre
+   de los tokens de app/globals.css. */
+
+.sync {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: 10px;
+}
+
+.syncCampo {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.filtros {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-bottom: 18px;
+}
+
+.filtro {
+  padding: 7px 14px;
+  border: 1px solid var(--field-line);
+  border-radius: 999px;
+  font-size: 13px;
+  color: var(--muted);
+  text-decoration: none;
+}
+
+.filtro:hover {
+  border-color: var(--gold);
+  color: var(--text);
+}
+
+.filtroActivo {
+  border-color: var(--gold);
+  color: var(--text);
+}
+
+.periodo {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: 10px;
+  margin-bottom: 14px;
+}
+
+.totales {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 24px;
+  margin-bottom: 14px;
+  font-size: 13px;
+  color: var(--muted);
+}
+
+.totales strong {
+  color: var(--text);
+  font-variant-numeric: tabular-nums;
+}
+
+.importe {
+  text-align: right;
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+}
+
+.estado {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  font-size: 13px;
+}
+
+.numero {
+  font-variant-numeric: tabular-nums;
+}
+
+.error {
+  color: var(--danger);
+  font-size: 12px;
+}
+
+/* Neto, IVA y total antes de emitir: lo que va a decir la factura. */
+.resumen {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px 20px;
+  margin: 0;
+  font-size: 14px;
+  color: var(--muted);
+  font-variant-numeric: tabular-nums;
+}
+
+.resumen strong {
+  color: var(--text);
+}
+
+.cuentaDatos {
+  display: grid;
+  grid-template-columns: max-content 1fr;
+  gap: 8px 18px;
+  margin: 0 0 18px;
+  font-size: 14px;
+}
+
+.cuentaDatos dt {
+  color: var(--muted);
+}
+
+.cuentaDatos dd {
+  margin: 0;
+}

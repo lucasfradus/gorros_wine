@@ -51,6 +51,7 @@ export interface ClienteDefaults {
   email?: string | null;
   documento?: string | null;
   razonSocial?: string | null;
+  condicionIva?: string | null;
   direccion?: string | null;
   notas?: string | null;
   cuentaCorriente?: boolean;
@@ -131,6 +132,26 @@ export function ClienteForm({
         maxLength={160}
         defaultValue={defaults?.razonSocial}
       />
+      <div className={styles.field}>
+        <label className={styles.label} htmlFor="condicionIva">
+          Condición frente al IVA
+        </label>
+        <select
+          id="condicionIva"
+          name="condicionIva"
+          defaultValue={defaults?.condicionIva ?? ""}
+          className={styles.select}
+        >
+          <option value="">Sin cargar</option>
+          <option value="consumidor_final">Consumidor final</option>
+          <option value="responsable_inscripto">Responsable inscripto</option>
+          <option value="monotributo">Monotributo</option>
+          <option value="exento">Exento</option>
+        </select>
+        <span className={styles.hint}>
+          Decide la letra de la factura: a un responsable inscripto le corresponde A.
+        </span>
+      </div>
       <Campo
         name="direccion"
         label="Dirección de entrega"
