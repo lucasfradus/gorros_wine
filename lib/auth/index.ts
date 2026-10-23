@@ -5,6 +5,7 @@ import type { PublicUser } from "@/lib/db/schema";
 import { SESSION_COOKIE, validateSessionToken } from "./session";
 import {
   canEditContent,
+  canFacturar,
   canManageCuentaCorriente,
   canManageUsers,
 } from "./permissions";
@@ -60,6 +61,13 @@ export async function requireContentEditor(): Promise<PublicUser> {
 export async function requireCuentaCorriente(): Promise<PublicUser> {
   const user = await requireUser();
   if (!canManageCuentaCorriente(user)) redirect("/admin/clientes");
+  return user;
+}
+
+/** Exige sesión con permiso para ver los cobros de MP y emitir comprobantes. */
+export async function requireFacturacion(): Promise<PublicUser> {
+  const user = await requireUser();
+  if (!canFacturar(user)) redirect("/admin");
   return user;
 }
 

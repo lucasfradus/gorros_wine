@@ -300,6 +300,7 @@ export default async function ClientePage({
               email: cliente.email,
               documento: cliente.documento,
               razonSocial: cliente.razonSocial,
+              condicionIva: cliente.condicionIva,
               direccion: cliente.direccion,
               notas: cliente.notas,
               cuentaCorriente: cliente.cuentaCorriente,
@@ -328,6 +329,17 @@ export default async function ClientePage({
             <li>
               <span className={styles.metaLabel}>Razón social</span>
               {cliente.razonSocial ?? "—"}
+            </li>
+            <li>
+              <span className={styles.metaLabel}>Condición IVA</span>
+              {cliente.condicionIva
+                ? {
+                    consumidor_final: "Consumidor final",
+                    responsable_inscripto: "Responsable inscripto",
+                    monotributo: "Monotributo",
+                    exento: "Exento",
+                  }[cliente.condicionIva]
+                : "—"}
             </li>
             <li>
               <span className={styles.metaLabel}>Dirección</span>

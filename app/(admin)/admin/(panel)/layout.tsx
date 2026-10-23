@@ -1,5 +1,10 @@
 import Link from "next/link";
-import { canManageUsers, requireUser, ROLE_LABEL } from "@/lib/auth";
+import {
+  canFacturar,
+  canManageUsers,
+  requireUser,
+  ROLE_LABEL,
+} from "@/lib/auth";
 import { getTheme } from "@/lib/theme-server";
 import { logoutAction } from "./actions";
 import { NavLinks } from "./nav-links";
@@ -31,7 +36,10 @@ export default async function PanelLayout({
           Gorros Wine
         </Link>
 
-        <NavLinks showUsers={canManageUsers(user)} />
+        <NavLinks
+          showUsers={canManageUsers(user)}
+          showFacturacion={canFacturar(user)}
+        />
 
         <div className={styles.sidebarFoot}>
           <span className={styles.whoName}>{user.name}</span>

@@ -5,7 +5,7 @@ import { redirect } from "next/navigation";
 import { eq } from "drizzle-orm";
 import { z } from "zod";
 import { db } from "@/lib/db";
-import { clientes, movimientosCc } from "@/lib/db/schema";
+import { clientes, condicionIva, movimientosCc } from "@/lib/db/schema";
 import { normalizeEmail } from "@/lib/auth/password";
 import { canManageCuentaCorriente, requireUser } from "@/lib/auth";
 import { importeACentavos } from "@/lib/cuenta-corriente";
@@ -39,6 +39,7 @@ const datosSchema = z.object({
     .max(160, "La razón social es muy larga.")
     .optional(),
   direccion: z.string().trim().max(240, "La dirección es muy larga.").optional(),
+  condicionIva: z.enum(condicionIva.enumValues).optional(),
   notas: z.string().trim().max(2000, "Las notas son muy largas.").optional(),
   cuentaCorriente: z.boolean(),
 });
@@ -54,6 +55,7 @@ function leerDatos(formData: FormData) {
     documento: textoOpcional(formData.get("documento")),
     razonSocial: textoOpcional(formData.get("razonSocial")),
     direccion: textoOpcional(formData.get("direccion")),
+    condicionIva: textoOpcional(formData.get("condicionIva")),
     notas: textoOpcional(formData.get("notas")),
     cuentaCorriente: formData.get("cuentaCorriente") === "on",
   });
@@ -84,6 +86,7 @@ function aColumnas(datos: Datos) {
     documento: datos.documento ?? null,
     razonSocial: datos.razonSocial ?? null,
     direccion: datos.direccion ?? null,
+    condicionIva: datos.condicionIva ?? null,
     notas: datos.notas ?? null,
     cuentaCorriente: datos.cuentaCorriente,
   };
