@@ -74,7 +74,7 @@ export default async function UsuariosPage() {
                     </span>
                     <span className={styles.cellMail}>{u.email}</span>
                   </td>
-                  <td>
+                  <td data-label="Rol">
                     <span
                       className={`${styles.badge} ${
                         u.role === "admin" ? styles.badgeAdmin : ""
@@ -83,7 +83,7 @@ export default async function UsuariosPage() {
                       {ROLE_LABEL[u.role]}
                     </span>
                   </td>
-                  <td>
+                  <td data-label="Estado">
                     <span
                       className={`${styles.badge} ${
                         u.isActive ? styles.badgeOn : styles.badgeOff
@@ -92,7 +92,7 @@ export default async function UsuariosPage() {
                       {u.isActive ? "Activo" : "Desactivado"}
                     </span>
                   </td>
-                  <td className={styles.cellDim}>
+                  <td data-label="Último ingreso" className={styles.cellDim}>
                     {formatDateTime(u.lastLoginAt)}
                   </td>
                   <td className={styles.cellRight}>

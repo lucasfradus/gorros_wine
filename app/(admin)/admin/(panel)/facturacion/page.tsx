@@ -248,18 +248,18 @@ export default async function FacturacionPage({
                     {filas.map((m) => (
                       <tr key={m.id}>
                         <td>{formatDateTime(m.fechaAprobacion)}</td>
-                        <td>
+                        <td data-label="Quién pagó">
                           <span className={styles.cellName}>{m.titular ?? "—"}</span>
                           <span className={styles.cellDim}>
                             {m.email ?? m.descripcion ?? `Operación ${m.mpPagoId}`}
                           </span>
                         </td>
-                        <td className={styles.cellDim}>{m.metodoPago ?? "—"}</td>
-                        <td className={propios.importe}>{formatARS(m.montoCentavos)}</td>
-                        <td className={`${propios.importe} ${styles.cellDim}`}>
+                        <td data-label="Medio" className={styles.cellDim}>{m.metodoPago ?? "—"}</td>
+                        <td data-label="Cobrado" className={propios.importe}>{formatARS(m.montoCentavos)}</td>
+                        <td data-label="Neto" className={`${propios.importe} ${styles.cellDim}`}>
                           {m.netoCentavos != null ? formatARS(m.netoCentavos) : "—"}
                         </td>
-                        <td>
+                        <td data-label="Factura">
                           <EstadoCelda situacion={m.situacion} />
                         </td>
                         <td>

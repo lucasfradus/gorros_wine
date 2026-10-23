@@ -31,12 +31,12 @@
 }
 
 .filtro:hover {
-  border-color: var(--gold);
+  border-color: var(--accent);
   color: var(--text);
 }
 
 .filtroActivo {
-  border-color: var(--gold);
+  border-color: var(--accent);
   color: var(--text);
 }
 

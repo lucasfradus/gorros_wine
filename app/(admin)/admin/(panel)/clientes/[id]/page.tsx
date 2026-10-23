@@ -224,7 +224,7 @@ export default async function ClientePage({
                           <td className={styles.cellDim}>
                             {sigueAlAnterior ? "" : formatDate(m.fecha)}
                           </td>
-                          <td className={anulado ? propios.anulado : ""}>
+                          <td data-label="Detalle" className={anulado ? propios.anulado : ""}>
                             <span className={propios.detalleTipo}>
                               {ETIQUETA_TIPO[m.tipo] ?? m.tipo}
                             </span>
@@ -234,6 +234,7 @@ export default async function ClientePage({
                             ) : null}
                           </td>
                           <td
+                            data-label="Pesos"
                             className={`${propios.importeCelda} ${anulado ? propios.anulado : ""}`}
                           >
                             <Delta
@@ -242,6 +243,7 @@ export default async function ClientePage({
                             />
                           </td>
                           <td
+                            data-label="Dólares"
                             className={`${propios.importeCelda} ${anulado ? propios.anulado : ""}`}
                           >
                             <Delta
@@ -249,7 +251,7 @@ export default async function ClientePage({
                               formato={formatUSD}
                             />
                           </td>
-                          <td className={`${propios.importeCelda} ${propios.cotiz}`}>
+                          <td data-label="TC" className={`${propios.importeCelda} ${propios.cotiz}`}>
                             {formatCotizacion(m.cotizacion)}
                           </td>
                           <td className={styles.cellRight}>

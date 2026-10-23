@@ -171,7 +171,7 @@ export default async function CobroPage({ params }: { params: Promise<{ id: stri
                           )}
                         </span>
                       </td>
-                      <td>
+                      <td data-label="Receptor">
                         <span className={styles.cellName}>
                           {c.receptorNombre ?? "Consumidor final"}
                         </span>
@@ -183,8 +183,8 @@ export default async function CobroPage({ params }: { params: Promise<{ id: stri
                               : `DNI ${c.receptorDocNumero}`}
                         </span>
                       </td>
-                      <td className={propios.importe}>{formatARS(c.totalCentavos)}</td>
-                      <td>
+                      <td data-label="Total" className={propios.importe}>{formatARS(c.totalCentavos)}</td>
+                      <td data-label="Estado">
                         <span className={propios.estado}>
                           <span>{ESTADOS[c.estado]}</span>
                           {c.cae ? <span className={styles.cellDim}>CAE {c.cae}</span> : null}

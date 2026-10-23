@@ -70,8 +70,8 @@ export default async function VarietalesPage() {
                         <span className={styles.cellName}>{v.nombre}</span>
                         <span className={styles.cellMail}>{v.slug}</span>
                       </td>
-                      <td className={styles.cellDim}>{v.usos}</td>
-                      <td>
+                      <td data-label="Vinos" className={styles.cellDim}>{v.usos}</td>
+                      <td data-label="Estado">
                         <span
                           className={`${styles.badge} ${
                             v.isActive ? styles.badgeOn : styles.badgeOff

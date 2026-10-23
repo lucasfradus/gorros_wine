@@ -8,6 +8,7 @@ import {
 import { getTheme } from "@/lib/theme-server";
 import { logoutAction } from "./actions";
 import { NavLinks } from "./nav-links";
+import { PanelShell } from "./panel-shell";
 import { ThemeSwitch } from "../theme-switch";
 import styles from "../admin.module.css";
 
@@ -31,34 +32,50 @@ export default async function PanelLayout({
 
   return (
     <div className={`${styles.themed} ${styles.panel}`} data-theme={theme}>
-      <aside className={styles.sidebar}>
-        <Link href="/admin" className={styles.sidebarBrand}>
-          Gorros Wine
-        </Link>
+      <PanelShell
+        sidebar={
+          <>
+            <Link href="/admin" className={styles.sidebarBrand}>
+              <span className={styles.brandTile} aria-hidden="true">
+                G
+              </span>
+              <span className={styles.brandText}>
+                Gorros Wine
+                <span className={styles.brandSub}>Administración</span>
+              </span>
+            </Link>
 
-        <NavLinks
-          showUsers={canManageUsers(user)}
-          showFacturacion={canFacturar(user)}
-        />
+            <NavLinks
+              showUsers={canManageUsers(user)}
+              showFacturacion={canFacturar(user)}
+            />
 
-        <div className={styles.sidebarFoot}>
-          <span className={styles.whoName}>{user.name}</span>
-          <span className={styles.whoRole}>{ROLE_LABEL[user.role]}</span>
+            <div className={styles.sidebarFoot}>
+              <div className={styles.who}>
+                <span className={styles.whoText}>
+                  <span className={styles.whoName}>{user.name}</span>
+                  <span className={styles.whoRole}>
+                    {ROLE_LABEL[user.role]}
+                  </span>
+                </span>
 
-          <form action={logoutAction}>
-            <button
-              type="submit"
-              className={`${styles.btn} ${styles.btnSmall} ${styles.logoutBtn}`}
-            >
-              Salir
-            </button>
-          </form>
+                <form action={logoutAction}>
+                  <button
+                    type="submit"
+                    className={`${styles.btn} ${styles.btnSmall}`}
+                  >
+                    Salir
+                  </button>
+                </form>
+              </div>
 
-          <ThemeSwitch current={theme} />
-        </div>
-      </aside>
-
-      <main className={styles.main}>{children}</main>
+              <ThemeSwitch current={theme} />
+            </div>
+          </>
+        }
+      >
+        {children}
+      </PanelShell>
     </div>
   );
 }
