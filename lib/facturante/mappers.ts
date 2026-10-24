@@ -1,7 +1,20 @@
-import type { ComprobanteEstado, ComprobanteLetra, CondicionIva } from "@/lib/db/schema";
+import type {
+  ComprobanteEstado,
+  ComprobanteLetra,
+  CondicionIva,
+  FormaPago,
+} from "@/lib/db/schema";
+import {
+  precioConDescuento,
+  type Percepcion,
+  type Renglon,
+  type TipoPercepcion,
+} from "../facturacion/calculo.ts";
 import type {
   DocAddress,
+  DocItem,
   DocReceiver,
+  DocTribute,
   DocumentoResponse,
   ElectronicDocument,
 } from "./types";
@@ -41,8 +54,27 @@ const VAT_21 = 7;
 const PRECIO_BRUTO = 2;
 /** Bienes: con Servicios Facturante completa el período con la fecha de hoy. */
 const GOOD_BIENES = 1;
-/** Condición de venta "Pago electrónico": todo lo que entra por MP. */
-const PAGO_ELECTRONICO = 6;
+/**
+ * `detail.sellCondition[].conditionType`, calibrado en Clicnet
+ * (`sell-condition.ts`). El 4 es depósito bancario, que acá no se usa. Todo lo
+ * que entra por MP es "pago electrónico".
+ */
+const SELL_CONDITION: Record<FormaPago, number> = {
+  efectivo: 1,
+  debito: 2,
+  credito: 3,
+  transferencia: 5,
+  electronico: 6,
+};
+
+/** Maestro de tributos de Facturante (doc técnica, "Tributes"). */
+const TRIBUTE_ID: Record<TipoPercepcion, number> = {
+  iva_rg5329: 2, // Percepción Nacional IVA
+};
+const MONTO = 1;
+
+/** Pesos con dos decimales, como los pide Facturante. */
+const pesos = (centavos: number) => centavos / 100;
 /** No hay una entrada propia en `GET /ExternalSoftware`; 12 es "Otro". */
 const EXTERNAL_SOFTWARE_OTRO = 12;
 const FECHA_COMPROBANTE = 1;
@@ -142,11 +174,44 @@ function settingsDe(webhook?: WebhookConfig) {
 /** "2026-10-23" → "2026-10-23T00:00:00", el formato que no se presta a dd/mm. */
 const fechaRequest = (dia: string) => `${dia}T00:00:00`;
 
+/**
+ * Un renglón al ítem de Facturante. El descuento viene aplicado en el precio y
+ * nombrado en la descripción (por qué no como bonificación: ver
+ * `precioConDescuento`). Sin descuento el ítem queda igual que siempre: el de
+ * un cobro de MP no cambia.
+ */
+function itemDe(r: Renglon): DocItem {
+  const descripcion =
+    r.descuentoPct > 0
+      ? `${r.descripcion} (${String(r.descuentoPct).replace(".", ",")}% dto.)`
+      : r.descripcion;
+  return {
+    quantity: r.cantidad,
+    name: descripcion,
+    description: descripcion,
+    measureUnit: 1,
+    vat: VAT_21,
+    price: { unitPrice: pesos(precioConDescuento(r)), priceType: PRECIO_BRUTO },
+  };
+}
+
+/** Se manda el monto ya calculado (y no la alícuota): es el que se mostró. */
+function tributoDe(p: Percepcion): DocTribute {
+  return {
+    tributeId: TRIBUTE_ID[p.tipo],
+    amount: pesos(p.montoCentavos),
+    amountAffected: pesos(p.baseCentavos),
+    amountType: MONTO,
+    ...(p.tipo === "iva_rg5329" ? { comment: "RG 5329" } : {}),
+  };
+}
+
 export function mapFactura(opts: {
   letra: ComprobanteLetra;
   receptor: ReceptorFiscal;
-  importeCentavos: number;
-  descripcion: string;
+  renglones: Renglon[];
+  percepciones: Percepcion[];
+  formaPago: FormaPago;
   /** Día del comprobante "YYYY-MM-DD", **en hora de Argentina**. */
   dia: string;
   externalId: string;
@@ -160,7 +225,9 @@ export function mapFactura(opts: {
       detail: {
         pos: opts.posId,
         good: GOOD_BIENES,
-        sellCondition: [{ conditionType: PAGO_ELECTRONICO, currency: "ARS", currencyValue: 1 }],
+        sellCondition: [
+          { conditionType: SELL_CONDITION[opts.formaPago], currency: "ARS", currencyValue: 1 },
+        ],
         dates: [{ dateType: FECHA_COMPROBANTE, dateTime: fechaRequest(opts.dia) }],
         currencySettings: { currency: "ARS", currencyValue: 1 },
       },
@@ -169,17 +236,9 @@ export function mapFactura(opts: {
       identification: [
         { externalSoftwareId: EXTERNAL_SOFTWARE_OTRO, code: opts.externalId, primary: true },
       ],
+      ...(opts.percepciones.length > 0 ? { tributes: opts.percepciones.map(tributoDe) } : {}),
     },
-    items: [
-      {
-        quantity: 1,
-        name: opts.descripcion,
-        description: opts.descripcion,
-        measureUnit: 1,
-        vat: VAT_21,
-        price: { unitPrice: opts.importeCentavos / 100, priceType: PRECIO_BRUTO },
-      },
-    ],
+    items: opts.renglones.map(itemDe),
   };
 }
 
@@ -198,9 +257,10 @@ export interface FacturaOrigen {
 }
 
 /**
- * Nota de crédito por el total: receptor, domicilio e ítems espejo de la
- * factura, misma letra, fecha propia y su propio externalId (si heredara el de
- * la factura, el webhook de la NC se aplicaría a la factura).
+ * Nota de crédito por el total: receptor, domicilio, ítems y percepciones
+ * espejo de la factura, misma letra, fecha propia y su propio externalId (si
+ * heredara el de la factura, el webhook de la NC se aplicaría a la factura).
+ * Sin las percepciones, la NC devolvería menos de lo que se facturó.
  */
 export function mapNotaCredito(
   factura: ElectronicDocument,
@@ -231,6 +291,7 @@ export function mapNotaCredito(
           date: origen.fecha,
         },
       ],
+      ...(factura.header.tributes ? { tributes: factura.header.tributes } : {}),
     },
     items: factura.items,
   };

@@ -1,7 +1,14 @@
 import { randomUUID } from "node:crypto";
-import { and, eq, isNull } from "drizzle-orm";
+import { and, eq, inArray, isNull } from "drizzle-orm";
 import { db } from "@/lib/db";
-import { clientes, comprobantes, movimientosMp } from "@/lib/db/schema";
+import {
+  clientes,
+  comprobanteItems,
+  comprobantes,
+  movimientosMp,
+  productos,
+  type FormaPago,
+} from "@/lib/db/schema";
 import { configFacturante } from "@/lib/facturante/config";
 import {
   mapFactura,
@@ -11,6 +18,7 @@ import {
 } from "@/lib/facturante/mappers";
 import type { DocumentoResponse, ElectronicDocument } from "@/lib/facturante/types";
 import { hoyEnArgentina } from "@/lib/format";
+import { calcular, validarRenglones, type Renglon } from "./calculo";
 import { validarReceptor, type DatosReceptor } from "./reglas";
 
 /**
@@ -33,42 +41,65 @@ export function esDuplicado(e: unknown): boolean {
 
 const DESCRIPCION_POR_DEFECTO = "Vinos y productos";
 
-export async function reservarFactura(opts: {
-  movimientoId: string;
+/**
+ * Lo común a una factura de cobro y a una manual: validar, calcular, armar el
+ * request y escribir comprobante + renglones juntos. Lo que cambia entre las
+ * dos es de dónde salen los renglones y qué decir si choca un duplicado.
+ */
+async function reservar(o: {
+  id: string;
+  movimientoId: string | null;
+  renglones: Renglon[];
+  percepcionIva: boolean;
+  formaPago: FormaPago;
   datos: DatosReceptor;
   clienteId: string | null;
   actorId: string;
+  siDuplicado: string;
 }): Promise<Reserva> {
   const cfg = configFacturante();
   if (!cfg) return { ok: false, error: "Falta la configuración de Facturante en el entorno." };
 
-  const [mov] = await db
-    .select()
-    .from(movimientosMp)
-    .where(eq(movimientosMp.id, opts.movimientoId))
-    .limit(1);
-  if (!mov) return { ok: false, error: "No se encontró el cobro." };
-  if (mov.montoCentavos <= 0) return { ok: false, error: "El cobro no tiene importe." };
+  const errorRenglones = validarRenglones(o.renglones);
+  if (errorRenglones) return { ok: false, error: errorRenglones };
 
-  const v = validarReceptor(opts.datos, mov.montoCentavos);
+  // La RG 5329 sólo alcanza a un responsable inscripto: a cualquier otro se
+  // ignora la casilla en vez de rechazar la factura por ella.
+  const calc = calcular(o.renglones, {
+    percepcionIva: o.percepcionIva && o.datos.condicionIva === "responsable_inscripto",
+  });
+  const v = validarReceptor(o.datos, calc.totalCentavos);
   if (!v.ok) return v;
 
-  if (opts.clienteId) {
+  if (o.clienteId) {
     const [cli] = await db
       .select({ id: clientes.id })
       .from(clientes)
-      .where(eq(clientes.id, opts.clienteId))
+      .where(eq(clientes.id, o.clienteId))
       .limit(1);
     if (!cli) return { ok: false, error: "No se encontró el cliente." };
   }
 
-  const id = randomUUID();
-  const externalId = `gorros-f-${id}`;
+  // Un producto archivado se puede facturar (se archiva, no se borra), pero uno
+  // que no existe rompería la FK con un error ilegible.
+  const productoIds = [...new Set(o.renglones.flatMap((r) => (r.productoId ? [r.productoId] : [])))];
+  if (productoIds.length) {
+    const hay = await db
+      .select({ id: productos.id })
+      .from(productos)
+      .where(inArray(productos.id, productoIds));
+    if (hay.length !== productoIds.length) {
+      return { ok: false, error: "Uno de los productos ya no existe: volvé a elegirlo." };
+    }
+  }
+
+  const externalId = `gorros-f-${o.id}`;
   const request = mapFactura({
     letra: v.letra,
     receptor: v.receptor,
-    importeCentavos: mov.montoCentavos,
-    descripcion: (mov.descripcion?.trim() || DESCRIPCION_POR_DEFECTO).slice(0, 200),
+    renglones: o.renglones,
+    percepciones: calc.percepciones,
+    formaPago: o.formaPago,
     // En hora de Argentina: en UTC, después de las 21 sería "mañana", y con
     // facturas manuales del día eso choca con 100014.
     dia: hoyEnArgentina(),
@@ -77,39 +108,112 @@ export async function reservarFactura(opts: {
   });
 
   try {
-    await db.insert(comprobantes).values({
-      id,
-      movimientoId: mov.id,
-      tipo: "factura",
-      letra: v.letra,
-      estado: "pendiente",
-      externalId,
-      totalCentavos: mov.montoCentavos,
-      receptorDocTipo: v.receptor.docTipo,
-      receptorDocNumero: v.receptor.docNumero ?? "0",
-      receptorNombre: v.receptor.nombre,
-      receptorCondicionIva: v.receptor.condicionIva,
-      clienteId: opts.clienteId,
-      requestPayload: request,
-      emitidoPor: opts.actorId,
+    await db.transaction(async (tx) => {
+      await tx.insert(comprobantes).values({
+        id: o.id,
+        movimientoId: o.movimientoId,
+        tipo: "factura",
+        letra: v.letra,
+        estado: "pendiente",
+        externalId,
+        totalCentavos: calc.totalCentavos,
+        formaPago: o.formaPago,
+        tributos: calc.percepciones.length ? calc.percepciones : null,
+        receptorDocTipo: v.receptor.docTipo,
+        receptorDocNumero: v.receptor.docNumero ?? "0",
+        receptorNombre: v.receptor.nombre,
+        receptorCondicionIva: v.receptor.condicionIva,
+        clienteId: o.clienteId,
+        requestPayload: request,
+        emitidoPor: o.actorId,
+      });
+      await tx.insert(comprobanteItems).values(
+        calc.renglones.map((r, i) => ({
+          comprobanteId: o.id,
+          productoId: r.productoId,
+          orden: i,
+          descripcion: r.descripcion,
+          cantidad: r.cantidad,
+          precioUnitarioCentavos: r.precioUnitarioCentavos,
+          descuentoPct: r.descuentoPct,
+          subtotalCentavos: r.subtotalCentavos,
+          alcanzado: r.alcanzado,
+        })),
+      );
     });
   } catch (e) {
-    if (esDuplicado(e)) {
-      return { ok: false, error: "Ese cobro ya tiene una factura, o se está emitiendo." };
-    }
+    if (esDuplicado(e)) return { ok: false, error: o.siDuplicado };
     throw e;
   }
 
   // Al cliente que todavía no tenía condición frente al IVA se le guarda la
   // que se usó, así la próxima vez sale precargada. Lo que ya tenía no se pisa.
-  if (opts.clienteId) {
+  if (o.clienteId) {
     await db
       .update(clientes)
       .set({ condicionIva: v.receptor.condicionIva, updatedAt: new Date() })
-      .where(and(eq(clientes.id, opts.clienteId), isNull(clientes.condicionIva)));
+      .where(and(eq(clientes.id, o.clienteId), isNull(clientes.condicionIva)));
   }
 
-  return { ok: true, comprobanteId: id };
+  return { ok: true, comprobanteId: o.id };
+}
+
+/** La factura de un cobro de MP: un único renglón por el total, sin percepción. */
+export async function reservarFactura(opts: {
+  movimientoId: string;
+  datos: DatosReceptor;
+  clienteId: string | null;
+  actorId: string;
+}): Promise<Reserva> {
+  const [mov] = await db
+    .select()
+    .from(movimientosMp)
+    .where(eq(movimientosMp.id, opts.movimientoId))
+    .limit(1);
+  if (!mov) return { ok: false, error: "No se encontró el cobro." };
+  if (mov.montoCentavos <= 0) return { ok: false, error: "El cobro no tiene importe." };
+
+  return reservar({
+    id: randomUUID(),
+    movimientoId: mov.id,
+    renglones: [
+      {
+        productoId: null,
+        descripcion: (mov.descripcion?.trim() || DESCRIPCION_POR_DEFECTO).slice(0, 200),
+        cantidad: 1,
+        precioUnitarioCentavos: mov.montoCentavos,
+        descuentoPct: 0,
+        alcanzado: false,
+      },
+    ],
+    percepcionIva: false,
+    formaPago: "electronico",
+    datos: opts.datos,
+    clienteId: opts.clienteId,
+    actorId: opts.actorId,
+    siDuplicado: "Ese cobro ya tiene una factura, o se está emitiendo.",
+  });
+}
+
+/**
+ * Una factura sin cobro de MP detrás. El `id` lo trae el formulario, generado
+ * al dibujarlo: un segundo envío del mismo formulario choca con la PK en vez
+ * de sacar otra factura (Facturante no deduplica).
+ */
+export async function reservarFacturaManual(opts: {
+  id: string;
+  renglones: Renglon[];
+  percepcionIva: boolean;
+  formaPago: FormaPago;
+  datos: DatosReceptor;
+  clienteId: string | null;
+  actorId: string;
+}): Promise<Reserva> {
+  return reservar({
+    ...opts,
+    movimientoId: null,
+    siDuplicado: "Esa factura ya se mandó: buscala en Comprobantes.",
+  });
 }
 
 /** Nota de crédito por el total de una factura autorizada. */
@@ -151,22 +255,36 @@ export async function reservarNotaCredito(opts: {
   );
 
   try {
-    await db.insert(comprobantes).values({
-      id,
-      movimientoId: f.movimientoId,
-      tipo: "nota_credito",
-      letra: f.letra,
-      estado: "pendiente",
-      externalId,
-      totalCentavos: f.totalCentavos,
-      receptorDocTipo: f.receptorDocTipo,
-      receptorDocNumero: f.receptorDocNumero,
-      receptorNombre: f.receptorNombre,
-      receptorCondicionIva: f.receptorCondicionIva,
-      clienteId: f.clienteId,
-      origenId: f.id,
-      requestPayload: request,
-      emitidoPor: opts.actorId,
+    await db.transaction(async (tx) => {
+      await tx.insert(comprobantes).values({
+        id,
+        movimientoId: f.movimientoId,
+        tipo: "nota_credito",
+        letra: f.letra,
+        estado: "pendiente",
+        externalId,
+        totalCentavos: f.totalCentavos,
+        formaPago: f.formaPago,
+        tributos: f.tributos,
+        receptorDocTipo: f.receptorDocTipo,
+        receptorDocNumero: f.receptorDocNumero,
+        receptorNombre: f.receptorNombre,
+        receptorCondicionIva: f.receptorCondicionIva,
+        clienteId: f.clienteId,
+        origenId: f.id,
+        requestPayload: request,
+        emitidoPor: opts.actorId,
+      });
+      // La NC devuelve lo mismo que facturó la factura: sus mismos renglones.
+      const items = await tx
+        .select()
+        .from(comprobanteItems)
+        .where(eq(comprobanteItems.comprobanteId, f.id));
+      if (items.length) {
+        await tx
+          .insert(comprobanteItems)
+          .values(items.map(({ id: _id, ...it }) => ({ ...it, comprobanteId: id })));
+      }
     });
   } catch (e) {
     if (esDuplicado(e)) {

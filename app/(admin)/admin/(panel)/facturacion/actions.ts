@@ -5,10 +5,15 @@ import { revalidatePath } from "next/cache";
 import { eq } from "drizzle-orm";
 import { z } from "zod";
 import { db } from "@/lib/db";
-import { condicionIva, cuentasMp } from "@/lib/db/schema";
+import { redirect } from "next/navigation";
+import { condicionIva, cuentasMp, formaPago } from "@/lib/db/schema";
 import { requireFacturacion } from "@/lib/auth";
 import { sincronizarPagos } from "@/lib/mercadopago/sync";
-import { reservarFactura, reservarNotaCredito } from "@/lib/facturacion/emitir";
+import {
+  reservarFactura,
+  reservarFacturaManual,
+  reservarNotaCredito,
+} from "@/lib/facturacion/emitir";
 import { enviarComprobante } from "@/lib/facturacion/enviar";
 import { consultarEstado, marcarNoEmitido } from "@/lib/facturacion/reconciliar";
 import type { FormState } from "../form-ui";
@@ -82,8 +87,8 @@ export async function desactivarCuentaAction(formData: FormData): Promise<void> 
 
 const texto = (max: number) => z.string().trim().max(max);
 
-const facturaSchema = z.object({
-  movimientoId: z.uuid(),
+/** El receptor: lo comparten la factura de un cobro y la manual. */
+const receptorSchema = z.object({
   clienteId: z.union([z.uuid(), z.literal("")]),
   condicionIva: z.enum(condicionIva.enumValues, {
     error: "Elegí la condición frente al IVA.",
@@ -96,6 +101,8 @@ const facturaSchema = z.object({
   ciudad: texto(100),
   provincia: texto(10),
 });
+
+const facturaSchema = receptorSchema.extend({ movimientoId: z.uuid() });
 
 /** Los campos que no vienen (inputs ocultos según la condición) valen "". */
 const leer = (fd: FormData, campos: string[]) =>
@@ -127,6 +134,75 @@ export async function emitirFacturaAction(
   after(() => enviarComprobante(r.comprobanteId));
   revalidatePath("/admin/facturacion", "layout");
   return { ok: "Emitiendo la factura. Tarda unos 20 segundos." };
+}
+
+/**
+ * Los renglones llegan como JSON en un input oculto: son una lista de largo
+ * variable, y el formulario ya los tiene armados para mostrar las cuentas. Lo
+ * que vale es lo que se valida y se calcula acá, no lo que mostró la pantalla.
+ */
+const renglonesSchema = z
+  .array(
+    z.object({
+      productoId: z.union([z.uuid(), z.null()]),
+      descripcion: z.string().trim().min(1, "Falta la descripción de un renglón.").max(200),
+      cantidad: z.number().int().min(1).max(9_999),
+      precioUnitarioCentavos: z.number().int().positive("Falta el precio de un renglón."),
+      descuentoPct: z.number().min(0).max(99.99),
+      alcanzado: z.boolean(),
+    }),
+  )
+  .min(1, "Agregá al menos un renglón.")
+  .max(50, "Hasta 50 renglones por factura.");
+
+const facturaManualSchema = receptorSchema.extend({
+  id: z.uuid(),
+  formaPago: z.enum(formaPago.enumValues, { error: "Elegí la forma de pago." }),
+});
+
+function leerRenglones(texto: FormDataEntryValue | null) {
+  let crudo: unknown;
+  try {
+    crudo = JSON.parse(String(texto ?? ""));
+  } catch {
+    return { error: "No llegaron los renglones. Recargá la página." } as const;
+  }
+  const r = renglonesSchema.safeParse(crudo);
+  return r.success ? ({ renglones: r.data } as const) : ({ error: r.error.issues[0].message } as const);
+}
+
+/**
+ * Factura de una venta que no pasó por MP. Reserva, manda en `after()` y lleva
+ * al detalle, que se refresca solo hasta que llega el CAE.
+ */
+export async function emitirFacturaManualAction(
+  _prev: FormState,
+  formData: FormData,
+): Promise<FormState> {
+  const user = await requireFacturacion();
+
+  const parsed = facturaManualSchema.safeParse(
+    leer(formData, Object.keys(facturaManualSchema.shape)),
+  );
+  if (!parsed.success) return { error: parsed.error.issues[0].message };
+  const leidos = leerRenglones(formData.get("renglones"));
+  if ("error" in leidos) return { error: leidos.error };
+
+  const { id, clienteId, formaPago: forma, ...datos } = parsed.data;
+  const r = await reservarFacturaManual({
+    id,
+    renglones: leidos.renglones,
+    percepcionIva: formData.get("percepcionIva") === "on",
+    formaPago: forma,
+    datos,
+    clienteId: clienteId || null,
+    actorId: user.id,
+  });
+  if (!r.ok) return { error: r.error };
+
+  after(() => enviarComprobante(r.comprobanteId));
+  revalidatePath("/admin/facturacion", "layout");
+  redirect(`/admin/facturacion/manual/${r.comprobanteId}`);
 }
 
 const idSchema = z.object({ id: z.uuid() });
@@ -178,5 +254,5 @@ export async function marcarNoEmitidoAction(
 
   const r = await marcarNoEmitido(parsed.data.id, user.name);
   revalidatePath("/admin/facturacion", "layout");
-  return r.ok ? { ok: "Listo: el cobro se puede volver a facturar." } : { error: r.error };
+  return r.ok ? { ok: "Listo: quedó como no emitido y se puede volver a facturar." } : { error: r.error };
 }

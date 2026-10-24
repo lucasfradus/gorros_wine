@@ -217,7 +217,8 @@ hasta verificar su código de Facturante con una emisión real.
 
 **Un cobro, una factura viva**, y lo garantiza la base: un índice único parcial
 sobre `comprobantes.movimiento_id` que ignora las rechazadas, las fallidas y las
-anuladas. Dos clics o dos pestañas no sacan dos facturas.
+anuladas. Dos clics o dos pestañas no sacan dos facturas. (Las manuales, con
+`movimiento_id` NULL, no chocan entre sí: Postgres no iguala dos NULL.)
 
 **`en_proceso` no es un error.** Facturante tarda 13-20 s, así que la action
 reserva la fila (`pendiente`) y manda el POST en `after()`. Si no hay respuesta
@@ -235,6 +236,41 @@ usable —timeout, red—, el comprobante pudo haberse emitido igual, y Facturan
 asociada a la factura. Cuando la NC queda autorizada, la factura pasa a
 `anulado` y el cobro se puede volver a facturar. Ninguna fila se borra.
 
+### Facturas manuales
+
+Lo que se vende fuera de MP (mostrador, mayorista, transferencia) se factura
+desde **Facturación → Factura manual**. Es el mismo ciclo de vida, con tres
+diferencias:
+
+- **Sin cobro detrás**: `comprobantes.movimiento_id` es NULL (y el de su NC
+  también). No hay otra columna que diga "manual".
+- **Renglones**: del catálogo o libres, con cantidad, precio con IVA y
+  descuento %. Se guardan en `comprobante_items`, que es lo que se consulta
+  para saber qué se vendió; el `request_payload` sigue siendo lo que se mandó.
+  La factura de un cobro de MP escribe su único renglón también.
+  - **El descuento va dentro del precio unitario**, redondeado por unidad, y
+    nombrado en la descripción ("(10% dto.)"). Como bonificación del ítem, el
+    PDF de la Factura B de Facturante la imprime mal: 6 botellas al 10% salen
+    "-60 %".
+- **Doble envío**: sin un cobro no hay índice único que lo frene. El
+  formulario trae un uuid generado al dibujarse, que es el id del comprobante,
+  así que un segundo envío choca con la PK.
+
+**Percepción de IVA RG 5329** (3%), en `lib/facturacion/calculo.ts`:
+
+- **A quién**: a un responsable inscripto que revende, marcado en el cliente
+  (`clientes.percepcion_iva`).
+- **Sobre qué**: el neto de los renglones que son bebida. El default sale de
+  `categorias.es_vino`.
+- **Desde cuánto**: sólo si supera $3.000 (`RG_5329`).
+- **Cómo se manda**: va a Facturante en `header.tributes` con el monto ya
+  calculado (`amountType: 1`). Sin ese campo, Facturante lee el monto como
+  porcentaje. Se guarda en `comprobantes.tributos` y la NC la copia.
+
+`calculo.ts` es una función pura que comparten el formulario, el servidor y la
+prueba offline. Los totales se calibraron contra el sandbox de Facturante con
+`scripts/_facturante-sandbox.ts`, que se niega a correr contra producción.
+
 El cron diario (`scripts/cron-diario.mjs` → `POST /api/cron/diario`) trae los
 cobros de la última semana, reconcilia lo que quedó en proceso y renueva **un**
 token de MP por vez: renovar en ráfaga da 429 e invalida los tokens vigentes.
@@ -244,11 +280,13 @@ token de MP por vez: renovar en ráfaga da 429 e invalida los tokens vigentes.
 | `lib/mercadopago/` | OAuth, renovación del token, búsqueda y sync de pagos |
 | `lib/facturante/` | Cliente HTTP, request y respuesta de Facturante, sin base |
 | `lib/facturacion/reglas.ts` | Letra y datos obligatorios del receptor, sin base |
+| `lib/facturacion/calculo.ts` | Renglones, descuentos, percepción y totales, sin base |
 | `lib/facturacion/{emitir,enviar,guardar,reconciliar,webhook}.ts` | El ciclo de vida del comprobante |
 | `lib/facturacion/estado.ts` | Qué estado de facturación tiene un cobro, visto desde sus comprobantes |
 
-`npm run prueba:facturacion` arma los requests de una B, una A y su NC sin
-mandarlos, y chequea reglas y códigos.
+`npm run prueba:facturacion` arma los requests de una B, una A, su NC y una
+venta de varios renglones con percepción sin mandarlos, y chequea reglas,
+cuentas y códigos.
 
 ## El CMS de contenido
 

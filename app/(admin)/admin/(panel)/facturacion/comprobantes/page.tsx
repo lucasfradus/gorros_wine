@@ -158,6 +158,8 @@ export default async function ComprobantesPage({
                       <span className={styles.cellDim}>
                         {c.origenId ? `Anula ${numeroDe.get(c.origenId) ?? "una factura"}` : null}
                         {c.cae ? ` CAE ${c.cae}` : null}
+                        {c.movimientoId ? null : " · Manual"}
+                        {c.tributos?.length ? " · Con percepción" : null}
                       </span>
                     </td>
                     <td data-label="Receptor">
@@ -175,7 +177,16 @@ export default async function ComprobantesPage({
                     </td>
                     <td data-label="Estado">
                       <span className={propios.estado}>
-                        <Link href={`/admin/facturacion/${c.movimientoId}`}>{ESTADOS[c.estado]}</Link>
+                        {/* Lo de un cobro se ve en su cobro; una manual (o su NC), en su detalle. */}
+                        <Link
+                          href={
+                            c.movimientoId
+                              ? `/admin/facturacion/${c.movimientoId}`
+                              : `/admin/facturacion/manual/${c.origenId ?? c.id}`
+                          }
+                        >
+                          {ESTADOS[c.estado]}
+                        </Link>
                         {c.errorMensaje && c.estado !== "autorizado" ? (
                           <span className={propios.error}>{c.errorMensaje}</span>
                         ) : null}

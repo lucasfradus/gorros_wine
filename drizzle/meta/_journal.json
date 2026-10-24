@@ -71,6 +71,13 @@
       "when": 1792782280948,
       "tag": "0009_concerned_mongoose",
       "breakpoints": true
+    },
+    {
+      "idx": 10,
+      "version": "7",
+      "when": 1792869692231,
+      "tag": "0010_slim_taskmaster",
+      "breakpoints": true
     }
   ]
 }

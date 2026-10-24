@@ -20,6 +20,12 @@ import {
 import type { DocumentoResponse } from "../lib/facturante/types.ts";
 import { FacturanteApiError, clasificarFallo } from "../lib/facturante/errors.ts";
 import { sePuedeMarcarNoEmitido } from "../lib/facturacion/estado.ts";
+import {
+  calcular,
+  parseImporte,
+  validarRenglones,
+  type Renglon,
+} from "../lib/facturacion/calculo.ts";
 
 let fallos = 0;
 const ok = (q: string, real: unknown, esperado: unknown) => {
@@ -91,11 +97,23 @@ ok(
 console.log("\nRequest de una Factura B anónima");
 const vB = validarReceptor(base, 1_234_567);
 if (!vB.ok) throw new Error(vB.error);
+/** Lo que arma `reservarFactura` para un cobro de MP: un renglón por el total. */
+const unRenglon = (importe: number): Renglon[] => [
+  {
+    productoId: null,
+    descripcion: "Vinos y productos",
+    cantidad: 1,
+    precioUnitarioCentavos: importe,
+    descuentoPct: 0,
+    alcanzado: false,
+  },
+];
 const fb = mapFactura({
   letra: vB.letra,
   receptor: vB.receptor,
-  importeCentavos: 1_234_567,
-  descripcion: "Vinos y productos",
+  renglones: unRenglon(1_234_567),
+  percepciones: [],
+  formaPago: "electronico",
   dia: "2026-10-23",
   externalId: "gorros-f-prueba",
   posId: 13665,
@@ -124,8 +142,9 @@ if (!vA.ok) throw new Error(vA.error);
 const fa = mapFactura({
   letra: vA.letra,
   receptor: vA.receptor,
-  importeCentavos: 14_000_050,
-  descripcion: "Vinos y productos",
+  renglones: unRenglon(14_000_050),
+  percepciones: [],
+  formaPago: "electronico",
   dia: "2026-10-23",
   externalId: "gorros-f-prueba-a",
   posId: 13665,
@@ -215,6 +234,114 @@ ok("con id de Facturante → nunca (se consulta)", sePuedeMarcarNoEmitido(fila({
 ok("pendiente a los 5 min → todavía no", sePuedeMarcarNoEmitido(fila({ estado: "pendiente", enviadoEn: null }), t0 + 5 * 60_000), false);
 ok("pendiente a los 11 min → sí", sePuedeMarcarNoEmitido(fila({ estado: "pendiente", enviadoEn: null }), t0 + 11 * 60_000), true);
 ok("autorizado → nunca", sePuedeMarcarNoEmitido(fila({ estado: "autorizado" }), t0 + 60 * 60_000), false);
+
+console.log("\nImporte tipeado");
+ok("forma argentina", parseImporte("12.345,67"), 1_234_567);
+ok("con signo y espacios", parseImporte("$ 12.345"), 1_234_500);
+ok("coma decimal sin miles", parseImporte("12345,6"), 1_234_560);
+ok("punto decimal", parseImporte("12345.67"), 1_234_567);
+ok("punto de miles", parseImporte("1.234.567"), 123_456_700);
+ok("entero", parseImporte("15000"), 1_500_000);
+ok("coma con tres dígitos (ambiguo) → no", parseImporte("12,345"), null);
+ok("forma yanqui", parseImporte("1,234.56"), 123_456);
+ok("dos separadores iguales con decimales → no", parseImporte("1.234.567.89"), null);
+ok("miles mal agrupados → no", parseImporte("12.34.567"), null);
+ok("letras → no", parseImporte("12a"), null);
+ok("cero → no", parseImporte("0,00"), null);
+ok("vacío → no", parseImporte(""), null);
+ok("más de $100.000.000 → no", parseImporte("100.000.000,01"), null);
+
+const renglon = (o: Partial<Renglon>): Renglon => ({
+  productoId: null,
+  descripcion: "Malbec Reserva",
+  cantidad: 1,
+  precioUnitarioCentavos: 1_500_000,
+  descuentoPct: 0,
+  alcanzado: true,
+  ...o,
+});
+
+console.log("\nValidación de renglones");
+ok("sin renglones", validarRenglones([]), "Agregá al menos un renglón.");
+ok("válido", validarRenglones([renglon({})]), null);
+ok("cantidad 0", validarRenglones([renglon({ cantidad: 0 })]), "Renglón 1: la cantidad tiene que ser un entero entre 1 y 9.999.");
+ok("cantidad con coma", validarRenglones([renglon({ cantidad: 1.5 })]), "Renglón 1: la cantidad tiene que ser un entero entre 1 y 9.999.");
+ok("sin precio", validarRenglones([renglon({}), renglon({ precioUnitarioCentavos: 0 })]), "Renglón 2: falta el precio.");
+ok("descuento 100", validarRenglones([renglon({ descuentoPct: 100 })]), "Renglón 1: el descuento va de 0 a 99%.");
+ok("sin descripción", validarRenglones([renglon({ descripcion: "  " })]), "Renglón 1: falta la descripción.");
+ok("descuento con tres decimales", validarRenglones([renglon({ descuentoPct: 12.345 })]), "Renglón 1: el descuento admite hasta dos decimales.");
+ok("descuento con dos decimales", validarRenglones([renglon({ descuentoPct: 12.35 })]), null);
+ok("precio final en $0", validarRenglones([renglon({ precioUnitarioCentavos: 40, descuentoPct: 99.99 })]), "Renglón 1: con ese descuento el precio queda en $0.");
+
+console.log("\nCuentas de una venta");
+// Las cuentas a mano: neto = redondeo(subtotal / 1,21) por renglón.
+const venta = [
+  // 6 × $15.000 = $90.000, -10% = $81.000 → neto $66.942,15
+  renglon({ cantidad: 6, descuentoPct: 10 }),
+  // 2 × $4.999,99 = $9.999,98 → neto $8.264,45. Copas: fuera de la percepción.
+  renglon({ descripcion: "Copa Riedel", cantidad: 2, precioUnitarioCentavos: 499_999, alcanzado: false }),
+  // $12.345,67 -12,5% ($1.543,21) = $10.802,46 → neto $8.927,65
+  renglon({ descripcion: "Espumante", precioUnitarioCentavos: 1_234_567, descuentoPct: 12.5 }),
+];
+const c1 = calcular(venta, { percepcionIva: true });
+ok("subtotales por renglón", c1.renglones.map((r) => r.subtotalCentavos), [8_100_000, 999_998, 1_080_246]);
+ok("descuentos por renglón", c1.renglones.map((r) => r.descuentoCentavos), [900_000, 0, 154_321]);
+ok("netos por renglón", c1.renglones.map((r) => r.netoCentavos), [6_694_215, 826_445, 892_765]);
+ok("neto e IVA suman el subtotal", [c1.netoCentavos, c1.ivaCentavos], [8_413_425, 1_766_819]);
+// Base: sólo vino y espumante = $75.869,80 → 3% = $2.276,09, no supera $3.000.
+ok("percepción bajo el mínimo: no se aplica", c1.percepciones, []);
+ok("…pero se informa", c1.percepcionBajoUmbral?.montoCentavos, 227_609);
+ok("total sin percepción", c1.totalCentavos, 10_180_244);
+
+// 7 × $9,99 al 33%: el precio con descuento se redondea por unidad ($6,69,
+// que es lo que se imprime y lo que multiplica Facturante) → $46,83. Sobre el
+// renglón entero daría $46,85, y la factura no cerraría.
+const c3 = calcular([renglon({ cantidad: 7, precioUnitarioCentavos: 999, descuentoPct: 33 })], { percepcionIva: false });
+ok("redondeo por unidad", [c3.renglones[0].precioFinalCentavos, c3.renglones[0].subtotalCentavos, c3.renglones[0].descuentoCentavos], [669, 4683, 2310]);
+
+// 12 × $15.000 = $180.000 → neto $148.760,33 → 3% = $4.462,81.
+const c2 = calcular([renglon({ cantidad: 12 })], { percepcionIva: true });
+ok("percepción sobre el mínimo", c2.percepciones, [
+  { tipo: "iva_rg5329", alicuotaBp: 300, baseCentavos: 14_876_033, montoCentavos: 446_281 },
+]);
+ok("total con percepción", c2.totalCentavos, 18_446_281);
+ok("cliente sin percepción", calcular([renglon({ cantidad: 12 })], { percepcionIva: false }).percepciones, []);
+ok("todo fuera de la percepción", calcular([renglon({ cantidad: 12, alcanzado: false })], { percepcionIva: true }).percepcionBajoUmbral, null);
+// $121.000 → neto $100.000 → 3% = $3.000 justos: "supera" es estricto.
+ok("$3.000 justos no se percibe", calcular([renglon({ precioUnitarioCentavos: 12_100_000 })], { percepcionIva: true }).percepciones.length, 0);
+ok("$3.000,01 sí", calcular([renglon({ precioUnitarioCentavos: 12_100_021 })], { percepcionIva: true }).percepciones[0]?.montoCentavos, 300_001);
+
+console.log("\nRequest de una venta");
+const fv = mapFactura({
+  letra: vA.letra,
+  receptor: vA.receptor,
+  renglones: venta,
+  percepciones: c2.percepciones,
+  formaPago: "efectivo",
+  dia: "2026-10-24",
+  externalId: "gorros-f-venta",
+  posId: 13665,
+});
+ok("efectivo = 1", fv.header.detail.sellCondition[0].conditionType, 1);
+// El descuento va dentro del precio (la bonificación sale mal impresa en la B).
+ok("un ítem por renglón, con el descuento en el precio", fv.items.map((i) => [i.quantity, i.price.unitPrice]), [[6, 13500], [2, 4999.99], [1, 10802.46]]);
+ok("cantidad × precio da el subtotal calculado", fv.items.map((i) => Math.round(i.quantity * i.price.unitPrice * 100)), c1.renglones.map((x) => x.subtotalCentavos));
+ok("el descuento se nombra en la descripción", fv.items.map((i) => i.description), [
+  "Malbec Reserva (10% dto.)",
+  "Copa Riedel",
+  "Espumante (12,5% dto.)",
+]);
+ok("percepción como tributo, en monto", fv.header.tributes, [
+  { tributeId: 2, amount: 4462.81, amountAffected: 148760.33, amountType: 1, comment: "RG 5329" },
+]);
+ok("sin percepción no hay tributes", fb.header.tributes, undefined);
+const ncv = mapNotaCredito(
+  fv,
+  { posId: 13665, posPrefix: 15, number: 3, cuitEmisor: "20160680904", fecha: "2026-10-24T00:00:00" },
+  { dia: "2026-10-24", externalId: "gorros-nc-venta" },
+);
+ok("la NC copia los tributos", ncv.header.tributes, fv.header.tributes);
+ok("la NC copia ítems y descuentos", ncv.items, fv.items);
 
 if (ver) {
   console.log("\n— Factura B —\n" + JSON.stringify([fb], null, 2));

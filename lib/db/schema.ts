@@ -17,6 +17,7 @@ import {
 } from "drizzle-orm/pg-core";
 import { sql } from "drizzle-orm";
 import type { ImagenValor } from "@/lib/content/types";
+import type { Percepcion } from "@/lib/facturacion/calculo";
 
 /**
  * Roles del panel. Son los del *sistema*, no los del negocio: un cliente que
@@ -626,6 +627,11 @@ export const clientes = pgTable(
      *  no la tienen: se completa la primera vez que se le factura. */
     condicionIva: condicionIva("condicion_iva"),
 
+    /** Se le percibe IVA (RG 5329): un Responsable Inscripto que revende sin
+     *  transformar, como un almacén o un restaurante. No sale del CUIT: lo
+     *  sabe quien le vende. La factura lo precarga y se puede destildar. */
+    percepcionIva: boolean("percepcion_iva").notNull().default(false),
+
     direccion: text("direccion"),
 
     /** El campo para lo que no entra en ningún casillero: "paga a fin de mes",
@@ -877,6 +883,17 @@ export const comprobanteTipo = pgEnum("comprobante_tipo", [
 export type ComprobanteTipo = (typeof comprobanteTipo.enumValues)[number];
 
 export const comprobanteLetra = pgEnum("comprobante_letra", ["A", "B"]);
+
+/** Cómo se cobró: va a la factura como condición de venta. Lo de MP es
+ *  `electronico`; el resto sale de las facturas manuales. */
+export const formaPago = pgEnum("forma_pago", [
+  "efectivo",
+  "debito",
+  "credito",
+  "transferencia",
+  "electronico",
+]);
+export type FormaPago = (typeof formaPago.enumValues)[number];
 export type ComprobanteLetra = (typeof comprobanteLetra.enumValues)[number];
 
 /**
@@ -910,9 +927,13 @@ export const comprobantes = pgTable(
   {
     id: uuid("id").primaryKey().defaultRandom(),
 
-    movimientoId: uuid("movimiento_id")
-      .notNull()
-      .references(() => movimientosMp.id, { onDelete: "restrict" }),
+    /** El cobro de MP que factura. NULL es una **factura manual** (venta de
+     *  mostrador, mayorista): no hay columna "origen" porque sería este mismo
+     *  dato dicho dos veces. Su NC copia el NULL. El índice de factura viva
+     *  sigue valiendo: Postgres no considera iguales dos NULL. */
+    movimientoId: uuid("movimiento_id").references(() => movimientosMp.id, {
+      onDelete: "restrict",
+    }),
 
     tipo: comprobanteTipo("tipo").notNull(),
     letra: comprobanteLetra("letra").notNull(),
@@ -932,7 +953,15 @@ export const comprobantes = pgTable(
     pdfUrl: text("pdf_url"),
     qrUrl: text("qr_url"),
 
+    /** Con percepciones incluidas: es lo que paga el cliente. */
     totalCentavos: bigint("total_centavos", { mode: "number" }).notNull(),
+
+    /** Condición de venta. NULL en las facturas de MP de antes de que existiera. */
+    formaPago: formaPago("forma_pago"),
+
+    /** Las percepciones, como se calcularon y se mandaron. Una lista y no una
+     *  columna por impuesto: sumar IIBB no tiene que cambiar el schema. */
+    tributos: jsonb("tributos").$type<Percepcion[]>(),
 
     /** El receptor se copia al comprobante aunque venga de `clientes`: la
      *  factura dice lo que decía el día que se emitió, aunque el cliente cambie
@@ -991,8 +1020,51 @@ export const comprobantes = pgTable(
   ],
 );
 
+/**
+ * Los renglones de un comprobante: qué se vendió, cuántos y a cuánto. El
+ * `request_payload` sigue siendo la verdad de lo que se mandó; esto es lo que
+ * se consulta ("¿cuánto Malbec Reserva facturamos este mes?"). La factura de un
+ * cobro de MP tiene uno solo, sin producto. Como el comprobante, no se edita:
+ * se escribe con él, en la misma transacción.
+ *
+ * Los de una nota de crédito repiten los de su factura, **en positivo**: para
+ * saber qué se vendió, filtrar `comprobantes.tipo = 'factura'` y descontar las
+ * anuladas, no sumar todo.
+ */
+export const comprobanteItems = pgTable(
+  "comprobante_items",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    comprobanteId: uuid("comprobante_id")
+      .notNull()
+      .references(() => comprobantes.id, { onDelete: "restrict" }),
+    /** Del catálogo, si salió de ahí. `set null`: el renglón dice lo que dice
+     *  aunque el producto se borre. */
+    productoId: uuid("producto_id").references(() => productos.id, {
+      onDelete: "set null",
+    }),
+    orden: integer("orden").notNull(),
+    descripcion: text("descripcion").notNull(),
+    cantidad: integer("cantidad").notNull(),
+    /** Con IVA incluido, antes del descuento. */
+    precioUnitarioCentavos: bigint("precio_unitario_centavos", { mode: "number" }).notNull(),
+    descuentoPct: numeric("descuento_pct", { precision: 5, scale: 2, mode: "number" })
+      .notNull()
+      .default(0),
+    /** Lo que se facturó por el renglón: cantidad × precio con descuento. */
+    subtotalCentavos: bigint("subtotal_centavos", { mode: "number" }).notNull(),
+    /** Si entró en la base de la percepción de IVA. */
+    alcanzado: boolean("alcanzado").notNull().default(false),
+  },
+  (t) => [
+    index("comprobante_items_comprobante_idx").on(t.comprobanteId),
+    index("comprobante_items_producto_idx").on(t.productoId),
+  ],
+);
+
 export type CuentaMp = typeof cuentasMp.$inferSelect;
 export type MovimientoMp = typeof movimientosMp.$inferSelect;
 export type NewMovimientoMp = typeof movimientosMp.$inferInsert;
 export type Comprobante = typeof comprobantes.$inferSelect;
 export type NewComprobante = typeof comprobantes.$inferInsert;
+export type ComprobanteItem = typeof comprobanteItems.$inferSelect;

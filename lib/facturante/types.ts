@@ -97,6 +97,23 @@ export interface DocHeader {
   identification?: DocIdentification[];
   settings?: { integrationDetails: { webHooks: DocWebhook[] } };
   fiscalAssociations?: FiscalAssociation[];
+  tributes?: DocTribute[];
+}
+
+/**
+ * Una percepción o tributo del comprobante. Va en el header, no por ítem.
+ * `amountType` **no se omite**: sin él Facturante toma 2 y lee `amount` como
+ * porcentaje.
+ */
+export interface DocTribute {
+  /** Maestro de Facturante: 2 Percepción Nacional IVA, 4 IIBB AGIP, 5 ARBA… */
+  tributeId: number;
+  amount: number;
+  /** La base imponible. */
+  amountAffected: number;
+  /** 1 monto · 2 porcentaje. */
+  amountType: number;
+  comment?: string;
 }
 
 export interface DocItem {
