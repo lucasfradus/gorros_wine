@@ -303,6 +303,7 @@ export default async function ClientePage({
               documento: cliente.documento,
               razonSocial: cliente.razonSocial,
               condicionIva: cliente.condicionIva,
+              percepcionIva: cliente.percepcionIva,
               direccion: cliente.direccion,
               notas: cliente.notas,
               cuentaCorriente: cliente.cuentaCorriente,
@@ -342,6 +343,7 @@ export default async function ClientePage({
                     exento: "Exento",
                   }[cliente.condicionIva]
                 : "—"}
+              {cliente.percepcionIva ? " · se le percibe IVA (RG 5329)" : null}
             </li>
             <li>
               <span className={styles.metaLabel}>Dirección</span>

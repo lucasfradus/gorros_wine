@@ -108,7 +108,9 @@ export default async function FacturacionPage({
       const previa = ncPorFactura.get(c.origenId);
       if (!previa || previa.createdAt < c.createdAt) ncPorFactura.set(c.origenId, c);
     }
-    porMovimiento.set(c.movimientoId, [...(porMovimiento.get(c.movimientoId) ?? []), c]);
+    // Siempre tiene: la consulta filtra por cobro. Las manuales no entran acá.
+    const mov = c.movimientoId;
+    if (mov) porMovimiento.set(mov, [...(porMovimiento.get(mov) ?? []), c]);
   }
 
   const todas = movimientos.map((m) => ({
@@ -136,10 +138,16 @@ export default async function FacturacionPage({
           <h1 className={styles.pageTitle}>Facturación</h1>
           <p className={styles.pageSub}>
             Los cobros que entraron por Mercado Pago, para facturarlos uno por
-            uno.
+            uno. Lo que se vendió por otro lado va por Factura manual.
           </p>
         </div>
         <div className={styles.btnRow}>
+          <Link
+            href="/admin/facturacion/manual"
+            className={`${styles.btn} ${styles.btnSmall} ${styles.btnPrimary}`}
+          >
+            Factura manual
+          </Link>
           <Link
             href="/admin/facturacion/comprobantes"
             className={`${styles.btn} ${styles.btnSmall}`}

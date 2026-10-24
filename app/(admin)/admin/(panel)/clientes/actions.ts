@@ -41,6 +41,7 @@ const datosSchema = z.object({
   direccion: z.string().trim().max(240, "La dirección es muy larga.").optional(),
   condicionIva: z.enum(condicionIva.enumValues).optional(),
   notas: z.string().trim().max(2000, "Las notas son muy largas.").optional(),
+  percepcionIva: z.boolean(),
   cuentaCorriente: z.boolean(),
 });
 
@@ -57,6 +58,7 @@ function leerDatos(formData: FormData) {
     direccion: textoOpcional(formData.get("direccion")),
     condicionIva: textoOpcional(formData.get("condicionIva")),
     notas: textoOpcional(formData.get("notas")),
+    percepcionIva: formData.get("percepcionIva") === "on",
     cuentaCorriente: formData.get("cuentaCorriente") === "on",
   });
 }
@@ -87,6 +89,8 @@ function aColumnas(datos: Datos) {
     razonSocial: datos.razonSocial ?? null,
     direccion: datos.direccion ?? null,
     condicionIva: datos.condicionIva ?? null,
+    // La RG 5329 sólo alcanza a responsables inscriptos: tildado en otro, no vale.
+    percepcionIva: datos.percepcionIva && datos.condicionIva === "responsable_inscripto",
     notas: datos.notas ?? null,
     cuentaCorriente: datos.cuentaCorriente,
   };

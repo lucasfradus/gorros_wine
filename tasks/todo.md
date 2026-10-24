@@ -7,38 +7,37 @@
 > Antes de tocar código: leer `AGENTS.md` (este Next.js y este Drizzle no son
 > los del training data) y `tasks/lessons.md`.
 
-**Panel formal: paleta Grafito, Inter y mobile.**
-Plan completo: [docs/planes/2026-10-23-panel-formal.md](../docs/planes/2026-10-23-panel-formal.md).
+**Facturas manuales de productos (renglones, descuentos, percepciones).**
+Plan completo: [docs/planes/2026-10-24-factura-manual.md](../docs/planes/2026-10-24-factura-manual.md).
 
-Worktree `../Gorros-panel-formal` · rama `feat/panel-formal` · puerto `:3002`
+Worktree `../Gorros-factura-manual` · rama `feat/factura-manual` · puerto `:3003`
 
-- [x] **Tarea 1** — Tokens semánticos Grafito, Inter, renombre en los CSS de sección
-- [x] **Tarea 2** — Componentes compartidos (botón, campo, badge, tabla, tarjeta)
-- [x] **Tarea 3** — Marco nuevo y menú lateral mobile
-- [x] **Tarea 4** — Tablas como filas de lista y botonera fija en mobile
-- [ ] **Cierre** — tsc ✓, build ✓, probado en 390px y escritorio, claro/oscuro ✓ · falta PR
-
----
-
-**Facturación electrónica de los cobros de Mercado Pago** (mergeada en #16; quedan los pasos contra cuentas reales).
-Plan completo: [docs/planes/2026-10-23-facturacion-mp.md](../docs/planes/2026-10-23-facturacion-mp.md).
-
-Worktree `../Gorros-facturacion-mp` · rama `feat/facturacion-mp` · puerto `:3001`
-
-- [x] **Tarea 0** — Credenciales de Facturante y de la app de MP, claves generadas
-- [x] **Tarea 1** — Schema y migración `0009` (aditiva) · `0009_concerned_mongoose.sql`, aplicada
-- [x] **Tarea 2** — `canFacturar`, `requireFacturacion`, ítem en el nav (falta probar con `editor`)
-- [x] **Tarea 3** — OAuth de MP y pantalla de la cuenta · código listo; falta registrar la redirect URI y vincular la cuenta real
-- [x] **Tarea 4** — `payments/search` y sync a `movimientos_mp` · código listo; falta correrlo contra la cuenta real y comparar con el panel de MP
-- [x] **Tarea 5** — Cliente de Facturante, mappers A/B, validación de receptor · `npm run prueba:facturacion` (47 ok)
-- [x] **Tarea 6** — Reservar, enviar, anular con NC, reconciliar, webhook · se prueba de verdad en Railway (decisión 23)
-- [x] **Tarea 7** — Pantalla de movimientos y página por cobro con el formulario (decisión 25)
-- [x] **Tarea 8** — Listado de comprobantes y condición IVA en clientes
-- [ ] **Tarea 9** — Cron diario · route y script listos; **falta crear el servicio en Railway (confirmar antes)**
-- [x] **Tarea 10** — `.env.example` y `docs/ARQUITECTURA.md`
-- [ ] **Cierre** — tsc ✓, build, deploy a Railway (confirmar variables), primera B + NC, primera A con centavos + NC A, PR, borrar worktree
+- [x] **Preguntas abiertas** — percepción IVA RG 5329 (3%); sandbox con las credenciales de Clicnet; panel-formal mergeado antes
+- [x] **Tarea 0** — Arrancar sobre `feat/panel-formal` mergeado (#17)
+- [x] **Tarea 1** — `calculo.ts` (renglones, descuentos, percepción), mapper con `items`/`tributes`, chequeos offline · request de MP idéntico a `main`
+- [x] **Credenciales del sandbox** — empresa RI 224234 en el `.env.local` del worktree
+- [x] **Tarea 2** — Calibración contra el sandbox: todo coincide al centavo · descuento dentro del precio (la B imprime mal la bonificación)
+- [x] **Tarea 3** — Schema: `movimiento_id` opcional, `forma_pago`, `tributos`, `comprobante_items`, `clientes.percepcion_iva` · migración `0010_slim_taskmaster` aplicada en local
+- [x] **Tarea 4** — `reservarFacturaManual` sobre una reserva común, NC copia ítems y tributos, action
+- [x] **Tarea 5** — Formulario de venta (buscador de productos, renglones, percepción), `/manual`, `/manual/[id]`, tabla compartida
+- [x] **Tarea 6** — `docs/ARQUITECTURA.md`
+- [ ] **Cierre** — tsc ✓, prueba offline ✓, build ✓, probado en :3003 contra el sandbox ✓ (390 px y escritorio) · falta review, PR, deploy, primera B manual real + NC (confirmar antes), borrar worktree
 
 ## Viene de las iteraciones anteriores (sigue pendiente)
+
+- **Panel formal (#17, mergeado)**: Review y archivo de
+  `docs/planes/2026-10-23-panel-formal.md`, y borrar el worktree
+  `../Gorros-panel-formal`.
+
+- **Facturación de MP (#16), pasos contra cuentas reales**: vincular la cuenta
+  de MP en producción (registrar la redirect URI
+  `https://gorros-wine-production.up.railway.app/api/mercadopago/callback`),
+  correr el sync y compararlo con el panel de MP, primera B + NC y primera A
+  con centavos + NC A sobre cobros reales, crear el servicio de cron en Railway
+  (`node scripts/cron-diario.mjs`, `0 9 * * *`, confirmar antes), probar que un
+  `editor` no ve Facturación, Review y archivo de
+  `docs/planes/2026-10-23-facturacion-mp.md`, y borrar el worktree
+  `../Gorros-facturacion-mp`.
 
 - **Diecinueve bodegas sin logo**: Antucura, De Angeles, Rimapere, Costa &
   Pampa, Altocedro, Abras, Teho, TintoNegro, Matías Riccitelli, Bressia, Manos

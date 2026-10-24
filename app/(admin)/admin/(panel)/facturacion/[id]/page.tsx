@@ -2,34 +2,22 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { and, asc, desc, eq, isNotNull } from "drizzle-orm";
 import { db } from "@/lib/db";
-import { clientes, comprobantes, movimientosMp, type Comprobante } from "@/lib/db/schema";
+import { clientes, comprobantes, movimientosMp } from "@/lib/db/schema";
 import { requireFacturacion } from "@/lib/auth";
 import { formatARS, formatDateTime } from "@/lib/format";
 import { facturacionConfigurada } from "@/lib/facturante/config";
-import { formatCuit } from "@/lib/facturacion/cuit";
 import {
   sePuedeFacturar,
-  sePuedeMarcarNoEmitido,
   situacionDe,
   type ComprobanteResumen,
 } from "@/lib/facturacion/estado";
-import { AccionComprobante } from "../acciones-comprobante";
 import { AutoRefresh } from "../auto-refresh";
 import { EmitirForm, type DatosIniciales } from "../emitir-form";
-import { anularFacturaAction, consultarEstadoAction, marcarNoEmitidoAction } from "../actions";
+import { TablaComprobantes } from "../tabla-comprobantes";
 import styles from "../../../admin.module.css";
 import propios from "../facturacion.module.css";
 
 export const metadata = { title: "Facturar cobro" };
-
-const ESTADOS: Record<Comprobante["estado"], string> = {
-  pendiente: "Por enviar",
-  en_proceso: "Emitiendo…",
-  autorizado: "Autorizado",
-  rechazado: "Rechazado",
-  error: "No se emitió",
-  anulado: "Anulada",
-};
 
 /** Lo que MP sabe del pagador, como punto de partida del receptor. */
 function inicialesDe(m: {
@@ -77,7 +65,6 @@ export default async function CobroPage({ params }: { params: Promise<{ id: stri
   const situacion = situacionDe(comps, ncPorFactura);
   const enCamino = comps.some((c) => c.estado === "pendiente" || c.estado === "en_proceso");
   const facturable = sePuedeFacturar(situacion);
-  const ahora = Date.now();
 
   const listaClientes = facturable
     ? await db
@@ -87,6 +74,7 @@ export default async function CobroPage({ params }: { params: Promise<{ id: stri
           razonSocial: clientes.razonSocial,
           documento: clientes.documento,
           condicionIva: clientes.condicionIva,
+          percepcionIva: clientes.percepcionIva,
           direccion: clientes.direccion,
           email: clientes.email,
         })
@@ -131,112 +119,7 @@ export default async function CobroPage({ params }: { params: Promise<{ id: stri
 
       {comps.length > 0 ? (
         <section className={`${styles.card} ${styles.cardTight}`} style={{ marginBottom: 18 }}>
-          <div className={styles.tableWrap}>
-            <table className={styles.table}>
-              <thead>
-                <tr>
-                  <th scope="col">Comprobante</th>
-                  <th scope="col">Receptor</th>
-                  <th scope="col" className={propios.importe}>
-                    Total
-                  </th>
-                  <th scope="col">Estado</th>
-                  <th scope="col" aria-label="Acciones" />
-                </tr>
-              </thead>
-              <tbody>
-                {comps.map((c) => {
-                  const nc = c.tipo === "factura" ? ncPorFactura.get(c.id) : undefined;
-                  const puedeAnular =
-                    c.tipo === "factura" &&
-                    c.estado === "autorizado" &&
-                    (!nc || nc.estado === "rechazado" || nc.estado === "error");
-                  const enViaje = c.estado === "en_proceso" || c.estado === "pendiente";
-                  // Sin id de Facturante no hay a quién preguntarle: pasada la
-                  // espera del webhook, lo resuelve una persona mirando su panel.
-                  const colgado = sePuedeMarcarNoEmitido(c, ahora);
-                  return (
-                    <tr key={c.id}>
-                      <td>
-                        <span className={styles.cellName}>
-                          {c.tipo === "factura" ? "Factura" : "Nota de crédito"} {c.letra}
-                        </span>
-                        <span className={styles.cellDim}>
-                          {c.numeroCompleto && c.pdfUrl ? (
-                            <a href={c.pdfUrl} target="_blank" rel="noreferrer">
-                              {c.numeroCompleto}
-                            </a>
-                          ) : (
-                            (c.numeroCompleto ?? formatDateTime(c.createdAt))
-                          )}
-                        </span>
-                      </td>
-                      <td data-label="Receptor">
-                        <span className={styles.cellName}>
-                          {c.receptorNombre ?? "Consumidor final"}
-                        </span>
-                        <span className={styles.cellDim}>
-                          {c.receptorDocTipo === "ninguno"
-                            ? "Sin identificar"
-                            : c.receptorDocTipo === "cuit"
-                              ? `CUIT ${formatCuit(c.receptorDocNumero)}`
-                              : `DNI ${c.receptorDocNumero}`}
-                        </span>
-                      </td>
-                      <td data-label="Total" className={propios.importe}>{formatARS(c.totalCentavos)}</td>
-                      <td data-label="Estado">
-                        <span className={propios.estado}>
-                          <span>{ESTADOS[c.estado]}</span>
-                          {c.cae ? <span className={styles.cellDim}>CAE {c.cae}</span> : null}
-                          {c.errorMensaje && c.estado !== "autorizado" ? (
-                            <span className={propios.error}>{c.errorMensaje}</span>
-                          ) : null}
-                          {colgado ? (
-                            <span className={propios.error}>
-                              Facturante no confirmó. Buscalo en su panel por fecha e importe
-                              antes de marcarlo como no emitido.
-                            </span>
-                          ) : null}
-                        </span>
-                      </td>
-                      <td>
-                        <div className={styles.btnRow}>
-                          {puedeAnular ? (
-                            <AccionComprobante
-                              action={anularFacturaAction}
-                              id={c.id}
-                              label="Anular con NC"
-                              pendiente="Reservando…"
-                              confirmar={`Se va a emitir una nota de crédito ${c.letra} por ${formatARS(c.totalCentavos)} que anula la ${c.numeroCompleto}. No se puede deshacer.`}
-                              peligro
-                            />
-                          ) : null}
-                          {enViaje && c.facturanteId ? (
-                            <AccionComprobante
-                              action={consultarEstadoAction}
-                              id={c.id}
-                              label="Consultar estado"
-                              pendiente="Consultando…"
-                            />
-                          ) : null}
-                          {colgado ? (
-                            <AccionComprobante
-                              action={marcarNoEmitidoAction}
-                              id={c.id}
-                              label="No se emitió"
-                              pendiente="Marcando…"
-                              confirmar="¿Revisaste en Facturante que este comprobante no existe? Si existe y lo marcás, el cobro puede terminar facturado dos veces."
-                              peligro
-                            />
-                          ) : null}
-                        </div>
-                      </td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
-          </div>
+          <TablaComprobantes comps={comps} />
         </section>
       ) : null}
 

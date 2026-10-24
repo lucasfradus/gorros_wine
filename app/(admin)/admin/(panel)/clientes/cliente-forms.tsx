@@ -54,6 +54,7 @@ export interface ClienteDefaults {
   condicionIva?: string | null;
   direccion?: string | null;
   notas?: string | null;
+  percepcionIva?: boolean;
   cuentaCorriente?: boolean;
   limiteArs?: string;
   limiteUsd?: string;
@@ -151,6 +152,23 @@ export function ClienteForm({
         <span className={styles.hint}>
           Decide la letra de la factura: a un responsable inscripto le corresponde A.
         </span>
+      </div>
+      <div className={styles.field}>
+        <label className={propios.check}>
+          <input
+            type="checkbox"
+            name="percepcionIva"
+            defaultChecked={defaults?.percepcionIva ?? false}
+          />
+          <span>
+            <span className={styles.radioName}>Se le percibe IVA (RG 5329)</span>
+            <span className={styles.radioDesc}>
+              Para un responsable inscripto que revende sin transformar: almacén,
+              vinoteca, restaurante. La factura le suma el 3% sobre las bebidas cuando
+              supera el mínimo. Si no es responsable inscripto, no se guarda.
+            </span>
+          </span>
+        </label>
       </div>
       <Campo
         name="direccion"
