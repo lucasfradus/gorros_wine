@@ -83,11 +83,11 @@ export default async function CategoriasPage() {
                       </span>
                       <span className={styles.cellMail}>{fila.slug}</span>
                     </td>
-                    <td className={styles.cellDim}>
+                    <td data-label="Ficha" className={styles.cellDim}>
                       {fila.esVino ? "Vino" : "Corta"}
                     </td>
-                    <td className={styles.cellDim}>{fila.productos}</td>
-                    <td>
+                    <td data-label="Productos" className={styles.cellDim}>{fila.productos}</td>
+                    <td data-label="Estado">
                       <span
                         className={`${styles.badge} ${
                           fila.isActive ? styles.badgeOn : styles.badgeOff

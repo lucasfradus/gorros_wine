@@ -7,7 +7,20 @@
 > Antes de tocar código: leer `AGENTS.md` (este Next.js y este Drizzle no son
 > los del training data) y `tasks/lessons.md`.
 
-**Facturación electrónica de los cobros de Mercado Pago.**
+**Panel formal: paleta Grafito, Inter y mobile.**
+Plan completo: [docs/planes/2026-10-23-panel-formal.md](../docs/planes/2026-10-23-panel-formal.md).
+
+Worktree `../Gorros-panel-formal` · rama `feat/panel-formal` · puerto `:3002`
+
+- [x] **Tarea 1** — Tokens semánticos Grafito, Inter, renombre en los CSS de sección
+- [x] **Tarea 2** — Componentes compartidos (botón, campo, badge, tabla, tarjeta)
+- [x] **Tarea 3** — Marco nuevo y menú lateral mobile
+- [x] **Tarea 4** — Tablas como filas de lista y botonera fija en mobile
+- [ ] **Cierre** — tsc ✓, build ✓, probado en 390px y escritorio, claro/oscuro ✓ · falta PR
+
+---
+
+**Facturación electrónica de los cobros de Mercado Pago** (mergeada en #16; quedan los pasos contra cuentas reales).
 Plan completo: [docs/planes/2026-10-23-facturacion-mp.md](../docs/planes/2026-10-23-facturacion-mp.md).
 
 Worktree `../Gorros-facturacion-mp` · rama `feat/facturacion-mp` · puerto `:3001`
@@ -15,8 +28,8 @@ Worktree `../Gorros-facturacion-mp` · rama `feat/facturacion-mp` · puerto `:30
 - [x] **Tarea 0** — Credenciales de Facturante y de la app de MP, claves generadas
 - [x] **Tarea 1** — Schema y migración `0009` (aditiva) · `0009_concerned_mongoose.sql`, aplicada
 - [x] **Tarea 2** — `canFacturar`, `requireFacturacion`, ítem en el nav (falta probar con `editor`)
-- [ ] **Tarea 3** — OAuth de MP y pantalla de la cuenta · código listo; falta registrar la redirect URI y vincular la cuenta real
-- [ ] **Tarea 4** — `payments/search` y sync a `movimientos_mp` · código listo; falta correrlo contra la cuenta real y comparar con el panel de MP
+- [x] **Tarea 3** — OAuth de MP y pantalla de la cuenta · código listo; falta registrar la redirect URI y vincular la cuenta real
+- [x] **Tarea 4** — `payments/search` y sync a `movimientos_mp` · código listo; falta correrlo contra la cuenta real y comparar con el panel de MP
 - [x] **Tarea 5** — Cliente de Facturante, mappers A/B, validación de receptor · `npm run prueba:facturacion` (47 ok)
 - [x] **Tarea 6** — Reservar, enviar, anular con NC, reconciliar, webhook · se prueba de verdad en Railway (decisión 23)
 - [x] **Tarea 7** — Pantalla de movimientos y página por cobro con el formulario (decisión 25)

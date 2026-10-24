@@ -282,11 +282,11 @@ export default async function ProductosPage({
                                 {p.anada ? ` · ${p.anada}` : ""}
                               </span>
                             </td>
-                            <td className={styles.cellDim}>
+                            <td data-label="Categoría" className={styles.cellDim}>
                               {p.categoria}
                               {p.tipo ? ` · ${p.tipo}` : ""}
                             </td>
-                            <td>
+                            <td data-label="Precio">
                               <span className={styles.cellName}>
                                 {formatearPrecio(p.precioCentavos, p.moneda)}
                               </span>
@@ -298,7 +298,7 @@ export default async function ProductosPage({
                                 </span>
                               ) : null}
                             </td>
-                            <td>
+                            <td data-label="Stock">
                               <span
                                 className={`${styles.badge} ${
                                   p.stock === 0 ? styles.badgeOff : ""
@@ -307,7 +307,7 @@ export default async function ProductosPage({
                                 {p.stock === 0 ? "Sin stock" : p.stock}
                               </span>
                             </td>
-                            <td>
+                            <td data-label="Estado">
                               <span
                                 className={`${styles.badge} ${
                                   p.isActive ? styles.badgeOn : styles.badgeOff
