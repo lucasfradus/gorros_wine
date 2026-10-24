@@ -21,7 +21,7 @@ Worktree `../Gorros-factura-manual` · rama `feat/factura-manual` · puerto `:30
 - [x] **Tarea 4** — `reservarFacturaManual` sobre una reserva común, NC copia ítems y tributos, action
 - [x] **Tarea 5** — Formulario de venta (buscador de productos, renglones, percepción), `/manual`, `/manual/[id]`, tabla compartida
 - [x] **Tarea 6** — `docs/ARQUITECTURA.md`
-- [ ] **Cierre** — tsc ✓, prueba offline ✓, build ✓, probado en :3003 contra el sandbox ✓ (390 px y escritorio) · falta review, PR, deploy, primera B manual real + NC (confirmar antes), borrar worktree
+- [ ] **Cierre** — tsc ✓, prueba offline ✓, build ✓, sandbox ✓, review ✓ (arreglado), PR #18 abierto · falta: merge y deploy, primera B manual real + NC (confirmar antes), umbral $3.000 con el contador, borrar worktree
 
 ## Viene de las iteraciones anteriores (sigue pendiente)
 
