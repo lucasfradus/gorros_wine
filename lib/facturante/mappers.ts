@@ -55,16 +55,20 @@ const PRECIO_BRUTO = 2;
 /** Bienes: con Servicios Facturante completa el período con la fecha de hoy. */
 const GOOD_BIENES = 1;
 /**
- * `detail.sellCondition[].conditionType`, calibrado en Clicnet
- * (`sell-condition.ts`). El 4 es depósito bancario, que acá no se usa. Todo lo
- * que entra por MP es "pago electrónico".
+ * `detail.sellCondition[].conditionType`: el maestro `GET /SellCondition`,
+ * leído del sandbox el 2026-10-25 (20 condiciones, ninguna "otros"; sin
+ * condición, el PDF imprime "Contado"). Todo lo que entra por MP es "pago
+ * electrónico".
  */
 const SELL_CONDITION: Record<FormaPago, number> = {
-  efectivo: 1,
-  debito: 2,
-  credito: 3,
-  transferencia: 5,
-  electronico: 6,
+  efectivo: 1, // CASH
+  debito: 2, // DEBIT CARD
+  credito: 3, // CREDIT CARD
+  deposito: 4, // BANK DEPOSIT
+  transferencia: 5, // BANK TRANSFER
+  electronico: 6, // ELECTRONIC PAYMENT
+  cuenta_corriente: 11, // CURRENT ACCOUNT
+  cheque: 12, // CHECK
 };
 
 /** Maestro de tributos de Facturante (doc técnica, "Tributes"). */
@@ -326,6 +330,8 @@ export interface ResultadoDocumento {
   cae: string | null;
   /** "YYYY-MM-DD", para la columna `date`. */
   caeVencimiento: string | null;
+  /** Lo que dijo ARCA al no autorizarlo. */
+  motivo: string | null;
   pdfUrl: string | null;
   qrUrl: string | null;
   /** `null` si no vino: el webhook puede traer el total en 0. */
@@ -335,6 +341,11 @@ export interface ResultadoDocumento {
 const ESTADOS: Record<string, ResultadoDocumento["estado"]> = {
   AUTHORIZED: "autorizado",
   REJECTED: "rechazado",
+  // ARCA lo rechazó (fecha anterior a la del último comprobante, por
+  // ejemplo). Es final: leído como "en proceso", quedaba emitiéndose para
+  // siempre. Visto en el sandbox el 2026-10-25, con el motivo en
+  // `fiscalData.governmentMessage`.
+  UNAUTHORIZED: "rechazado",
 };
 
 const oNull = (v: string | null | undefined) => (v && v.trim() ? v : null);
@@ -353,6 +364,7 @@ export function parseDocumento(doc: DocumentoResponse): ResultadoDocumento {
     numeroCompleto: oNull(doc.fiscalData?.fullNumber),
     cae: oNull(doc.fiscalData?.nationalAuthorizationCode),
     caeVencimiento: diaDesdeFacturante(doc.fiscalData?.nationalAuthorizationCodeExpires),
+    motivo: oNull(doc.fiscalData?.governmentMessage),
     pdfUrl: urlPdfComprobante(doc.accessData?.pdfUrl),
     qrUrl: oNull(doc.accessData?.fiscalQrUrl),
     totalCentavos: doc.total > 0 ? Math.round(doc.total * 100) : null,

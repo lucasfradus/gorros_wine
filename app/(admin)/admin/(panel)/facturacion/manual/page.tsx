@@ -1,33 +1,24 @@
 import { randomUUID } from "node:crypto";
 import Link from "next/link";
-import { and, asc, desc, eq, isNotNull } from "drizzle-orm";
+import { asc, desc, eq } from "drizzle-orm";
 import { db } from "@/lib/db";
-import { bodegas, categorias, clientes, cotizaciones, productos } from "@/lib/db/schema";
+import { bodegas, categorias, cotizaciones, productos } from "@/lib/db/schema";
 import { requireFacturacion } from "@/lib/auth";
 import { facturacionConfigurada } from "@/lib/facturante/config";
+import { ultimasFechas } from "@/lib/facturacion/emitir";
+import { hoyEnArgentina } from "@/lib/format";
 import { FacturaManualForm, type ProductoParaFacturar } from "./factura-manual-form";
+import { clientesParaFacturar } from "../clientes-para-facturar";
 import styles from "../../../admin.module.css";
 
-export const metadata = { title: "Factura manual" };
+export const metadata = { title: "Nueva factura" };
 
 export default async function FacturaManualPage() {
   await requireFacturacion();
 
-  const [listaClientes, catalogo, [cotizacion]] = await Promise.all([
-    db
-      .select({
-        id: clientes.id,
-        nombre: clientes.nombre,
-        razonSocial: clientes.razonSocial,
-        documento: clientes.documento,
-        condicionIva: clientes.condicionIva,
-        percepcionIva: clientes.percepcionIva,
-        direccion: clientes.direccion,
-        email: clientes.email,
-      })
-      .from(clientes)
-      .where(and(eq(clientes.isActive, true), isNotNull(clientes.documento)))
-      .orderBy(asc(clientes.nombre)),
+  const [listaClientes, ultimas, catalogo, [cotizacion]] = await Promise.all([
+    clientesParaFacturar(),
+    ultimasFechas(),
     db
       .select({
         id: productos.id,
@@ -90,9 +81,9 @@ export default async function FacturaManualPage() {
       </Link>
       <div className={styles.pageHead}>
         <div>
-          <h1 className={styles.pageTitle}>Factura manual</h1>
+          <h1 className={styles.pageTitle}>Nueva factura</h1>
           <p className={styles.pageSub}>
-            Una venta que no entró por Mercado Pago: mostrador, mayorista, transferencia.
+            Mostrador, mayorista, transferencia. Lo cobrado por Mercado Pago se factura desde Cobros de MP.
           </p>
         </div>
       </div>
@@ -103,8 +94,10 @@ export default async function FacturaManualPage() {
             // Un id por formulario dibujado: es el del comprobante, y lo que
             // impide que un doble envío saque dos facturas.
             id={randomUUID()}
-            clientes={listaClientes.map((c) => ({ ...c, documento: c.documento ?? "" }))}
+            clientes={listaClientes}
             productos={productosParaFacturar}
+            hoy={hoyEnArgentina()}
+            ultimas={ultimas}
           />
         ) : (
           <p className={styles.hint}>

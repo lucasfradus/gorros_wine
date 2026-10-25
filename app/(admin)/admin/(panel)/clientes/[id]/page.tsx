@@ -3,8 +3,9 @@ import { notFound } from "next/navigation";
 import { desc, eq } from "drizzle-orm";
 import { z } from "zod";
 import { db } from "@/lib/db";
-import { clientes, movimientosCc } from "@/lib/db/schema";
-import { canManageCuentaCorriente, requireUser } from "@/lib/auth";
+import { clientes, comprobantes, movimientosCc } from "@/lib/db/schema";
+import { canFacturar, canManageCuentaCorriente, requireUser } from "@/lib/auth";
+import { PROVINCIAS } from "@/lib/facturante/provincias";
 import {
   conOperacionesJuntas,
   excedidoDelLimite,
@@ -27,6 +28,7 @@ import {
 } from "../cuenta-actions";
 import { ArchivarForm, ClienteForm } from "../cliente-forms";
 import { AnularForm, MovimientoForm } from "../cuenta-forms";
+import { ListaComprobantes } from "../../facturacion/lista-comprobantes";
 import styles from "../../../admin.module.css";
 import propios from "../clientes.module.css";
 
@@ -131,6 +133,16 @@ export default async function ClientePage({
   const saldo = saldoDe(movimientos);
   const anulados = gruposAnulados(movimientos);
   const excedido = excedidoDelLimite(cliente, saldo);
+
+  // Lo facturado se ve con el mismo permiso que Facturación: un editor no.
+  const comps = canFacturar(actor)
+    ? await db
+        .select()
+        .from(comprobantes)
+        .where(eq(comprobantes.clienteId, cliente.id))
+        .orderBy(desc(comprobantes.createdAt))
+        .limit(20)
+    : null;
 
   // El saldo se calcula sobre lo que vino de la base; el extracto se dibuja
   // sobre esto, que garantiza que las patas de una operación queden juntas.
@@ -288,6 +300,20 @@ export default async function ClientePage({
           </section>
         ) : null}
 
+        {comps ? (
+          <section className={styles.card}>
+            <h2 className={`${styles.label} ${styles.sectionHead}`}>Comprobantes</h2>
+            {comps.length === 0 ? (
+              <p className={styles.empty}>Todavía no se le facturó nada.</p>
+            ) : (
+              <ListaComprobantes comps={comps} conReceptor={false} />
+            )}
+            {comps.length === 20 ? (
+              <p className={styles.hint}>Son los últimos 20.</p>
+            ) : null}
+          </section>
+        ) : null}
+
         <section className={styles.card}>
           <h2 className={`${styles.label} ${styles.sectionHead}`}>Datos</h2>
           <ClienteForm
@@ -305,6 +331,8 @@ export default async function ClientePage({
               condicionIva: cliente.condicionIva,
               percepcionIva: cliente.percepcionIva,
               direccion: cliente.direccion,
+              localidad: cliente.localidad,
+              provincia: cliente.provincia,
               notas: cliente.notas,
               cuentaCorriente: cliente.cuentaCorriente,
               limiteArs: importeEditable(cliente.limiteArsCentavos),
@@ -347,7 +375,13 @@ export default async function ClientePage({
             </li>
             <li>
               <span className={styles.metaLabel}>Dirección</span>
-              {cliente.direccion ?? "—"}
+              {[
+                cliente.direccion,
+                cliente.localidad,
+                PROVINCIAS.find((p) => p.code === cliente.provincia)?.nombre,
+              ]
+                .filter(Boolean)
+                .join(", ") || "—"}
             </li>
             <li>
               <span className={styles.metaLabel}>Alta</span>

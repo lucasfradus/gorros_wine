@@ -3,12 +3,13 @@ import { formatARS, formatDateTime } from "@/lib/format";
 import { formatCuit } from "@/lib/facturacion/cuit";
 import { sePuedeMarcarNoEmitido } from "@/lib/facturacion/estado";
 import { AccionComprobante } from "./acciones-comprobante";
+import { EstadoComprobante } from "./en-curso";
 import { anularFacturaAction, consultarEstadoAction, marcarNoEmitidoAction } from "./actions";
 import styles from "../../admin.module.css";
 import propios from "./facturacion.module.css";
 
 export const ESTADOS: Record<Comprobante["estado"], string> = {
-  pendiente: "Por enviar",
+  pendiente: "Enviando…",
   en_proceso: "Emitiendo…",
   autorizado: "Autorizado",
   rechazado: "Rechazado",
@@ -90,7 +91,7 @@ export function TablaComprobantes({ comps }: { comps: Comprobante[] }) {
                 </td>
                 <td data-label="Estado">
                   <span className={propios.estado}>
-                    <span>{ESTADOS[c.estado]}</span>
+                    <EstadoComprobante c={c} texto={ESTADOS[c.estado]} />
                     {c.cae ? <span className={styles.cellDim}>CAE {c.cae}</span> : null}
                     {c.errorMensaje && c.estado !== "autorizado" ? (
                       <span className={propios.error}>{c.errorMensaje}</span>

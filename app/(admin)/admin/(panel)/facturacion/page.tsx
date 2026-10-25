@@ -1,46 +1,50 @@
 import Link from "next/link";
-import { and, desc, eq, gte, ilike, inArray, lt, or } from "drizzle-orm";
+import { and, desc, eq, gte, ilike, isNotNull, isNull, lte, or, sql } from "drizzle-orm";
 import { db } from "@/lib/db";
-import { comprobantes, cuentasMp, movimientosMp } from "@/lib/db/schema";
+import { comprobantes, comprobanteEstado } from "@/lib/db/schema";
 import { requireFacturacion } from "@/lib/auth";
-import { formatARS, formatDateTime, hoyEnArgentina } from "@/lib/format";
-import {
-  sePuedeFacturar,
-  situacionDe,
-  type ComprobanteResumen,
-  type EstadoFacturacion,
-} from "@/lib/facturacion/estado";
+import { formatARS, hoyEnArgentina } from "@/lib/format";
 import { AutoRefresh } from "./auto-refresh";
-import { SyncForm } from "./sync-form";
+import { ListaComprobantes } from "./lista-comprobantes";
+import { ESTADOS } from "./tabla-comprobantes";
 import styles from "../../admin.module.css";
 import propios from "./facturacion.module.css";
 
 export const metadata = { title: "Facturación" };
 
-const FILTROS = {
-  sin_facturar: "Sin facturar",
-  en_proceso: "En proceso",
-  facturado: "Facturados",
-  con_error: "Con error",
-  todos: "Todos",
-} as const;
-type Filtro = keyof typeof FILTROS;
-const esFiltro = (v?: string): v is Filtro => v !== undefined && v in FILTROS;
-
 /** Tope de filas: con un período razonable no se llega, y si se llega, la
  *  página sigue respondiendo rápido. */
 const TOPE = 300;
 const DIA = 24 * 60 * 60 * 1000;
-const esDia = (v?: string): v is string => !!v && /^\d{4}-\d{2}-\d{2}$/.test(v);
-
-/** Un día "YYYY-MM-DD" del local, como instante: la medianoche de Buenos
- *  Aires, que no tiene horario de verano y es siempre UTC-3. */
+// Con formato y además fecha real: "2026-13-45" daría Invalid Date y la
+// consulta reventaría.
+const esDia = (v?: string): v is string =>
+  !!v && /^\d{4}-\d{2}-\d{2}$/.test(v) && !Number.isNaN(Date.parse(`${v}T00:00:00Z`));
+/** Medianoche de Buenos Aires (UTC-3 todo el año). */
 const inicioDelDia = (dia: string) => new Date(`${dia}T00:00:00-03:00`);
 
+const TIPOS = { factura: "Facturas", nota_credito: "Notas de crédito" } as const;
+const ORIGENES = { manual: "Manuales", mp: "De Mercado Pago" } as const;
+const elegido = <T extends string>(opciones: Record<T, string>, v?: string) =>
+  v !== undefined && v in opciones ? (v as T) : undefined;
+
+/**
+ * El inicio de Facturación: todo lo emitido, manual o de un cobro de MP. Es lo
+ * que se mira todos los días; los cobros de MP por facturar están en
+ * `/cobros`.
+ */
 export default async function FacturacionPage({
   searchParams,
 }: {
-  searchParams: Promise<{ desde?: string; hasta?: string; estado?: string; q?: string }>;
+  searchParams: Promise<{
+    desde?: string;
+    hasta?: string;
+    q?: string;
+    tipo?: string;
+    letra?: string;
+    estado?: string;
+    origen?: string;
+  }>;
 }) {
   await requireFacturacion();
   const params = await searchParams;
@@ -52,280 +56,190 @@ export default async function FacturacionPage({
     : new Date(inicioDelDia(hoy).getTime() - 30 * DIA + 3 * 60 * 60 * 1000)
         .toISOString()
         .slice(0, 10);
-  const filtro: Filtro = esFiltro(params.estado) ? params.estado : "sin_facturar";
   const busqueda = params.q?.trim() ?? "";
+  const tipo = elegido(TIPOS, params.tipo);
+  const origen = elegido(ORIGENES, params.origen);
+  const letra = params.letra === "A" || params.letra === "B" ? params.letra : undefined;
+  const estado = comprobanteEstado.enumValues.find((e) => e === params.estado);
 
-  const [cuenta] = await db
-    .select({ id: cuentasMp.id })
-    .from(cuentasMp)
-    .where(eq(cuentasMp.isActive, true))
-    .limit(1);
+  // % y _ son comodines de LIKE: tipeados, se buscan tal cual.
+  const patron = `%${busqueda.replace(/[\\%_]/g, (c) => `\\${c}`)}%`;
+  // El documento se guarda en dígitos: "20-1234" busca "201234".
+  const digitos = busqueda.replace(/\D/g, "");
+  const filtro = and(
+    // Por la fecha fiscal, la impresa: una factura fechada ayer es de ayer
+    // aunque se haya cargado hoy.
+    gte(comprobantes.fecha, desde),
+    lte(comprobantes.fecha, hasta),
+    busqueda
+      ? or(
+          ilike(comprobantes.receptorNombre, patron),
+          ilike(comprobantes.numeroCompleto, patron),
+          digitos.length >= 3 ? ilike(comprobantes.receptorDocNumero, `%${digitos}%`) : undefined,
+        )
+      : undefined,
+    tipo ? eq(comprobantes.tipo, tipo) : undefined,
+    letra ? eq(comprobantes.letra, letra) : undefined,
+    estado ? eq(comprobantes.estado, estado) : undefined,
+    origen === "manual" ? isNull(comprobantes.movimientoId) : undefined,
+    origen === "mp" ? isNotNull(comprobantes.movimientoId) : undefined,
+  );
 
-  const patron = `%${busqueda}%`;
-  const movimientos = await db
-    .select()
-    .from(movimientosMp)
-    .where(
-      and(
-        gte(movimientosMp.fechaAprobacion, inicioDelDia(desde)),
-        lt(movimientosMp.fechaAprobacion, new Date(inicioDelDia(hasta).getTime() + DIA)),
-        busqueda
-          ? or(
-              ilike(movimientosMp.titular, patron),
-              ilike(movimientosMp.email, patron),
-              ilike(movimientosMp.mpPagoId, patron),
-            )
-          : undefined,
-      ),
-    )
-    .orderBy(desc(movimientosMp.fechaAprobacion))
-    .limit(TOPE);
-
-  // Todos los comprobantes de estos cobros en una consulta, no una por fila.
-  const ids = movimientos.map((m) => m.id);
-  const comps = ids.length
-    ? await db
-        .select({
-          id: comprobantes.id,
-          movimientoId: comprobantes.movimientoId,
-          origenId: comprobantes.origenId,
-          tipo: comprobantes.tipo,
-          letra: comprobantes.letra,
-          estado: comprobantes.estado,
-          numeroCompleto: comprobantes.numeroCompleto,
-          pdfUrl: comprobantes.pdfUrl,
-          errorMensaje: comprobantes.errorMensaje,
-          createdAt: comprobantes.createdAt,
-        })
-        .from(comprobantes)
-        .where(inArray(comprobantes.movimientoId, ids))
-    : [];
-
-  const porMovimiento = new Map<string, ComprobanteResumen[]>();
-  const ncPorFactura = new Map<string, ComprobanteResumen>();
-  for (const c of comps) {
-    if (c.tipo === "nota_credito" && c.origenId) {
-      const previa = ncPorFactura.get(c.origenId);
-      if (!previa || previa.createdAt < c.createdAt) ncPorFactura.set(c.origenId, c);
-    }
-    // Siempre tiene: la consulta filtra por cobro. Las manuales no entran acá.
-    const mov = c.movimientoId;
-    if (mov) porMovimiento.set(mov, [...(porMovimiento.get(mov) ?? []), c]);
-  }
-
-  const todas = movimientos.map((m) => ({
-    ...m,
-    situacion: situacionDe(porMovimiento.get(m.id) ?? [], ncPorFactura),
-  }));
-  const filas = filtro === "todos" ? todas : todas.filter((f) => f.situacion.estado === filtro);
-  const total = (estado?: EstadoFacturacion) =>
-    todas
-      .filter((f) => !estado || f.situacion.estado === estado)
-      .reduce((s, f) => s + f.montoCentavos, 0);
-
-  const enlace = (f: Filtro) => {
-    const qs = new URLSearchParams({ desde, hasta });
-    if (busqueda) qs.set("q", busqueda);
-    if (f !== "sin_facturar") qs.set("estado", f);
-    return `/admin/facturacion?${qs}`;
-  };
+  // Los totales van en SQL sobre todo el período, no sobre las filas que se
+  // muestran: pasado el TOPE darían de menos. Una factura anulada se emitió
+  // igual: cuenta en lo facturado, y su NC la descuenta.
+  const [filas, [totales]] = await Promise.all([
+    db
+      .select()
+      .from(comprobantes)
+      .where(filtro)
+      .orderBy(desc(comprobantes.fecha), desc(comprobantes.createdAt))
+      .limit(TOPE),
+    db
+      .select({
+        facturado: sql<number>`coalesce(sum(${comprobantes.totalCentavos}) filter (where ${comprobantes.tipo} = 'factura' and ${comprobantes.estado} in ('autorizado', 'anulado')), 0)`.mapWith(Number),
+        acreditado: sql<number>`coalesce(sum(${comprobantes.totalCentavos}) filter (where ${comprobantes.tipo} = 'nota_credito' and ${comprobantes.estado} = 'autorizado'), 0)`.mapWith(Number),
+        conProblema: sql<number>`count(*) filter (where ${comprobantes.estado} = 'error')`.mapWith(Number),
+      })
+      .from(comprobantes)
+      .where(filtro),
+  ]);
+  const { facturado, acreditado, conProblema } = totales;
+  const filtrando = !!(busqueda || tipo || letra || estado || origen);
 
   return (
-    <>
-      <AutoRefresh activo={todas.some((f) => f.situacion.estado === "en_proceso")} />
+    <div className={styles.anchoCompleto}>
+      <AutoRefresh activo={filas.some((c) => c.estado === "pendiente" || c.estado === "en_proceso")} />
       <div className={styles.pageHead}>
         <div>
           <h1 className={styles.pageTitle}>Facturación</h1>
-          <p className={styles.pageSub}>
-            Los cobros que entraron por Mercado Pago, para facturarlos uno por
-            uno. Lo que se vendió por otro lado va por Factura manual.
-          </p>
+          <p className={styles.pageSub}>Todo lo emitido: facturas y notas de crédito.</p>
         </div>
         <div className={styles.btnRow}>
           <Link
             href="/admin/facturacion/manual"
             className={`${styles.btn} ${styles.btnSmall} ${styles.btnPrimary}`}
           >
-            Factura manual
+            Nueva factura
           </Link>
-          <Link
-            href="/admin/facturacion/comprobantes"
-            className={`${styles.btn} ${styles.btnSmall}`}
-          >
-            Comprobantes
+          <Link href="/admin/facturacion/cobros" className={`${styles.btn} ${styles.btnSmall}`}>
+            Cobros de MP
           </Link>
-          <Link
-            href="/admin/facturacion/cuenta-mp"
-            className={`${styles.btn} ${styles.btnSmall}`}
-          >
+          <Link href="/admin/facturacion/cuenta-mp" className={`${styles.btn} ${styles.btnSmall}`}>
             Cuenta de MP
           </Link>
         </div>
       </div>
 
-      {!cuenta ? (
-        <section className={styles.card}>
-          <p className={styles.hint}>
-            Todavía no hay una cuenta de Mercado Pago vinculada.{" "}
-            <Link href="/admin/facturacion/cuenta-mp">Vincularla</Link>.
-          </p>
-        </section>
-      ) : (
-        <>
-          <section className={styles.card} style={{ marginBottom: 18 }}>
-            <SyncForm />
-          </section>
-
-          <form className={propios.periodo}>
-            <label className={propios.syncCampo}>
-              <span className={styles.label}>Desde</span>
-              <input type="date" name="desde" defaultValue={desde} className={styles.input} />
-            </label>
-            <label className={propios.syncCampo}>
-              <span className={styles.label}>Hasta</span>
-              <input type="date" name="hasta" defaultValue={hasta} className={styles.input} />
-            </label>
-            <label className={propios.syncCampo}>
-              <span className={styles.label}>Buscar</span>
-              <input
-                type="search"
-                name="q"
-                defaultValue={busqueda}
-                placeholder="Titular, email o n° de operación"
-                className={styles.input}
-              />
-            </label>
-            {filtro !== "sin_facturar" ? (
-              <input type="hidden" name="estado" value={filtro} />
-            ) : null}
-            <button type="submit" className={`${styles.btn} ${styles.btnSmall}`}>
-              Ver
-            </button>
-          </form>
-
-          <div className={propios.filtros}>
-            {(Object.keys(FILTROS) as Filtro[]).map((f) => (
-              <Link
-                key={f}
-                href={enlace(f)}
-                className={`${propios.filtro} ${f === filtro ? propios.filtroActivo : ""}`}
-              >
-                {FILTROS[f]}
-              </Link>
+      <form className={propios.periodo}>
+        <label className={propios.syncCampo}>
+          <span className={styles.label}>Desde</span>
+          <input type="date" name="desde" defaultValue={desde} className={styles.input} />
+        </label>
+        <label className={propios.syncCampo}>
+          <span className={styles.label}>Hasta</span>
+          <input type="date" name="hasta" defaultValue={hasta} className={styles.input} />
+        </label>
+        <label className={`${propios.syncCampo} ${propios.campoAncho}`}>
+          <span className={styles.label}>Buscar</span>
+          <input
+            type="search"
+            name="q"
+            defaultValue={busqueda}
+            placeholder="Nombre, CUIT/DNI o número"
+            className={styles.input}
+          />
+        </label>
+        <label className={propios.syncCampo}>
+          <span className={styles.label}>Tipo</span>
+          <select name="tipo" defaultValue={tipo ?? ""} className={styles.select}>
+            <option value="">Todos</option>
+            {(Object.keys(TIPOS) as (keyof typeof TIPOS)[]).map((t) => (
+              <option key={t} value={t}>
+                {TIPOS[t]}
+              </option>
             ))}
-          </div>
+          </select>
+        </label>
+        <label className={propios.syncCampo}>
+          <span className={styles.label}>Letra</span>
+          <select name="letra" defaultValue={letra ?? ""} className={styles.select}>
+            <option value="">Todas</option>
+            <option value="A">A</option>
+            <option value="B">B</option>
+          </select>
+        </label>
+        <label className={propios.syncCampo}>
+          <span className={styles.label}>Estado</span>
+          <select name="estado" defaultValue={estado ?? ""} className={styles.select}>
+            <option value="">Todos</option>
+            {comprobanteEstado.enumValues.map((e) => (
+              <option key={e} value={e}>
+                {ESTADOS[e]}
+              </option>
+            ))}
+          </select>
+        </label>
+        <label className={propios.syncCampo}>
+          <span className={styles.label}>Origen</span>
+          <select name="origen" defaultValue={origen ?? ""} className={styles.select}>
+            <option value="">Todos</option>
+            {(Object.keys(ORIGENES) as (keyof typeof ORIGENES)[]).map((o) => (
+              <option key={o} value={o}>
+                {ORIGENES[o]}
+              </option>
+            ))}
+          </select>
+        </label>
+        <button type="submit" className={`${styles.btn} ${styles.btnSmall}`}>
+          Ver
+        </button>
+        {filtrando ? (
+          <Link
+            href={`/admin/facturacion?${new URLSearchParams({ desde, hasta })}`}
+            className={`${styles.btn} ${styles.btnSmall}`}
+          >
+            Limpiar
+          </Link>
+        ) : null}
+      </form>
 
-          <p className={propios.totales}>
-            <span>
-              Cobrado en el período <strong>{formatARS(total())}</strong>
-            </span>
-            <span>
-              Facturado <strong>{formatARS(total("facturado"))}</strong>
-            </span>
-            <span>
-              Sin facturar <strong>{formatARS(total("sin_facturar"))}</strong>
-            </span>
+      <p className={propios.totales}>
+        <span>
+          Facturado <strong>{formatARS(facturado)}</strong>
+        </span>
+        <span>
+          Notas de crédito <strong>{formatARS(-acreditado)}</strong>
+        </span>
+        <span>
+          Neto <strong>{formatARS(facturado - acreditado)}</strong>
+        </span>
+        {conProblema > 0 && estado !== "error" ? (
+          <Link
+            href={`/admin/facturacion?${new URLSearchParams({ desde, hasta, estado: "error" })}`}
+            className={propios.error}
+          >
+            {conProblema === 1 ? "1 no se emitió" : `${conProblema} no se emitieron`}
+          </Link>
+        ) : null}
+      </p>
+
+      <section className={`${styles.card} ${styles.cardTight}`}>
+        {filas.length === 0 ? (
+          <p className={styles.empty}>
+            {filtrando
+              ? "Nada coincide con esa búsqueda en el período."
+              : "No se emitió nada en este período."}
           </p>
-
-          <section className={`${styles.card} ${styles.cardTight}`}>
-            {filas.length === 0 ? (
-              <p className={styles.empty}>
-                {movimientos.length === 0
-                  ? "No hay cobros en este período. Probá con “Actualizar”."
-                  : "Ningún cobro del período está en este estado."}
-              </p>
-            ) : (
-              <div className={styles.tableWrap}>
-                <table className={styles.table}>
-                  <thead>
-                    <tr>
-                      <th scope="col">Fecha</th>
-                      <th scope="col">Quién pagó</th>
-                      <th scope="col">Medio</th>
-                      <th scope="col" className={propios.importe}>
-                        Cobrado
-                      </th>
-                      <th scope="col" className={propios.importe}>
-                        Neto
-                      </th>
-                      <th scope="col">Factura</th>
-                      <th scope="col" aria-label="Acciones" />
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {filas.map((m) => (
-                      <tr key={m.id}>
-                        <td>{formatDateTime(m.fechaAprobacion)}</td>
-                        <td data-label="Quién pagó">
-                          <span className={styles.cellName}>{m.titular ?? "—"}</span>
-                          <span className={styles.cellDim}>
-                            {m.email ?? m.descripcion ?? `Operación ${m.mpPagoId}`}
-                          </span>
-                        </td>
-                        <td data-label="Medio" className={styles.cellDim}>{m.metodoPago ?? "—"}</td>
-                        <td data-label="Cobrado" className={propios.importe}>{formatARS(m.montoCentavos)}</td>
-                        <td data-label="Neto" className={`${propios.importe} ${styles.cellDim}`}>
-                          {m.netoCentavos != null ? formatARS(m.netoCentavos) : "—"}
-                        </td>
-                        <td data-label="Factura">
-                          <EstadoCelda situacion={m.situacion} />
-                        </td>
-                        <td>
-                          <Link
-                            href={`/admin/facturacion/${m.id}`}
-                            className={`${styles.btn} ${styles.btnSmall}`}
-                          >
-                            {sePuedeFacturar(m.situacion) ? "Facturar" : "Ver"}
-                          </Link>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            )}
-          </section>
-          {movimientos.length === TOPE ? (
-            <p className={styles.hint}>
-              Se muestran los {TOPE} cobros más recientes del período. Achicá las
-              fechas para ver el resto.
-            </p>
-          ) : null}
-        </>
-      )}
-    </>
-  );
-}
-
-function EstadoCelda({ situacion }: { situacion: ReturnType<typeof situacionDe> }) {
-  const { estado, factura, notaCredito } = situacion;
-  if (estado === "sin_facturar" && !factura) {
-    return <span className={styles.cellDim}>Sin facturar</span>;
-  }
-  return (
-    <span className={propios.estado}>
-      {factura?.numeroCompleto ? (
-        factura.pdfUrl ? (
-          <a href={factura.pdfUrl} target="_blank" rel="noreferrer" className={propios.numero}>
-            {factura.numeroCompleto}
-          </a>
         ) : (
-          <span className={propios.numero}>{factura.numeroCompleto}</span>
-        )
+          <ListaComprobantes comps={filas} />
+        )}
+      </section>
+      {filas.length === TOPE ? (
+        <p className={styles.hint}>
+          Se muestran los {TOPE} más recientes. Achicá las fechas para ver el resto.
+        </p>
       ) : null}
-      <span className={styles.cellDim}>
-        {
-          {
-            sin_facturar: "Anulada con nota de crédito",
-            en_proceso: notaCredito ? "Anulando…" : "Emitiendo…",
-            facturado: `Factura ${factura?.letra}`,
-            con_error: "No se pudo emitir",
-          }[estado]
-        }
-      </span>
-      {estado === "con_error" && factura?.errorMensaje ? (
-        <span className={propios.error}>{factura.errorMensaje}</span>
-      ) : null}
-    </span>
+    </div>
   );
 }

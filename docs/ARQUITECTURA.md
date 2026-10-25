@@ -236,10 +236,40 @@ usable —timeout, red—, el comprobante pudo haberse emitido igual, y Facturan
 asociada a la factura. Cuando la NC queda autorizada, la factura pasa a
 `anulado` y el cobro se puede volver a facturar. Ninguna fila se borra.
 
+### Pantallas
+
+| Ruta | Qué muestra |
+| --- | --- |
+| `/admin/facturacion` | El inicio: todos los comprobantes (facturas y NC, manuales y de MP), con búsqueda y filtros |
+| `/admin/facturacion/manual` | **Nueva factura**: receptor y renglones |
+| `/admin/facturacion/manual/[id]` | Detalle de una factura manual y sus NC (donde se anula) |
+| `/admin/facturacion/cobros` | Los cobros de MP, para facturarlos uno por uno |
+| `/admin/facturacion/[id]` | Detalle de un cobro de MP y sus comprobantes |
+
+`/admin/facturacion/comprobantes` redirige al inicio (era la lista antes).
+
+### El cliente de la factura
+
+El receptor se elige con un buscador de clientes (nombre, apodo, razón social
+o CUIT/DNI) o se carga a mano. Qué cliente queda asociado lo decide
+`resolverCliente()` en `lib/facturacion/emitir.ts`, **dentro de la transacción
+del comprobante**; las reglas están en `lib/facturacion/cliente-receptor.ts`:
+
+1. **El elegido**, si se eligió uno.
+2. Si no, **el que ya tiene ese CUIT o DNI** (comparado por dígitos), aunque se
+   haya tildado "Guardar como cliente": no se duplica.
+3. Si no, **uno nuevo**, sólo con "Guardar como cliente" (viene tildado) y con
+   nombre.
+
+Al cliente que ya existía se le **completan los campos vacíos**, nunca se pisan.
+Localidad y provincia, sólo si la calle es la misma que la que tiene cargada.
+Si el mail ya es de otro cliente, se guarda sin mail. La ficha del cliente
+lista sus últimos comprobantes.
+
 ### Facturas manuales
 
 Lo que se vende fuera de MP (mostrador, mayorista, transferencia) se factura
-desde **Facturación → Factura manual**. Es el mismo ciclo de vida, con tres
+desde **Facturación → Nueva factura**. Es el mismo ciclo de vida, con tres
 diferencias:
 
 - **Sin cobro detrás**: `comprobantes.movimiento_id` es NULL (y el de su NC
@@ -255,6 +285,30 @@ diferencias:
 - **Doble envío**: sin un cobro no hay índice único que lo frene. El
   formulario trae un uuid generado al dibujarse, que es el id del comprobante,
   así que un segundo envío choca con la PK.
+- **Vista previa**: las dos facturas (manual y de cobro) pasan por un
+  `<dialog>` con la factura armada (`vista-previa.tsx`) antes de emitir. Lo
+  emitido no se edita: se anula con nota de crédito.
+
+**Fecha de la factura** (`comprobantes.fecha`, la fiscal, que no es
+`created_at`). La manual se elige; la de un cobro y la NC salen con la de hoy.
+El rango sale de `rangoDeFecha` en `lib/facturacion/reglas.ts`:
+
+- **Hasta 5 días atrás**: ARCA acepta N-5 a N+5 para bienes (manual WSFEv1,
+  CbteFch). No se ofrecen fechas futuras: una factura fechada mañana bloquea
+  todas las de hoy.
+- **Nunca antes que la última de la misma letra** (`ultimasFechas()`): ARCA las
+  exige correlativas por tipo y punto de venta. Si igual pasa (una factura
+  hecha desde el panel de Facturante), Facturante responde `UNAUTHORIZED` con
+  el motivo en `fiscalData.governmentMessage` ("Existe un comprobante con fecha
+  posterior…"): se guarda como **rechazado** con ese mensaje.
+- El manual de ARCA también dice que la fecha "no podrá exceder el mes de
+  presentación". No se probó si eso impide fechar en el mes anterior: si ARCA lo
+  rechaza, se ve el motivo y no se pierde nada.
+
+**Formas de pago** (`lib/facturacion/formas-de-pago.ts`): cada una es una
+condición de venta del maestro de Facturante (`SELL_CONDITION` en
+`mappers.ts`, leído con `GET /SellCondition`). El maestro no tiene "otros", y
+sin condición el PDF imprime "Contado"; por eso no hay un "otros" acá.
 
 **Percepción de IVA RG 5329** (3%), en `lib/facturacion/calculo.ts`:
 
@@ -281,6 +335,7 @@ token de MP por vez: renovar en ráfaga da 429 e invalida los tokens vigentes.
 | `lib/facturante/` | Cliente HTTP, request y respuesta de Facturante, sin base |
 | `lib/facturacion/reglas.ts` | Letra y datos obligatorios del receptor, sin base |
 | `lib/facturacion/calculo.ts` | Renglones, descuentos, percepción y totales, sin base |
+| `lib/facturacion/cliente-receptor.ts` | Qué se le guarda a un cliente desde una factura, sin base |
 | `lib/facturacion/{emitir,enviar,guardar,reconciliar,webhook}.ts` | El ciclo de vida del comprobante |
 | `lib/facturacion/estado.ts` | Qué estado de facturación tiene un cobro, visto desde sus comprobantes |
 

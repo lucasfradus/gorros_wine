@@ -1,5 +1,5 @@
 import { randomUUID } from "node:crypto";
-import { and, eq, inArray, isNull } from "drizzle-orm";
+import { and, asc, desc, eq, inArray, ne, notInArray, sql } from "drizzle-orm";
 import { db } from "@/lib/db";
 import {
   clientes,
@@ -9,17 +9,20 @@ import {
   productos,
   type FormaPago,
 } from "@/lib/db/schema";
+import { normalizeEmail } from "@/lib/auth/password";
 import { configFacturante } from "@/lib/facturante/config";
 import {
   mapFactura,
   mapNotaCredito,
   numeroDeComprobante,
   prefijoDeComprobante,
+  type ReceptorFiscal,
 } from "@/lib/facturante/mappers";
 import type { DocumentoResponse, ElectronicDocument } from "@/lib/facturante/types";
 import { hoyEnArgentina } from "@/lib/format";
 import { calcular, validarRenglones, type Renglon } from "./calculo";
-import { validarReceptor, type DatosReceptor } from "./reglas";
+import { camposACompletar, datosDeReceptor } from "./cliente-receptor";
+import { rangoDeFecha, validarFecha, validarReceptor, type DatosReceptor } from "./reglas";
 
 /**
  * Reservar un comprobante: validar, armar el request y dejar la fila
@@ -41,6 +44,115 @@ export function esDuplicado(e: unknown): boolean {
 
 const DESCRIPCION_POR_DEFECTO = "Vinos y productos";
 
+/** El único renglón de la factura de un cobro de MP: su descripción, o una
+ *  genérica. La vista previa muestra esto mismo. */
+export const descripcionDelCobro = (mov: { descripcion: string | null }) =>
+  (mov.descripcion?.trim() || DESCRIPCION_POR_DEFECTO).slice(0, 200);
+
+type Tx = Parameters<Parameters<typeof db.transaction>[0]>[0];
+
+/** ¿Ese mail ya es de otro cliente? `email` es UNIQUE en `clientes`. */
+async function mailDeOtro(tx: Tx, email: string, exceptoId?: string) {
+  const [otro] = await tx
+    .select({ id: clientes.id })
+    .from(clientes)
+    .where(and(eq(clientes.email, email), exceptoId ? ne(clientes.id, exceptoId) : undefined))
+    .limit(1);
+  return !!otro;
+}
+
+/**
+ * A qué cliente queda asociada la factura (las reglas, en
+ * `cliente-receptor.ts`). El elegido en pantalla; si no hay, el que ya tiene
+ * ese CUIT o DNI, aunque se haya pedido crear uno; si tampoco, uno nuevo, sólo
+ * si se pidió. Al que ya existía se le completan los campos vacíos.
+ *
+ * Va dentro de la transacción del comprobante: si la factura no se reserva,
+ * tampoco queda un cliente a medio crear.
+ */
+async function resolverCliente(
+  tx: Tx,
+  o: { clienteId: string | null; guardar: boolean; receptor: ReceptorFiscal; percepcionIva: boolean },
+): Promise<string | null> {
+  const datos = datosDeReceptor(o.receptor, o.percepcionIva);
+  if (datos?.email) datos.email = normalizeEmail(datos.email);
+
+  let [cliente] = o.clienteId
+    ? await tx.select().from(clientes).where(eq(clientes.id, o.clienteId)).limit(1)
+    : [];
+  if (!cliente && o.receptor.docNumero) {
+    // Se compara por dígitos: el documento de `clientes` es texto libre y
+    // puede estar cargado con guiones o puntos.
+    [cliente] = await tx
+      .select()
+      .from(clientes)
+      .where(sql`regexp_replace(${clientes.documento}, '[^0-9]', '', 'g') = ${o.receptor.docNumero}`)
+      .orderBy(desc(clientes.isActive), asc(clientes.createdAt))
+      .limit(1);
+  }
+
+  if (cliente) {
+    const cambios = datos
+      ? camposACompletar(cliente, datos)
+      : cliente.condicionIva === null
+        ? { condicionIva: o.receptor.condicionIva }
+        : {};
+    if (cambios.email && (await mailDeOtro(tx, cambios.email, cliente.id))) delete cambios.email;
+    if (Object.keys(cambios).length) {
+      const id = cliente.id;
+      await sinChoqueDeMail(tx, (sp, conMail) =>
+        sp
+          .update(clientes)
+          .set({ ...cambios, ...(conMail ? {} : { email: undefined }), updatedAt: new Date() })
+          .where(eq(clientes.id, id)),
+      );
+    }
+    return cliente.id;
+  }
+
+  if (!o.guardar || !datos) return null;
+  // Con el mail de otro cliente, se crea sin mail: la factura lo lleva igual.
+  const email = datos.email && !(await mailDeOtro(tx, datos.email)) ? datos.email : null;
+  const [creado] = await sinChoqueDeMail(tx, (sp, conMail) =>
+    sp
+      .insert(clientes)
+      .values({ ...datos, email: conMail ? email : null })
+      .returning({ id: clientes.id }),
+  );
+  return creado.id;
+}
+
+/**
+ * Escribe en `clientes` dentro de un savepoint. `mailDeOtro` ya descarta el
+ * mail ocupado, pero otra escritura simultánea con el mismo mail puede ganar
+ * entre la consulta y el insert: entonces se reintenta sin mail. Sin esto, el
+ * 23505 de `clientes` subía al catch de `reservar` y se leía "esa factura ya se
+ * mandó", con la factura sin emitir.
+ */
+async function sinChoqueDeMail<T>(tx: Tx, escribir: (sp: Tx, conMail: boolean) => Promise<T>) {
+  try {
+    return await tx.transaction((sp) => escribir(sp, true));
+  } catch (e) {
+    if (!esDuplicado(e)) throw e;
+    return tx.transaction((sp) => escribir(sp, false));
+  }
+}
+
+/**
+ * La fecha de la última factura de cada letra que cuenta para la
+ * correlatividad de ARCA: las que salieron o pueden salir. Las rechazadas y
+ * las que nunca se mandaron no ocupan lugar. Hay un solo punto de venta.
+ */
+export async function ultimasFechas(): Promise<Record<"A" | "B", string | null>> {
+  const filas = await db
+    .select({ letra: comprobantes.letra, ultima: sql<string>`max(${comprobantes.fecha})::text` })
+    .from(comprobantes)
+    .where(and(eq(comprobantes.tipo, "factura"), notInArray(comprobantes.estado, ["rechazado", "error"])))
+    .groupBy(comprobantes.letra);
+  const de = (l: "A" | "B") => filas.find((f) => f.letra === l)?.ultima ?? null;
+  return { A: de("A"), B: de("B") };
+}
+
 /**
  * Lo común a una factura de cobro y a una manual: validar, calcular, armar el
  * request y escribir comprobante + renglones juntos. Lo que cambia entre las
@@ -54,6 +166,9 @@ async function reservar(o: {
   formaPago: FormaPago;
   datos: DatosReceptor;
   clienteId: string | null;
+  guardarCliente: boolean;
+  /** "AAAA-MM-DD"; `null` es hoy. */
+  dia: string | null;
   actorId: string;
   siDuplicado: string;
 }): Promise<Reserva> {
@@ -70,6 +185,13 @@ async function reservar(o: {
   });
   const v = validarReceptor(o.datos, calc.totalCentavos);
   if (!v.ok) return v;
+
+  // En hora de Argentina: en UTC, después de las 21 sería "mañana", y eso
+  // choca con la correlatividad de ARCA.
+  const hoy = hoyEnArgentina();
+  const dia = o.dia ?? hoy;
+  const errorFecha = validarFecha(dia, rangoDeFecha(hoy, (await ultimasFechas())[v.letra]));
+  if (errorFecha) return { ok: false, error: errorFecha };
 
   if (o.clienteId) {
     const [cli] = await db
@@ -100,21 +222,26 @@ async function reservar(o: {
     renglones: o.renglones,
     percepciones: calc.percepciones,
     formaPago: o.formaPago,
-    // En hora de Argentina: en UTC, después de las 21 sería "mañana", y con
-    // facturas manuales del día eso choca con 100014.
-    dia: hoyEnArgentina(),
+    dia,
     externalId,
     posId: cfg.posId,
   });
 
   try {
     await db.transaction(async (tx) => {
+      const clienteId = await resolverCliente(tx, {
+        clienteId: o.clienteId,
+        guardar: o.guardarCliente,
+        receptor: v.receptor,
+        percepcionIva: o.percepcionIva,
+      });
       await tx.insert(comprobantes).values({
         id: o.id,
         movimientoId: o.movimientoId,
         tipo: "factura",
         letra: v.letra,
         estado: "pendiente",
+        fecha: dia,
         externalId,
         totalCentavos: calc.totalCentavos,
         formaPago: o.formaPago,
@@ -123,7 +250,7 @@ async function reservar(o: {
         receptorDocNumero: v.receptor.docNumero ?? "0",
         receptorNombre: v.receptor.nombre,
         receptorCondicionIva: v.receptor.condicionIva,
-        clienteId: o.clienteId,
+        clienteId,
         requestPayload: request,
         emitidoPor: o.actorId,
       });
@@ -146,15 +273,6 @@ async function reservar(o: {
     throw e;
   }
 
-  // Al cliente que todavía no tenía condición frente al IVA se le guarda la
-  // que se usó, así la próxima vez sale precargada. Lo que ya tenía no se pisa.
-  if (o.clienteId) {
-    await db
-      .update(clientes)
-      .set({ condicionIva: v.receptor.condicionIva, updatedAt: new Date() })
-      .where(and(eq(clientes.id, o.clienteId), isNull(clientes.condicionIva)));
-  }
-
   return { ok: true, comprobanteId: o.id };
 }
 
@@ -163,6 +281,7 @@ export async function reservarFactura(opts: {
   movimientoId: string;
   datos: DatosReceptor;
   clienteId: string | null;
+  guardarCliente: boolean;
   actorId: string;
 }): Promise<Reserva> {
   const [mov] = await db
@@ -179,7 +298,7 @@ export async function reservarFactura(opts: {
     renglones: [
       {
         productoId: null,
-        descripcion: (mov.descripcion?.trim() || DESCRIPCION_POR_DEFECTO).slice(0, 200),
+        descripcion: descripcionDelCobro(mov),
         cantidad: 1,
         precioUnitarioCentavos: mov.montoCentavos,
         descuentoPct: 0,
@@ -190,6 +309,9 @@ export async function reservarFactura(opts: {
     formaPago: "electronico",
     datos: opts.datos,
     clienteId: opts.clienteId,
+    guardarCliente: opts.guardarCliente,
+    // La de un cobro sale con la fecha del día: el cobro ya tiene la suya.
+    dia: null,
     actorId: opts.actorId,
     siDuplicado: "Ese cobro ya tiene una factura, o se está emitiendo.",
   });
@@ -207,12 +329,15 @@ export async function reservarFacturaManual(opts: {
   formaPago: FormaPago;
   datos: DatosReceptor;
   clienteId: string | null;
+  guardarCliente: boolean;
+  /** "AAAA-MM-DD", elegida en pantalla dentro de `rangoDeFecha`. */
+  dia: string;
   actorId: string;
 }): Promise<Reserva> {
   return reservar({
     ...opts,
     movimientoId: null,
-    siDuplicado: "Esa factura ya se mandó: buscala en Comprobantes.",
+    siDuplicado: "Esa factura ya se mandó: buscala en Facturación.",
   });
 }
 
@@ -248,10 +373,13 @@ export async function reservarNotaCredito(opts: {
 
   const id = randomUUID();
   const externalId = `gorros-nc-${id}`;
+  // La NC sale con la fecha de hoy: nunca anterior a la de su factura, que como
+  // mucho es de hoy (`rangoDeFecha`).
+  const hoy = hoyEnArgentina();
   const request = mapNotaCredito(
     facturaRequest,
     { posId: cfg.posId, posPrefix: prefijo, number: numero, cuitEmisor: cfg.emisorCuit, fecha },
-    { dia: hoyEnArgentina(), externalId },
+    { dia: hoy, externalId },
   );
 
   try {
@@ -262,6 +390,7 @@ export async function reservarNotaCredito(opts: {
         tipo: "nota_credito",
         letra: f.letra,
         estado: "pendiente",
+        fecha: hoy,
         externalId,
         totalCentavos: f.totalCentavos,
         formaPago: f.formaPago,

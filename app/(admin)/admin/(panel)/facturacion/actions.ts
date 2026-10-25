@@ -50,7 +50,7 @@ export async function sincronizarAction(
     return { error: "No se pudo consultar Mercado Pago. Probá de nuevo en un rato." };
   }
 
-  revalidatePath("/admin/facturacion");
+  revalidatePath("/admin/facturacion/cobros");
 
   if (r.cuentas === 0) return { error: "No hay ninguna cuenta de Mercado Pago vinculada." };
   if (r.fallidas.length > 0) {
@@ -127,12 +127,15 @@ export async function emitirFacturaAction(
     movimientoId,
     datos,
     clienteId: clienteId || null,
+    guardarCliente: formData.get("guardarCliente") === "on",
     actorId: user.id,
   });
   if (!r.ok) return { error: r.error };
 
   after(() => enviarComprobante(r.comprobanteId));
   revalidatePath("/admin/facturacion", "layout");
+  // La factura puede haber creado o completado un cliente.
+  revalidatePath("/admin/clientes", "layout");
   return { ok: "Emitiendo la factura. Tarda unos 20 segundos." };
 }
 
@@ -158,6 +161,8 @@ const renglonesSchema = z
 const facturaManualSchema = receptorSchema.extend({
   id: z.uuid(),
   formaPago: z.enum(formaPago.enumValues, { error: "Elegí la forma de pago." }),
+  // El rango (hasta 5 días atrás, correlativa) lo valida `reservar`.
+  fecha: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "Elegí la fecha de la factura."),
 });
 
 function leerRenglones(texto: FormDataEntryValue | null) {
@@ -188,7 +193,7 @@ export async function emitirFacturaManualAction(
   const leidos = leerRenglones(formData.get("renglones"));
   if ("error" in leidos) return { error: leidos.error };
 
-  const { id, clienteId, formaPago: forma, ...datos } = parsed.data;
+  const { id, clienteId, formaPago: forma, fecha, ...datos } = parsed.data;
   const r = await reservarFacturaManual({
     id,
     renglones: leidos.renglones,
@@ -196,12 +201,16 @@ export async function emitirFacturaManualAction(
     formaPago: forma,
     datos,
     clienteId: clienteId || null,
+    guardarCliente: formData.get("guardarCliente") === "on",
+    dia: fecha,
     actorId: user.id,
   });
   if (!r.ok) return { error: r.error };
 
   after(() => enviarComprobante(r.comprobanteId));
   revalidatePath("/admin/facturacion", "layout");
+  // La factura puede haber creado o completado un cliente.
+  revalidatePath("/admin/clientes", "layout");
   redirect(`/admin/facturacion/manual/${r.comprobanteId}`);
 }
 

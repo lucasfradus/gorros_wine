@@ -9,10 +9,12 @@ import {
   validarRenglones,
   type Renglon,
 } from "@/lib/facturacion/calculo";
-import { formatARS } from "@/lib/format";
-import { Aviso, type FormState } from "../../form-ui";
+import { FORMAS_DE_PAGO, FORMAS_MANUALES } from "@/lib/facturacion/formas-de-pago";
+import { DIAS_HACIA_ATRAS, rangoDeFecha, validarFecha } from "@/lib/facturacion/reglas";
+import { formatARS, formatFecha } from "@/lib/format";
+import type { FormState } from "../../form-ui";
 import { emitirFacturaManualAction } from "../actions";
-import { Boton } from "../emitir-form";
+import { VistaPrevia } from "../vista-previa";
 import {
   ReceptorCampos,
   SIN_IDENTIFICAR,
@@ -44,14 +46,6 @@ interface Fila {
   descuento: string;
   alcanzado: boolean;
 }
-
-const FORMAS: { value: FormaPago; label: string }[] = [
-  { value: "efectivo", label: "Efectivo" },
-  { value: "transferencia", label: "Transferencia" },
-  { value: "debito", label: "Tarjeta de débito" },
-  { value: "credito", label: "Tarjeta de crédito" },
-  { value: "electronico", label: "Mercado Pago / QR" },
-];
 
 const INICIAL: FormState = {};
 const pesosEditables = (centavos: number) =>
@@ -103,10 +97,16 @@ export function FacturaManualForm({
   id,
   clientes,
   productos,
+  hoy,
+  ultimas,
 }: {
   id: string;
   clientes: ClienteParaFacturar[];
   productos: ProductoParaFacturar[];
+  /** "AAAA-MM-DD" en Buenos Aires, del servidor: el reloj del navegador puede mentir. */
+  hoy: string;
+  /** La fecha de la última factura de cada letra, para no romper la correlatividad. */
+  ultimas: Record<"A" | "B", string | null>;
 }) {
   const [state, action] = useActionState(emitirFacturaManualAction, INICIAL);
   const [filas, setFilas] = useState<Fila[]>(() => [filaVacia(0)]);
@@ -114,6 +114,7 @@ export function FacturaManualForm({
   const [condicion, setCondicion] = useState<CondicionIva>("consumidor_final");
   const [percepcion, setPercepcion] = useState(false);
   const [formaPago, setFormaPago] = useState<FormaPago>("efectivo");
+  const [fecha, setFecha] = useState(hoy);
 
   const porEtiqueta = useMemo(() => new Map(productos.map((p) => [p.etiqueta, p])), [productos]);
   const esRI = condicion === "responsable_inscripto";
@@ -131,6 +132,9 @@ export function FacturaManualForm({
         ? validarRenglones(validos)
         : null;
   const clienteAnterior = useRef<string | null>(null);
+  const letra = letraDe(condicion);
+  const rango = rangoDeFecha(hoy, ultimas[letra]);
+  const errorFecha = validarFecha(fecha, rango);
 
   function cambiar(key: number, cambio: Partial<Fila>) {
     setFilas((fs) => fs.map((f) => (f.key === key ? { ...f, ...cambio } : f)));
@@ -156,6 +160,40 @@ export function FacturaManualForm({
     <form action={action} className={styles.form}>
       <input type="hidden" name="id" value={id} />
       <input type="hidden" name="renglones" value={JSON.stringify(validos)} />
+
+      {/* Primero a quién: el cliente precarga el receptor y la percepción. */}
+      <ReceptorCampos
+        iniciales={SIN_IDENTIFICAR}
+        clientes={clientes}
+        onCambio={(r) => {
+          setCondicion(r.condicion);
+          // La casilla se precarga del cliente al elegirlo (y se apaga al
+          // volver a "Otro"); después se puede cambiar a mano.
+          const id = r.cliente?.id ?? null;
+          if (id !== clienteAnterior.current) {
+            clienteAnterior.current = id;
+            setPercepcion(r.cliente?.percepcionIva ?? false);
+          }
+        }}
+      />
+
+      {esRI ? (
+        <div className={styles.field}>
+          <label className={propios.renglonCheck}>
+            <input
+              type="checkbox"
+              name="percepcionIva"
+              checked={percepcion}
+              onChange={(e) => setPercepcion(e.target.checked)}
+            />
+            Percepción de IVA RG 5329 (3% sobre las bebidas)
+          </label>
+          <span className={styles.hint}>
+            A un responsable inscripto que revende: almacén, vinoteca, restaurante. Se aplica
+            sólo si supera {formatARS(RG_5329.umbralCentavos)}.
+          </span>
+        </div>
+      ) : null}
 
       <fieldset className={propios.renglones}>
         <legend className={styles.label}>Qué se vende</legend>
@@ -272,56 +310,50 @@ export function FacturaManualForm({
         {problema ? <span className={propios.error}>{problema}</span> : null}
       </fieldset>
 
-      <ReceptorCampos
-        iniciales={SIN_IDENTIFICAR}
-        clientes={clientes}
-        onCambio={(r) => {
-          setCondicion(r.condicion);
-          // La casilla se precarga del cliente al elegirlo (y se apaga al
-          // volver a "Otro"); después se puede cambiar a mano.
-          const id = r.cliente?.id ?? null;
-          if (id !== clienteAnterior.current) {
-            clienteAnterior.current = id;
-            setPercepcion(r.cliente?.percepcionIva ?? false);
-          }
-        }}
-      />
-
-      {esRI ? (
+      <div className={styles.fieldRow}>
         <div className={styles.field}>
-          <label className={propios.renglonCheck}>
-            <input
-              type="checkbox"
-              name="percepcionIva"
-              checked={percepcion}
-              onChange={(e) => setPercepcion(e.target.checked)}
-            />
-            Percepción de IVA RG 5329 (3% sobre las bebidas)
+          <label className={styles.label} htmlFor="fecha">
+            Fecha de la factura
           </label>
-          <span className={styles.hint}>
-            A un responsable inscripto que revende: almacén, vinoteca, restaurante. Se aplica
-            sólo si supera {formatARS(RG_5329.umbralCentavos)}.
-          </span>
+          <input
+            id="fecha"
+            name="fecha"
+            type="date"
+            value={fecha}
+            min={rango.min}
+            max={rango.max}
+            onChange={(e) => setFecha(e.target.value)}
+            required
+            className={styles.input}
+          />
+          {errorFecha ? (
+            <span className={propios.error}>{errorFecha}</span>
+          ) : (
+            <span className={styles.hint}>
+              {rango.min === rango.max
+                ? `Sólo hoy: ya hay una Factura ${letra} con fecha de hoy, y ARCA no deja emitir una con fecha anterior.`
+                : `Desde el ${formatFecha(rango.min)}: hasta ${DIAS_HACIA_ATRAS} días atrás, y nunca antes de la última Factura ${letra}.`}
+            </span>
+          )}
         </div>
-      ) : null}
-
-      <div className={styles.field}>
-        <label className={styles.label} htmlFor="formaPago">
-          Forma de pago
-        </label>
-        <select
-          id="formaPago"
-          name="formaPago"
-          value={formaPago}
-          onChange={(e) => setFormaPago(e.target.value as FormaPago)}
-          className={styles.select}
-        >
-          {FORMAS.map((f) => (
-            <option key={f.value} value={f.value}>
-              {f.label}
-            </option>
-          ))}
-        </select>
+        <div className={styles.field}>
+          <label className={styles.label} htmlFor="formaPago">
+            Forma de pago
+          </label>
+          <select
+            id="formaPago"
+            name="formaPago"
+            value={formaPago}
+            onChange={(e) => setFormaPago(e.target.value as FormaPago)}
+            className={styles.select}
+          >
+            {FORMAS_MANUALES.map((f) => (
+              <option key={f} value={f}>
+                {FORMAS_DE_PAGO[f]}
+              </option>
+            ))}
+          </select>
+        </div>
       </div>
 
       <p className={propios.resumen}>
@@ -339,8 +371,15 @@ export function FacturaManualForm({
         </p>
       ) : null}
 
-      <Aviso state={state} />
-      <Boton letra={letraDe(condicion)} deshabilitado={problema !== null || validos.length === 0} />
+      <VistaPrevia
+        letra={letra}
+        fecha={fecha}
+        formaPago={FORMAS_DE_PAGO[formaPago]}
+        calc={calc}
+        clientes={clientes}
+        state={state}
+        deshabilitado={problema !== null || errorFecha !== null || validos.length === 0}
+      />
     </form>
   );
 }

@@ -634,6 +634,13 @@ export const clientes = pgTable(
 
     direccion: text("direccion"),
 
+    /** Localidad y provincia, aparte de la dirección porque la Factura A las
+     *  pide por separado: sin esto, a cada responsable inscripto había que
+     *  volver a elegirle la provincia en cada factura. `provincia` guarda el
+     *  código de `lib/facturante/provincias.ts`, no el nombre. */
+    localidad: text("localidad"),
+    provincia: text("provincia"),
+
     /** El campo para lo que no entra en ningún casillero: "paga a fin de mes",
      *  "prefiere tintos". Interno, no lo ve el cliente. */
     notas: text("notas"),
@@ -885,13 +892,18 @@ export type ComprobanteTipo = (typeof comprobanteTipo.enumValues)[number];
 export const comprobanteLetra = pgEnum("comprobante_letra", ["A", "B"]);
 
 /** Cómo se cobró: va a la factura como condición de venta. Lo de MP es
- *  `electronico`; el resto sale de las facturas manuales. */
+ *  `electronico`; el resto sale de las facturas manuales. Cada valor tiene que
+ *  existir en el maestro de Facturante (`SELL_CONDITION` en mappers.ts), que no
+ *  tiene un "otros": por eso no hay uno acá. */
 export const formaPago = pgEnum("forma_pago", [
   "efectivo",
   "debito",
   "credito",
   "transferencia",
   "electronico",
+  "deposito",
+  "cheque",
+  "cuenta_corriente",
 ]);
 export type FormaPago = (typeof formaPago.enumValues)[number];
 export type ComprobanteLetra = (typeof comprobanteLetra.enumValues)[number];
@@ -938,6 +950,12 @@ export const comprobantes = pgTable(
     tipo: comprobanteTipo("tipo").notNull(),
     letra: comprobanteLetra("letra").notNull(),
     estado: comprobanteEstado("estado").notNull().default("pendiente"),
+
+    /** La fecha **fiscal** del comprobante, la que va impresa. No es
+     *  `createdAt`: una factura manual se puede fechar hasta 5 días atrás
+     *  (`rangoDeFecha` en lib/facturacion/reglas.ts). Es la que ordena los
+     *  listados y la que ARCA exige correlativa por tipo y punto de venta. */
+    fecha: date("fecha").notNull(),
 
     /** El id que le mandamos a Facturante. Único: es lo que permite preguntar
      *  "¿esto salió?" después de un timeout sin emitirlo de nuevo. */

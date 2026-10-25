@@ -7,6 +7,7 @@ import { z } from "zod";
 import { db } from "@/lib/db";
 import { clientes, condicionIva, movimientosCc } from "@/lib/db/schema";
 import { normalizeEmail } from "@/lib/auth/password";
+import { esProvinciaValida } from "@/lib/facturante/provincias";
 import { canManageCuentaCorriente, requireUser } from "@/lib/auth";
 import { importeACentavos } from "@/lib/cuenta-corriente";
 
@@ -39,6 +40,8 @@ const datosSchema = z.object({
     .max(160, "La razón social es muy larga.")
     .optional(),
   direccion: z.string().trim().max(240, "La dirección es muy larga.").optional(),
+  localidad: z.string().trim().max(100, "La localidad es muy larga.").optional(),
+  provincia: z.string().refine(esProvinciaValida, "Elegí una provincia de la lista.").optional(),
   condicionIva: z.enum(condicionIva.enumValues).optional(),
   notas: z.string().trim().max(2000, "Las notas son muy largas.").optional(),
   percepcionIva: z.boolean(),
@@ -56,6 +59,8 @@ function leerDatos(formData: FormData) {
     documento: textoOpcional(formData.get("documento")),
     razonSocial: textoOpcional(formData.get("razonSocial")),
     direccion: textoOpcional(formData.get("direccion")),
+    localidad: textoOpcional(formData.get("localidad")),
+    provincia: textoOpcional(formData.get("provincia")),
     condicionIva: textoOpcional(formData.get("condicionIva")),
     notas: textoOpcional(formData.get("notas")),
     percepcionIva: formData.get("percepcionIva") === "on",
@@ -88,6 +93,8 @@ function aColumnas(datos: Datos) {
     documento: datos.documento ?? null,
     razonSocial: datos.razonSocial ?? null,
     direccion: datos.direccion ?? null,
+    localidad: datos.localidad ?? null,
+    provincia: datos.provincia ?? null,
     condicionIva: datos.condicionIva ?? null,
     // La RG 5329 sólo alcanza a responsables inscriptos: tildado en otro, no vale.
     percepcionIva: datos.percepcionIva && datos.condicionIva === "responsable_inscripto",

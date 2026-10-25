@@ -147,6 +147,9 @@ export interface DocumentoResponse {
     number?: number;
     /** Prefijo del punto de venta, "00015". */
     pos?: string;
+    /** Por qué ARCA no lo autorizó, en castellano: "Existe un comprobante con
+     *  fecha posterior a la que se intenta emitir". Vacío si se autorizó. */
+    governmentMessage?: string | null;
   };
   accessData: {
     pdfUrl: string | null;
