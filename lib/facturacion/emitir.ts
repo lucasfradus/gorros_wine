@@ -49,7 +49,7 @@ const DESCRIPCION_POR_DEFECTO = "Vinos y productos";
 export const descripcionDelCobro = (mov: { descripcion: string | null }) =>
   (mov.descripcion?.trim() || DESCRIPCION_POR_DEFECTO).slice(0, 200);
 
-type Tx = Parameters<Parameters<typeof db.transaction>[0]>[0];
+export type Tx = Parameters<Parameters<typeof db.transaction>[0]>[0];
 
 /** ¿Ese mail ya es de otro cliente? `email` es UNIQUE en `clientes`. */
 async function mailDeOtro(tx: Tx, email: string, exceptoId?: string) {
@@ -70,7 +70,7 @@ async function mailDeOtro(tx: Tx, email: string, exceptoId?: string) {
  * Va dentro de la transacción del comprobante: si la factura no se reserva,
  * tampoco queda un cliente a medio crear.
  */
-async function resolverCliente(
+export async function resolverCliente(
   tx: Tx,
   o: { clienteId: string | null; guardar: boolean; receptor: ReceptorFiscal; percepcionIva: boolean },
 ): Promise<string | null> {

@@ -14,6 +14,7 @@ import {
   reservarFacturaManual,
   reservarNotaCredito,
 } from "@/lib/facturacion/emitir";
+import { buscarCuit, type BusquedaCuit } from "@/lib/facturacion/buscar-cuit";
 import { enviarComprobante } from "@/lib/facturacion/enviar";
 import { consultarEstado, marcarNoEmitido } from "@/lib/facturacion/reconciliar";
 import type { FormState } from "../form-ui";
@@ -264,4 +265,15 @@ export async function marcarNoEmitidoAction(
   const r = await marcarNoEmitido(parsed.data.id, user.name);
   revalidatePath("/admin/facturacion", "layout");
   return r.ok ? { ok: "Listo: quedó como no emitido y se puede volver a facturar." } : { error: r.error };
+}
+
+// ── Padrón ─────────────────────────────────────────────────────────────────
+
+/**
+ * Los datos de un CUIT según el padrón de ARCA, para completar el receptor. La
+ * llama el formulario al terminar de tipear un CUIT válido.
+ */
+export async function buscarEnPadronAction(cuit: string): Promise<BusquedaCuit> {
+  await requireFacturacion();
+  return buscarCuit(String(cuit));
 }

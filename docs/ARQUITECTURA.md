@@ -266,6 +266,24 @@ Localidad y provincia, sólo si la calle es la misma que la que tiene cargada.
 Si el mail ya es de otro cliente, se guarda sin mail. La ficha del cliente
 lista sus últimos comprobantes.
 
+### Datos del receptor desde el padrón de ARCA
+
+Al tipear un CUIT válido que no es de un cliente cargado, el receptor se
+completa solo: razón social, condición frente al IVA, calle, localidad y
+provincia. Lo mismo hace "Completar desde ARCA" en el alta de un cliente. Todo
+queda editable.
+
+- La consulta es `POST /User/VerifyCuit` de Facturante (`consultarCuit` en
+  `lib/facturante/client.ts`), con el mismo usuario que emite: no hace falta
+  certificado propio ni trámite en ARCA.
+- La respuesta trae la provincia y la ciudad como ids. La provincia es la
+  posición en `PROVINCIAS`; la ciudad se nombra con `GET /State/{id}/City`. Las
+  reglas puras están en `lib/facturante/padron.ts` y la búsqueda con caché en
+  memoria, en `lib/facturacion/buscar-cuit.ts`.
+- **En el sandbox no viene el domicilio** (sólo razón social y condición), y su
+  tabla de ciudades no coincide con la de producción. Para probar el domicilio
+  hay que ir contra producción, que es sólo lectura.
+
 ### Facturas manuales
 
 Lo que se vende fuera de MP (mostrador, mayorista, transferencia) se factura

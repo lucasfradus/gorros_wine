@@ -6,6 +6,7 @@ import type {
 } from "./types";
 import { FacturanteApiError, detalleErrores, normalizeErrors } from "./errors";
 import type { ConfigFacturante } from "./config";
+import type { RespuestaPadron } from "./padron";
 
 /**
  * Cliente HTTP de Facturante, portado de Clicnet (que lo usa en producción).
@@ -140,6 +141,34 @@ export async function emitirEnFacturante(
     throw new FacturanteApiError({ message: "Facturante respondió sin el comprobante" });
   }
   return primero;
+}
+
+/**
+ * El padrón de ARCA para un CUIT (`POST /User/VerifyCuit`). Responde con el
+ * token de empresa; el domicilio sólo viene en producción.
+ */
+export async function consultarCuit(cfg: ConfigFacturante, cuit: string): Promise<RespuestaPadron> {
+  return llamar<RespuestaPadron>(cfg, "/User/VerifyCuit", {
+    method: "POST",
+    body: JSON.stringify({ Cuit: cuit }),
+    timeout: TIMEOUT_MS,
+  });
+}
+
+/**
+ * Las ciudades de una provincia (`GET /State/{id}/City`). No hay consulta por
+ * id de ciudad, así que para nombrar la del padrón se trae la lista entera
+ * (2931 en Buenos Aires): quien la use, que la cachee.
+ */
+export async function ciudadesDe(
+  cfg: ConfigFacturante,
+  stateId: number,
+): Promise<{ id: number; name: string }[]> {
+  const r = await llamar<{ cities?: { id: number; name: string }[] }>(cfg, `/State/${stateId}/City`, {
+    method: "GET",
+    timeout: TIMEOUT_MS,
+  });
+  return r.cities ?? [];
 }
 
 /** Estado actual de un comprobante ya enviado, por su id interno. */

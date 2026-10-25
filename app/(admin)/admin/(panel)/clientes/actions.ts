@@ -8,6 +8,7 @@ import { db } from "@/lib/db";
 import { clientes, condicionIva, movimientosCc } from "@/lib/db/schema";
 import { normalizeEmail } from "@/lib/auth/password";
 import { esProvinciaValida } from "@/lib/facturante/provincias";
+import { buscarCuit, type BusquedaCuit } from "@/lib/facturacion/buscar-cuit";
 import { canManageCuentaCorriente, requireUser } from "@/lib/auth";
 import { importeACentavos } from "@/lib/cuenta-corriente";
 
@@ -263,4 +264,15 @@ export async function archivarClienteAction(
       ? "Cliente archivado. Su cuenta y su historial quedan intactos."
       : "Cliente reactivado.",
   };
+}
+
+// -------------------------------------------------------------- padrón
+
+/**
+ * Los datos de un CUIT según el padrón de ARCA, para el botón "Completar desde
+ * ARCA" del alta y la edición. El mismo permiso que editar el cliente.
+ */
+export async function buscarEnPadronClienteAction(cuit: string): Promise<BusquedaCuit> {
+  await requireUser();
+  return buscarCuit(String(cuit));
 }

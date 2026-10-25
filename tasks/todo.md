@@ -7,20 +7,23 @@
 > Antes de tocar código: leer `AGENTS.md` (este Next.js y este Drizzle no son
 > los del training data) y `tasks/lessons.md`.
 
-**Facturación centrada en comprobantes, y clientes en la factura.**
-Plan completo: [docs/planes/2026-10-25-facturacion-clientes.md](../docs/planes/2026-10-25-facturacion-clientes.md).
+**Datos del receptor desde el padrón de ARCA (autocompletar por CUIT).**
+Plan completo: [docs/planes/2026-10-25-padron-cuit.md](../docs/planes/2026-10-25-padron-cuit.md).
 
-Worktree `../Gorros-factura-manual` (reusado) · rama `feat/facturacion-clientes` · puerto `:3003`
+Worktree `../Gorros-factura-manual` (reusado) · rama `feat/padron-cuit` · puerto `:3003`
 
-- [x] **Tarea 1** — Schema: `clientes.localidad` y `clientes.provincia`, alta/edición de Clientes · migración `0011_curly_spiral` aplicada en local
-- [x] **Tarea 2** — `resolverCliente` (asociar / completar vacíos / crear) dentro de la reserva · 7 chequeos offline nuevos
-- [x] **Tarea 3** — Buscador de clientes y "Guardar como cliente" en el receptor · el receptor pasó arriba de los renglones
-- [x] **Tarea 4** — `/admin/facturacion` = comprobantes; cobros de MP a `/cobros`; "Nueva factura"
-- [x] **Tarea 5** — Comprobantes en la ficha del cliente
-- [x] **Tarea 6** — `docs/ARQUITECTURA.md`
-- [ ] **Cierre** — tsc ✓, prueba offline ✓, build ✓, sandbox ✓ (FA 00002-4 crea el cliente, FA 00002-5 lo asocia sin duplicar), review ✓ (arreglado), PR #19 abierto, con la segunda vuelta (ancho, spinner, vista previa, fecha, formas de pago) · falta: merge y deploy (migraciones `0011`–`0013`), probar en producción, confirmar con el contador si se puede fechar en el mes anterior
+- [x] **Tarea 1** — `consultarCuit()` / `ciudadesDe()` y el parseo puro del padrón
+- [x] **Tarea 2** — `buscarEnPadronAction` con caché
+- [x] **Tarea 3** — El receptor completa solo al tipear un CUIT
+- [x] **Tarea 4** — "Completar desde ARCA" en el alta/edición de cliente
+- [x] **Tarea 5** — `docs/ARQUITECTURA.md`
+- [ ] **Cierre** — tsc ✓, prueba offline ✓, build ✓, sandbox ✓, producción solo lectura ✓ · falta: PR y merge
 
 ## Viene de las iteraciones anteriores (sigue pendiente)
+
+- **Facturación y clientes (#19, mergeado y deployado)**: backfill de clientes de
+  FA 00015-2 y FA 00015-3 aplicado en producción. Falta confirmar con el
+  contador si se puede fechar una factura en el mes anterior.
 
 - **Factura manual (#18, mergeado y deployado)**: primera B manual real emitida
   bien en producción; umbral de la RG 5329 confirmado en $3.000. Falta, si no

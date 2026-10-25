@@ -41,7 +41,7 @@ const DOC_RECEPTOR = { cuit: 1, dni: 5, otro: 6 } as const;
  * la condición informada a AFIP. El 5 (Monotributo) está **inferido**: por eso
  * todavía no se factura a monotributistas (ver `reglas.ts`).
  */
-const TAX_TREATMENT: Record<CondicionIva, number> = {
+export const TAX_TREATMENT: Record<CondicionIva, number> = {
   responsable_inscripto: 1,
   exento: 3,
   consumidor_final: 4,
