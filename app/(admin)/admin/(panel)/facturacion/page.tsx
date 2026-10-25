@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { and, desc, eq, gte, ilike, isNotNull, isNull, lt, or, sql } from "drizzle-orm";
+import { and, desc, eq, gte, ilike, isNotNull, isNull, lte, or, sql } from "drizzle-orm";
 import { db } from "@/lib/db";
 import { comprobantes, comprobanteEstado } from "@/lib/db/schema";
 import { requireFacturacion } from "@/lib/auth";
@@ -67,8 +67,10 @@ export default async function FacturacionPage({
   // El documento se guarda en dígitos: "20-1234" busca "201234".
   const digitos = busqueda.replace(/\D/g, "");
   const filtro = and(
-    gte(comprobantes.createdAt, inicioDelDia(desde)),
-    lt(comprobantes.createdAt, new Date(inicioDelDia(hasta).getTime() + DIA)),
+    // Por la fecha fiscal, la impresa: una factura fechada ayer es de ayer
+    // aunque se haya cargado hoy.
+    gte(comprobantes.fecha, desde),
+    lte(comprobantes.fecha, hasta),
     busqueda
       ? or(
           ilike(comprobantes.receptorNombre, patron),
@@ -87,7 +89,12 @@ export default async function FacturacionPage({
   // muestran: pasado el TOPE darían de menos. Una factura anulada se emitió
   // igual: cuenta en lo facturado, y su NC la descuenta.
   const [filas, [totales]] = await Promise.all([
-    db.select().from(comprobantes).where(filtro).orderBy(desc(comprobantes.createdAt)).limit(TOPE),
+    db
+      .select()
+      .from(comprobantes)
+      .where(filtro)
+      .orderBy(desc(comprobantes.fecha), desc(comprobantes.createdAt))
+      .limit(TOPE),
     db
       .select({
         facturado: sql<number>`coalesce(sum(${comprobantes.totalCentavos}) filter (where ${comprobantes.tipo} = 'factura' and ${comprobantes.estado} in ('autorizado', 'anulado')), 0)`.mapWith(Number),
@@ -101,7 +108,7 @@ export default async function FacturacionPage({
   const filtrando = !!(busqueda || tipo || letra || estado || origen);
 
   return (
-    <>
+    <div className={styles.anchoCompleto}>
       <AutoRefresh activo={filas.some((c) => c.estado === "pendiente" || c.estado === "en_proceso")} />
       <div className={styles.pageHead}>
         <div>
@@ -233,6 +240,6 @@ export default async function FacturacionPage({
           Se muestran los {TOPE} más recientes. Achicá las fechas para ver el resto.
         </p>
       ) : null}
-    </>
+    </div>
   );
 }

@@ -1,5 +1,5 @@
 import { randomUUID } from "node:crypto";
-import { and, asc, desc, eq, inArray, ne, sql } from "drizzle-orm";
+import { and, asc, desc, eq, inArray, ne, notInArray, sql } from "drizzle-orm";
 import { db } from "@/lib/db";
 import {
   clientes,
@@ -22,7 +22,7 @@ import type { DocumentoResponse, ElectronicDocument } from "@/lib/facturante/typ
 import { hoyEnArgentina } from "@/lib/format";
 import { calcular, validarRenglones, type Renglon } from "./calculo";
 import { camposACompletar, datosDeReceptor } from "./cliente-receptor";
-import { validarReceptor, type DatosReceptor } from "./reglas";
+import { rangoDeFecha, validarFecha, validarReceptor, type DatosReceptor } from "./reglas";
 
 /**
  * Reservar un comprobante: validar, armar el request y dejar la fila
@@ -43,6 +43,11 @@ export function esDuplicado(e: unknown): boolean {
 }
 
 const DESCRIPCION_POR_DEFECTO = "Vinos y productos";
+
+/** El único renglón de la factura de un cobro de MP: su descripción, o una
+ *  genérica. La vista previa muestra esto mismo. */
+export const descripcionDelCobro = (mov: { descripcion: string | null }) =>
+  (mov.descripcion?.trim() || DESCRIPCION_POR_DEFECTO).slice(0, 200);
 
 type Tx = Parameters<Parameters<typeof db.transaction>[0]>[0];
 
@@ -134,6 +139,21 @@ async function sinChoqueDeMail<T>(tx: Tx, escribir: (sp: Tx, conMail: boolean) =
 }
 
 /**
+ * La fecha de la última factura de cada letra que cuenta para la
+ * correlatividad de ARCA: las que salieron o pueden salir. Las rechazadas y
+ * las que nunca se mandaron no ocupan lugar. Hay un solo punto de venta.
+ */
+export async function ultimasFechas(): Promise<Record<"A" | "B", string | null>> {
+  const filas = await db
+    .select({ letra: comprobantes.letra, ultima: sql<string>`max(${comprobantes.fecha})::text` })
+    .from(comprobantes)
+    .where(and(eq(comprobantes.tipo, "factura"), notInArray(comprobantes.estado, ["rechazado", "error"])))
+    .groupBy(comprobantes.letra);
+  const de = (l: "A" | "B") => filas.find((f) => f.letra === l)?.ultima ?? null;
+  return { A: de("A"), B: de("B") };
+}
+
+/**
  * Lo común a una factura de cobro y a una manual: validar, calcular, armar el
  * request y escribir comprobante + renglones juntos. Lo que cambia entre las
  * dos es de dónde salen los renglones y qué decir si choca un duplicado.
@@ -147,6 +167,8 @@ async function reservar(o: {
   datos: DatosReceptor;
   clienteId: string | null;
   guardarCliente: boolean;
+  /** "AAAA-MM-DD"; `null` es hoy. */
+  dia: string | null;
   actorId: string;
   siDuplicado: string;
 }): Promise<Reserva> {
@@ -163,6 +185,13 @@ async function reservar(o: {
   });
   const v = validarReceptor(o.datos, calc.totalCentavos);
   if (!v.ok) return v;
+
+  // En hora de Argentina: en UTC, después de las 21 sería "mañana", y eso
+  // choca con la correlatividad de ARCA.
+  const hoy = hoyEnArgentina();
+  const dia = o.dia ?? hoy;
+  const errorFecha = validarFecha(dia, rangoDeFecha(hoy, (await ultimasFechas())[v.letra]));
+  if (errorFecha) return { ok: false, error: errorFecha };
 
   if (o.clienteId) {
     const [cli] = await db
@@ -193,9 +222,7 @@ async function reservar(o: {
     renglones: o.renglones,
     percepciones: calc.percepciones,
     formaPago: o.formaPago,
-    // En hora de Argentina: en UTC, después de las 21 sería "mañana", y con
-    // facturas manuales del día eso choca con 100014.
-    dia: hoyEnArgentina(),
+    dia,
     externalId,
     posId: cfg.posId,
   });
@@ -214,6 +241,7 @@ async function reservar(o: {
         tipo: "factura",
         letra: v.letra,
         estado: "pendiente",
+        fecha: dia,
         externalId,
         totalCentavos: calc.totalCentavos,
         formaPago: o.formaPago,
@@ -270,7 +298,7 @@ export async function reservarFactura(opts: {
     renglones: [
       {
         productoId: null,
-        descripcion: (mov.descripcion?.trim() || DESCRIPCION_POR_DEFECTO).slice(0, 200),
+        descripcion: descripcionDelCobro(mov),
         cantidad: 1,
         precioUnitarioCentavos: mov.montoCentavos,
         descuentoPct: 0,
@@ -282,6 +310,8 @@ export async function reservarFactura(opts: {
     datos: opts.datos,
     clienteId: opts.clienteId,
     guardarCliente: opts.guardarCliente,
+    // La de un cobro sale con la fecha del día: el cobro ya tiene la suya.
+    dia: null,
     actorId: opts.actorId,
     siDuplicado: "Ese cobro ya tiene una factura, o se está emitiendo.",
   });
@@ -300,6 +330,8 @@ export async function reservarFacturaManual(opts: {
   datos: DatosReceptor;
   clienteId: string | null;
   guardarCliente: boolean;
+  /** "AAAA-MM-DD", elegida en pantalla dentro de `rangoDeFecha`. */
+  dia: string;
   actorId: string;
 }): Promise<Reserva> {
   return reservar({
@@ -341,10 +373,13 @@ export async function reservarNotaCredito(opts: {
 
   const id = randomUUID();
   const externalId = `gorros-nc-${id}`;
+  // La NC sale con la fecha de hoy: nunca anterior a la de su factura, que como
+  // mucho es de hoy (`rangoDeFecha`).
+  const hoy = hoyEnArgentina();
   const request = mapNotaCredito(
     facturaRequest,
     { posId: cfg.posId, posPrefix: prefijo, number: numero, cuitEmisor: cfg.emisorCuit, fecha },
-    { dia: hoyEnArgentina(), externalId },
+    { dia: hoy, externalId },
   );
 
   try {
@@ -355,6 +390,7 @@ export async function reservarNotaCredito(opts: {
         tipo: "nota_credito",
         letra: f.letra,
         estado: "pendiente",
+        fecha: hoy,
         externalId,
         totalCentavos: f.totalCentavos,
         formaPago: f.formaPago,

@@ -345,6 +345,17 @@
   min-width: 0;
 }
 
+/* Las pantallas que son una tabla ancha (Facturación) usan todo el ancho; los
+   formularios no, porque a lo ancho se leen peor. La página se marca envolviendo
+   su contenido en `.anchoCompleto`, que no dibuja nada. */
+.main:has(.anchoCompleto) {
+  max-width: none;
+}
+
+.anchoCompleto {
+  display: contents;
+}
+
 .pageHead {
   display: flex;
   flex-wrap: wrap;

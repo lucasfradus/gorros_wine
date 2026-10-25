@@ -55,8 +55,12 @@ export async function guardarDocumento(
           ...datos,
           // Una factura ya anulada sigue anulada aunque llegue de nuevo su webhook.
           estado: actual.estado === "anulado" ? "anulado" : r.estado,
-          // Rechazado conserva el motivo que hubiera: el documento no lo trae.
-          ...(r.estado !== "rechazado" ? { errorCodigo: null, errorMensaje: null } : {}),
+          // Rechazado lleva el motivo de ARCA si vino; si no, conserva el que hubiera.
+          ...(r.estado !== "rechazado"
+            ? { errorCodigo: null, errorMensaje: null }
+            : r.motivo
+              ? { errorMensaje: r.motivo }
+              : {}),
         })
         .where(
           and(

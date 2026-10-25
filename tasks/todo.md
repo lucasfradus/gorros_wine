@@ -18,7 +18,7 @@ Worktree `../Gorros-factura-manual` (reusado) · rama `feat/facturacion-clientes
 - [x] **Tarea 4** — `/admin/facturacion` = comprobantes; cobros de MP a `/cobros`; "Nueva factura"
 - [x] **Tarea 5** — Comprobantes en la ficha del cliente
 - [x] **Tarea 6** — `docs/ARQUITECTURA.md`
-- [ ] **Cierre** — tsc ✓, prueba offline ✓, build ✓, sandbox ✓ (FA 00002-4 crea el cliente, FA 00002-5 lo asocia sin duplicar), review ✓ (arreglado), PR abierto · falta: merge y deploy (migración `0011`), probar en producción
+- [ ] **Cierre** — tsc ✓, prueba offline ✓, build ✓, sandbox ✓ (FA 00002-4 crea el cliente, FA 00002-5 lo asocia sin duplicar), review ✓ (arreglado), PR #19 abierto, con la segunda vuelta (ancho, spinner, vista previa, fecha, formas de pago) · falta: merge y deploy (migraciones `0011`–`0013`), probar en producción, confirmar con el contador si se puede fechar en el mes anterior
 
 ## Viene de las iteraciones anteriores (sigue pendiente)
 

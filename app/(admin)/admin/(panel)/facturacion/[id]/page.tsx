@@ -4,7 +4,8 @@ import { desc, eq } from "drizzle-orm";
 import { db } from "@/lib/db";
 import { comprobantes, movimientosMp } from "@/lib/db/schema";
 import { requireFacturacion } from "@/lib/auth";
-import { formatARS, formatDateTime } from "@/lib/format";
+import { formatARS, formatDateTime, hoyEnArgentina } from "@/lib/format";
+import { descripcionDelCobro } from "@/lib/facturacion/emitir";
 import { facturacionConfigurada } from "@/lib/facturante/config";
 import {
   sePuedeFacturar,
@@ -12,6 +13,7 @@ import {
   type ComprobanteResumen,
 } from "@/lib/facturacion/estado";
 import { AutoRefresh } from "../auto-refresh";
+import { AvisoEmitiendo } from "../en-curso";
 import { EmitirForm, type DatosIniciales } from "../emitir-form";
 import { TablaComprobantes } from "../tabla-comprobantes";
 import { clientesParaFacturar } from "../clientes-para-facturar";
@@ -105,6 +107,7 @@ export default async function CobroPage({ params }: { params: Promise<{ id: stri
         </dl>
       </section>
 
+      <AvisoEmitiendo comps={comps} />
       {comps.length > 0 ? (
         <section className={`${styles.card} ${styles.cardTight}`} style={{ marginBottom: 18 }}>
           <TablaComprobantes comps={comps} />
@@ -118,6 +121,8 @@ export default async function CobroPage({ params }: { params: Promise<{ id: stri
             <EmitirForm
               movimientoId={mov.id}
               importeCentavos={mov.montoCentavos}
+              descripcion={descripcionDelCobro(mov)}
+              hoy={hoyEnArgentina()}
               iniciales={inicialesDe(mov)}
               clientes={listaClientes}
             />

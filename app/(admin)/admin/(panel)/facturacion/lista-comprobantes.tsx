@@ -1,6 +1,7 @@
 import Link from "next/link";
 import type { Comprobante } from "@/lib/db/schema";
-import { formatARS, formatDateTime } from "@/lib/format";
+import { formatARS, formatFecha } from "@/lib/format";
+import { EstadoComprobante } from "./en-curso";
 import { ESTADOS, documentoReceptor } from "./tabla-comprobantes";
 import styles from "../../admin.module.css";
 import propios from "./facturacion.module.css";
@@ -50,7 +51,7 @@ export function ListaComprobantes({
         <tbody>
           {comps.map((c) => (
             <tr key={c.id}>
-              <td>{formatDateTime(c.createdAt)}</td>
+              <td>{formatFecha(c.fecha)}</td>
               <td data-label="Comprobante">
                 <Link href={detalleDe(c)} className={styles.cellName}>
                   {c.tipo === "factura" ? "Factura" : "NC"} {c.letra}{" "}
@@ -85,7 +86,7 @@ export function ListaComprobantes({
               </td>
               <td data-label="Estado">
                 <span className={propios.estado}>
-                  <span>{ESTADOS[c.estado]}</span>
+                  <EstadoComprobante c={c} texto={ESTADOS[c.estado]} />
                   {c.errorMensaje && c.estado !== "autorizado" ? (
                     <span className={propios.error}>{c.errorMensaje}</span>
                   ) : null}

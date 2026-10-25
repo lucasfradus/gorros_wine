@@ -2,23 +2,17 @@ import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 import { asc, desc, eq, or } from "drizzle-orm";
 import { db } from "@/lib/db";
-import { clientes, comprobanteItems, comprobantes, type FormaPago } from "@/lib/db/schema";
+import { clientes, comprobanteItems, comprobantes } from "@/lib/db/schema";
+import { FORMAS_DE_PAGO } from "@/lib/facturacion/formas-de-pago";
 import { requireFacturacion } from "@/lib/auth";
-import { formatARS, formatDateTime } from "@/lib/format";
+import { formatARS, formatFecha } from "@/lib/format";
 import { AutoRefresh } from "../../auto-refresh";
+import { AvisoEmitiendo } from "../../en-curso";
 import { TablaComprobantes, documentoReceptor } from "../../tabla-comprobantes";
 import styles from "../../../../admin.module.css";
 import propios from "../../facturacion.module.css";
 
 export const metadata = { title: "Factura" };
-
-const FORMAS: Record<FormaPago, string> = {
-  efectivo: "Efectivo",
-  transferencia: "Transferencia",
-  debito: "Tarjeta de débito",
-  credito: "Tarjeta de crédito",
-  electronico: "Mercado Pago / QR",
-};
 
 export default async function FacturaManualDetallePage({
   params,
@@ -69,8 +63,8 @@ export default async function FacturaManualDetallePage({
           </h1>
           <p className={styles.pageSub}>
             {c.receptorNombre ?? "Consumidor final"} · {documentoReceptor(c)} ·{" "}
-            {formatDateTime(c.createdAt)}
-            {c.formaPago ? ` · ${FORMAS[c.formaPago]}` : null}
+            {formatFecha(c.fecha)}
+            {c.formaPago ? ` · ${FORMAS_DE_PAGO[c.formaPago]}` : null}
           </p>
           {cliente ? (
             <p className={styles.pageSub}>
@@ -83,6 +77,7 @@ export default async function FacturaManualDetallePage({
         </Link>
       </div>
 
+      <AvisoEmitiendo comps={comps} />
       <section className={`${styles.card} ${styles.cardTight}`} style={{ marginBottom: 18 }}>
         <TablaComprobantes comps={comps} />
       </section>

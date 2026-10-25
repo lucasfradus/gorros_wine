@@ -8,7 +8,13 @@
  *   npm run prueba:facturacion -- --ver   → además imprime los requests
  */
 import { cuitValido } from "../lib/facturacion/cuit.ts";
-import { letraPara, validarReceptor, type DatosReceptor } from "../lib/facturacion/reglas.ts";
+import {
+  letraPara,
+  rangoDeFecha,
+  validarFecha,
+  validarReceptor,
+  type DatosReceptor,
+} from "../lib/facturacion/reglas.ts";
 import {
   mapFactura,
   mapNotaCredito,
@@ -189,6 +195,23 @@ ok("vencimiento del CAE a ISO", r.caeVencimiento, "2026-11-02");
 ok("total a centavos", r.totalCentavos, 14_000_050);
 ok("PDF por https", r.pdfUrl, "https://x/pdf");
 ok("estado desconocido = en proceso", parseDocumento({ ...respuesta, state: { id: 1, state: "TO AUTHORIZE" } }).estado, "en_proceso");
+// Como lo devolvió el sandbox una B con fecha anterior a la última emitida.
+const noAutorizado = parseDocumento({
+  ...respuesta,
+  state: { id: 4, state: "UNAUTHORIZED" },
+  fiscalData: {
+    ...respuesta.fiscalData,
+    fullNumber: "",
+    nationalAuthorizationCode: "",
+    governmentMessage: "Existe un comprobante con fecha posterior a la que se intenta emitir",
+  },
+});
+ok(
+  "UNAUTHORIZED = rechazado, con el motivo de ARCA",
+  [noAutorizado.estado, noAutorizado.motivo],
+  ["rechazado", "Existe un comprobante con fecha posterior a la que se intenta emitir"],
+);
+ok("autorizado no trae motivo", r.motivo, null);
 ok("número desde fiscalData", numeroDeComprobante(respuesta, null), 2);
 ok("número desde el texto", numeroDeComprobante(null, "FA 00015-00000002"), 2);
 ok("prefijo como entero", prefijoDeComprobante(null, "FA 00015-00000002"), 15);
@@ -343,6 +366,29 @@ const ncv = mapNotaCredito(
 );
 ok("la NC copia los tributos", ncv.header.tributes, fv.header.tributes);
 ok("la NC copia ítems y descuentos", ncv.items, fv.items);
+
+console.log("\nFecha de la factura");
+ok("sin facturas previas: 5 días atrás hasta hoy", rangoDeFecha("2026-10-25", null), { min: "2026-10-20", max: "2026-10-25" });
+ok("cruza el mes", rangoDeFecha("2026-11-02", null).min, "2026-10-28");
+ok("la última de la letra manda si es más nueva", rangoDeFecha("2026-10-25", "2026-10-23").min, "2026-10-23");
+ok("una última más vieja no importa", rangoDeFecha("2026-10-25", "2026-10-01").min, "2026-10-20");
+const rango = rangoDeFecha("2026-10-25", "2026-10-23");
+ok("dentro del rango", validarFecha("2026-10-24", rango), null);
+ok("futura, no", validarFecha("2026-10-26", rango), "La factura no puede tener fecha futura.");
+ok("antes de la última, no", validarFecha("2026-10-22", rango)?.startsWith("La fecha más vieja posible es 23/10/2026"), true);
+ok("fecha imposible, no", validarFecha("2026-02-31x", rango), "La fecha no es válida.");
+const fCheque = mapFactura({
+  letra: "B",
+  receptor: { condicionIva: "consumidor_final", docTipo: "ninguno", docNumero: null, nombre: null, email: null, domicilio: null },
+  renglones: [{ productoId: null, descripcion: "x", cantidad: 1, precioUnitarioCentavos: 100, descuentoPct: 0, alcanzado: false }],
+  percepciones: [],
+  formaPago: "cheque",
+  dia: "2026-10-23",
+  externalId: "gorros-f-cheque",
+  posId: 1,
+});
+ok("cheque = condición 12 del maestro", fCheque.header.detail.sellCondition[0].conditionType, 12);
+ok("la fecha elegida va al request", fCheque.header.detail.dates[0].dateTime, "2026-10-23T00:00:00");
 
 console.log("\nCliente desde la factura");
 const ri = {

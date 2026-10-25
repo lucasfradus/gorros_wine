@@ -285,6 +285,30 @@ diferencias:
 - **Doble envío**: sin un cobro no hay índice único que lo frene. El
   formulario trae un uuid generado al dibujarse, que es el id del comprobante,
   así que un segundo envío choca con la PK.
+- **Vista previa**: las dos facturas (manual y de cobro) pasan por un
+  `<dialog>` con la factura armada (`vista-previa.tsx`) antes de emitir. Lo
+  emitido no se edita: se anula con nota de crédito.
+
+**Fecha de la factura** (`comprobantes.fecha`, la fiscal, que no es
+`created_at`). La manual se elige; la de un cobro y la NC salen con la de hoy.
+El rango sale de `rangoDeFecha` en `lib/facturacion/reglas.ts`:
+
+- **Hasta 5 días atrás**: ARCA acepta N-5 a N+5 para bienes (manual WSFEv1,
+  CbteFch). No se ofrecen fechas futuras: una factura fechada mañana bloquea
+  todas las de hoy.
+- **Nunca antes que la última de la misma letra** (`ultimasFechas()`): ARCA las
+  exige correlativas por tipo y punto de venta. Si igual pasa (una factura
+  hecha desde el panel de Facturante), Facturante responde `UNAUTHORIZED` con
+  el motivo en `fiscalData.governmentMessage` ("Existe un comprobante con fecha
+  posterior…"): se guarda como **rechazado** con ese mensaje.
+- El manual de ARCA también dice que la fecha "no podrá exceder el mes de
+  presentación". No se probó si eso impide fechar en el mes anterior: si ARCA lo
+  rechaza, se ve el motivo y no se pierde nada.
+
+**Formas de pago** (`lib/facturacion/formas-de-pago.ts`): cada una es una
+condición de venta del maestro de Facturante (`SELL_CONDITION` en
+`mappers.ts`, leído con `GET /SellCondition`). El maestro no tiene "otros", y
+sin condición el PDF imprime "Contado"; por eso no hay un "otros" acá.
 
 **Percepción de IVA RG 5329** (3%), en `lib/facturacion/calculo.ts`:
 

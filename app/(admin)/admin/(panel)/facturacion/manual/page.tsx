@@ -5,6 +5,8 @@ import { db } from "@/lib/db";
 import { bodegas, categorias, cotizaciones, productos } from "@/lib/db/schema";
 import { requireFacturacion } from "@/lib/auth";
 import { facturacionConfigurada } from "@/lib/facturante/config";
+import { ultimasFechas } from "@/lib/facturacion/emitir";
+import { hoyEnArgentina } from "@/lib/format";
 import { FacturaManualForm, type ProductoParaFacturar } from "./factura-manual-form";
 import { clientesParaFacturar } from "../clientes-para-facturar";
 import styles from "../../../admin.module.css";
@@ -14,8 +16,9 @@ export const metadata = { title: "Nueva factura" };
 export default async function FacturaManualPage() {
   await requireFacturacion();
 
-  const [listaClientes, catalogo, [cotizacion]] = await Promise.all([
+  const [listaClientes, ultimas, catalogo, [cotizacion]] = await Promise.all([
     clientesParaFacturar(),
+    ultimasFechas(),
     db
       .select({
         id: productos.id,
@@ -93,6 +96,8 @@ export default async function FacturaManualPage() {
             id={randomUUID()}
             clientes={listaClientes}
             productos={productosParaFacturar}
+            hoy={hoyEnArgentina()}
+            ultimas={ultimas}
           />
         ) : (
           <p className={styles.hint}>

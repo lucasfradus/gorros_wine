@@ -232,3 +232,42 @@ anuncios del buscador.
   `pg_advisory_xact_lock` por documento en `resolverCliente`.
 - Un CUIT/DNI que coincide asocia y completa vacíos **aunque** se destilde
   "Guardar como cliente": es la regla "no duplicar" acordada.
+
+---
+
+## Segunda vuelta (mismo PR #19)
+
+Pedido: la pantalla de facturas a todo el ancho; un spinner mientras se emite
+("Emitiendo…" se confundía con un estado final); confirmar o mostrar la factura
+antes de emitir; elegir la fecha (con investigación de cuánto se puede ir para
+atrás); "otros" en forma de pago (con investigación).
+
+- [x] **Ancho**: `.main:has(.anchoCompleto)` sin `max-width`; lo usan el inicio
+      de Facturación y Cobros de MP. Los formularios siguen angostos.
+- [x] **Spinner** (`en-curso.tsx`): al lado del estado en las tablas, y un aviso
+      arriba del detalle mientras se espera el CAE. Pasada la espera de
+      `sePuedeMarcarNoEmitido`, deja de girar. "Por enviar" pasa a "Enviando…".
+- [x] **Vista previa** (`vista-previa.tsx`): "Revisar y emitir" valida el
+      formulario y abre un `<dialog>` con la factura armada; el submit real está
+      adentro. Para la manual y la de un cobro.
+- [x] **Fecha**: `comprobantes.fecha` (migración `0012`, completa las viejas con
+      el día de `created_at` en Buenos Aires). Rango: hasta 5 días atrás (ARCA,
+      WSFEv1 CbteFch, bienes) y nunca antes que la última de la letra; sin
+      fechas futuras. Los listados filtran y ordenan por esta fecha.
+- [x] **Formas de pago**: el maestro de Facturante (leído del sandbox) no tiene
+      "otros", y sin condición el PDF imprime "Contado". Decisión del usuario:
+      sumar las reales — depósito (4), cuenta corriente (11), cheque (12).
+      Migración `0013`.
+- [x] **Bug encontrado al probar fechas**: Facturante devuelve `UNAUTHORIZED`
+      (final) cuando ARCA rechaza, con el motivo en
+      `fiscalData.governmentMessage`. Se leía como "en proceso" y quedaba
+      emitiéndose para siempre. Ahora es `rechazado` con ese motivo.
+
+**Probado** en `:3003` contra el sandbox: FB 00002-47 sin condición de venta
+(imprime "Contado"); una B fechada 3 días atrás con FB del día → `UNAUTHORIZED`
+"Existe un comprobante con fecha posterior…"; FB 00002-48 con cheque desde la
+vista previa → spinner y aviso en el detalle, autorizada, el PDF dice
+"Condición de venta: Cheque". tsc, prueba offline (12 chequeos nuevos) y build.
+
+**Pendiente**: confirmar con el contador si se puede fechar en el mes anterior
+("no podrá exceder el mes de presentación").

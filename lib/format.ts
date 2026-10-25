@@ -42,6 +42,16 @@ const MESES = [
   "Dic",
 ];
 
+/**
+ * Una fecha de calendario "AAAA-MM-DD" (columna `date`) como "25/10/2026".
+ * Se arma a mano y no con `Date`: pasada por un huso horario, la medianoche
+ * puede caer en el día anterior.
+ */
+export function formatFecha(fecha: string): string {
+  const [a, m, d] = fecha.split("-");
+  return `${d}/${m}/${a}`;
+}
+
 /** El número grande de la tarjeta: "18". */
 export function formatDia(fecha: string): string {
   return fecha.slice(8, 10);

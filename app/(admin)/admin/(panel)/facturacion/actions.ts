@@ -161,6 +161,8 @@ const renglonesSchema = z
 const facturaManualSchema = receptorSchema.extend({
   id: z.uuid(),
   formaPago: z.enum(formaPago.enumValues, { error: "Elegí la forma de pago." }),
+  // El rango (hasta 5 días atrás, correlativa) lo valida `reservar`.
+  fecha: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "Elegí la fecha de la factura."),
 });
 
 function leerRenglones(texto: FormDataEntryValue | null) {
@@ -191,7 +193,7 @@ export async function emitirFacturaManualAction(
   const leidos = leerRenglones(formData.get("renglones"));
   if ("error" in leidos) return { error: leidos.error };
 
-  const { id, clienteId, formaPago: forma, ...datos } = parsed.data;
+  const { id, clienteId, formaPago: forma, fecha, ...datos } = parsed.data;
   const r = await reservarFacturaManual({
     id,
     renglones: leidos.renglones,
@@ -200,6 +202,7 @@ export async function emitirFacturaManualAction(
     datos,
     clienteId: clienteId || null,
     guardarCliente: formData.get("guardarCliente") === "on",
+    dia: fecha,
     actorId: user.id,
   });
   if (!r.ok) return { error: r.error };

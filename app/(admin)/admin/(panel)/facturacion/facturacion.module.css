@@ -251,3 +251,133 @@
 .campoAncho {
   flex: 1 1 220px;
 }
+
+/* Algo en camino a Facturante: un spinner y el texto al lado, para que
+   "Emitiendo…" no se lea como un estado final. */
+.enCurso {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.spinner {
+  flex: none;
+  width: 14px;
+  height: 14px;
+  border: 2px solid var(--border-strong);
+  border-top-color: var(--accent);
+  border-radius: 50%;
+  animation: girar 0.8s linear infinite;
+}
+
+@keyframes girar {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* Sin giro para quien pidió menos movimiento: un pulso lento alcanza. */
+@media (prefers-reduced-motion: reduce) {
+  .spinner {
+    animation: latir 2s ease-in-out infinite;
+  }
+}
+
+@keyframes latir {
+  50% {
+    opacity: 0.35;
+  }
+}
+
+/* El aviso grande del detalle mientras se emite. */
+.emitiendo {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  margin-bottom: 18px;
+  padding: 14px 16px;
+  border: 1px solid var(--accent);
+  border-radius: var(--radius-lg);
+  background: var(--accent-soft);
+}
+
+.emitiendo .spinner {
+  width: 18px;
+  height: 18px;
+  margin-top: 2px;
+}
+
+.emitiendo p {
+  margin: 2px 0 0;
+  font-size: 13px;
+  color: var(--muted);
+}
+
+/* La vista previa de la factura antes de emitir: un <dialog> modal. */
+.vista {
+  width: min(720px, calc(100vw - 32px));
+  max-height: calc(100dvh - 32px);
+  padding: 22px 24px;
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-lg);
+  background: var(--surface);
+  color: var(--text);
+}
+
+.vista::backdrop {
+  background: var(--scrim);
+}
+
+.vista > * + * {
+  margin-top: 14px;
+}
+
+.vistaTitulo {
+  margin: 0;
+  font-size: 20px;
+  color: var(--heading);
+}
+
+/* Más específicos que `.vista > * + *`: el subtítulo va pegado al título y el
+   receptor, separado. */
+.vista .vistaSub {
+  margin-top: 2px;
+  color: var(--muted);
+  font-size: 14px;
+}
+
+.vista .vistaReceptor {
+  display: grid;
+  gap: 10px;
+  margin: 18px 0 0;
+}
+
+.vistaReceptor > div {
+  display: grid;
+  grid-template-columns: 90px minmax(0, 1fr);
+  gap: 12px;
+}
+
+.vistaReceptor dt {
+  font-size: 13px;
+  color: var(--muted);
+}
+
+.vistaReceptor dd {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  margin: 0;
+  font-size: 14px;
+}
+
+@media (max-width: 640px) {
+  .vista {
+    padding: 18px 16px;
+  }
+
+  .vistaReceptor > div {
+    grid-template-columns: 1fr;
+    gap: 2px;
+  }
+}

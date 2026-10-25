@@ -11,6 +11,7 @@ import {
   type EstadoFacturacion,
 } from "@/lib/facturacion/estado";
 import { AutoRefresh } from "../auto-refresh";
+import { Spinner } from "../en-curso";
 import { SyncForm } from "../sync-form";
 import styles from "../../../admin.module.css";
 import propios from "../facturacion.module.css";
@@ -131,7 +132,7 @@ export default async function CobrosPage({
   };
 
   return (
-    <>
+    <div className={styles.anchoCompleto}>
       <AutoRefresh activo={todas.some((f) => f.situacion.estado === "en_proceso")} />
       <Link href="/admin/facturacion" className={styles.backLink}>
         ← Facturación
@@ -283,7 +284,7 @@ export default async function CobrosPage({
           ) : null}
         </>
       )}
-    </>
+    </div>
   );
 }
 
@@ -303,7 +304,8 @@ function EstadoCelda({ situacion }: { situacion: ReturnType<typeof situacionDe> 
           <span className={propios.numero}>{factura.numeroCompleto}</span>
         )
       ) : null}
-      <span className={styles.cellDim}>
+      <span className={`${styles.cellDim} ${propios.enCurso}`}>
+        {estado === "en_proceso" ? <Spinner /> : null}
         {
           {
             sin_facturar: "Anulada con nota de crédito",
