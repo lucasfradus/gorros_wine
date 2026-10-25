@@ -3,18 +3,23 @@
 import { useState } from "react";
 import type { CondicionIva } from "@/lib/db/schema";
 import { PROVINCIAS } from "@/lib/facturante/provincias";
+import { ClienteBuscador, etiquetaCliente } from "./cliente-buscador";
 import styles from "../../admin.module.css";
+import propios from "./facturacion.module.css";
 
 type DocTipo = "cuit" | "dni" | "ninguno";
 
 export interface ClienteParaFacturar {
   id: string;
   nombre: string;
+  apodo: string | null;
   razonSocial: string | null;
-  documento: string;
+  documento: string | null;
   condicionIva: CondicionIva | null;
   percepcionIva: boolean;
   direccion: string | null;
+  localidad: string | null;
+  provincia: string | null;
   email: string | null;
 }
 
@@ -38,12 +43,20 @@ export const letraDe = (c: CondicionIva) => (c === "responsable_inscripto" ? "A"
 
 export const SIN_IDENTIFICAR: DatosIniciales = { nombre: "", email: "", docTipo: "ninguno", docNumero: "" };
 
+const digitos = (s: string | null) => (s ?? "").replace(/\D/g, "");
+
 /**
  * Quién recibe la factura: los campos que mandan `emitirFacturaAction` y
  * `emitirFacturaManualAction`. La letra no se elige: sale de la condición
- * frente al IVA. Con un cliente elegido, se precarga con lo que tiene
- * cargado. Avisa hacia arriba la condición y el cliente, que el formulario de
- * venta necesita para la letra y la percepción.
+ * frente al IVA.
+ *
+ * Con un cliente elegido, se precarga con lo que tiene. Sin cliente, "Guardar
+ * como cliente" viene tildado: lo que se factura a mano suele volver. Si el
+ * documento tipeado ya es de un cliente, se avisa, y el servidor asocia a ese
+ * en vez de crear otro (`resolverCliente` en lib/facturacion/emitir.ts).
+ *
+ * Avisa hacia arriba la condición y el cliente, que el formulario de venta
+ * necesita para la letra y la percepción.
  */
 export function ReceptorCampos({
   iniciales,
@@ -54,7 +67,7 @@ export function ReceptorCampos({
   clientes: ClienteParaFacturar[];
   onCambio?: (r: { condicion: CondicionIva; cliente: ClienteParaFacturar | null }) => void;
 }) {
-  const [clienteId, setClienteId] = useState("");
+  const [cliente, setCliente] = useState<ClienteParaFacturar | null>(null);
   const [condicion, setCondicion] = useState<CondicionIva>("consumidor_final");
   const [docTipo, setDocTipo] = useState<DocTipo>(iniciales.docTipo);
   const [docNumero, setDocNumero] = useState(iniciales.docNumero);
@@ -63,60 +76,60 @@ export function ReceptorCampos({
   const [calle, setCalle] = useState("");
   const [ciudad, setCiudad] = useState("");
   const [provincia, setProvincia] = useState("");
+  const [guardar, setGuardar] = useState(true);
 
   const letra = letraDe(condicion);
   const consumidorFinal = condicion === "consumidor_final";
 
-  function elegirCliente(id: string) {
-    setClienteId(id);
-    const c = clientes.find((x) => x.id === id) ?? null;
+  // ¿El documento tipeado ya es de alguien? Desde 7 dígitos, que es un DNI.
+  const tipeado = docTipo === "ninguno" ? "" : digitos(docNumero);
+  const coincide =
+    !cliente && tipeado.length >= 7
+      ? (clientes.find((c) => digitos(c.documento) === tipeado) ?? null)
+      : null;
+
+  function elegirCliente(c: ClienteParaFacturar | null) {
+    setCliente(c);
     if (!c) {
-      onCambio?.({ condicion, cliente: null });
+      // Volver a cargar a mano arranca de cero (o de lo que trajo el cobro),
+      // no con los datos del cliente que se acaba de sacar. La condición
+      // también: un RI con el documento vaciado sería un estado sin salida.
+      setCondicion("consumidor_final");
+      setDocTipo(iniciales.docTipo);
+      setDocNumero(iniciales.docNumero);
+      setNombre(iniciales.nombre);
+      setEmail(iniciales.email);
+      setCalle("");
+      setCiudad("");
+      setProvincia("");
+      onCambio?.({ condicion: "consumidor_final", cliente: null });
       return;
     }
-    const digitos = c.documento.replace(/\D/g, "");
-    const esCuit = digitos.length === 11;
+    const doc = digitos(c.documento);
+    const esCuit = doc.length === 11;
     const nueva = c.condicionIva ?? (esCuit ? "responsable_inscripto" : "consumidor_final");
     setCondicion(nueva);
-    setDocTipo(esCuit ? "cuit" : "dni");
-    setDocNumero(digitos);
+    setDocTipo(esCuit ? "cuit" : doc ? "dni" : nueva === "consumidor_final" ? "ninguno" : "cuit");
+    setDocNumero(doc);
     setNombre(c.razonSocial ?? c.nombre);
-    setCalle(c.direccion ?? "");
     setEmail(c.email ?? "");
+    setCalle(c.direccion ?? "");
+    setCiudad(c.localidad ?? "");
+    setProvincia(c.provincia ?? "");
     onCambio?.({ condicion: nueva, cliente: c });
   }
 
   function elegirCondicion(c: CondicionIva) {
     setCondicion(c);
     if (c !== "consumidor_final") setDocTipo("cuit");
-    onCambio?.({ condicion: c, cliente: clientes.find((x) => x.id === clienteId) ?? null });
+    onCambio?.({ condicion: c, cliente });
   }
 
   return (
     <>
-      <input type="hidden" name="clienteId" value={clienteId} />
+      <input type="hidden" name="clienteId" value={cliente?.id ?? ""} />
 
-      {clientes.length > 0 ? (
-        <div className={styles.field}>
-          <label className={styles.label} htmlFor="cliente">
-            Cliente
-          </label>
-          <select
-            id="cliente"
-            value={clienteId}
-            onChange={(e) => elegirCliente(e.target.value)}
-            className={styles.select}
-          >
-            <option value="">— Otro, cargar a mano —</option>
-            {clientes.map((c) => (
-              <option key={c.id} value={c.id}>
-                {c.razonSocial ?? c.nombre} · {c.documento}
-              </option>
-            ))}
-          </select>
-          <span className={styles.hint}>Sólo aparecen los clientes con CUIT o DNI cargado.</span>
-        </div>
-      ) : null}
+      <ClienteBuscador clientes={clientes} elegido={cliente} onElegir={elegirCliente} />
 
       <div className={styles.field}>
         <label className={styles.label} htmlFor="condicionIva">
@@ -176,6 +189,21 @@ export function ReceptorCampos({
           </div>
         ) : null}
       </div>
+      {coincide ? (
+        <p className={propios.coincide} role="status">
+          <span>
+            Ese documento ya es de <strong>{etiquetaCliente(coincide)}</strong>: la
+            factura queda asociada a ese cliente.
+          </span>
+          <button
+            type="button"
+            onClick={() => elegirCliente(coincide)}
+            className={`${styles.btn} ${styles.btnSmall}`}
+          >
+            Usar sus datos
+          </button>
+        </p>
+      ) : null}
 
       <div className={styles.field}>
         <label className={styles.label} htmlFor="nombre">
@@ -264,6 +292,25 @@ export function ReceptorCampos({
           ))}
         </select>
       </div>
+
+      {cliente || coincide ? null : (
+        <div className={styles.field}>
+          <label className={propios.renglonCheck}>
+            <input
+              type="checkbox"
+              name="guardarCliente"
+              checked={guardar}
+              onChange={(e) => setGuardar(e.target.checked)}
+            />
+            Guardar como cliente
+          </label>
+          <span className={styles.hint}>
+            {nombre.trim()
+              ? "Queda en Clientes con estos datos, para la próxima."
+              : "Hace falta el nombre: sin nombre no se guarda."}
+          </span>
+        </div>
+      )}
     </>
   );
 }

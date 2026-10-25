@@ -177,3 +177,77 @@
     grid-column: 1 / -1;
   }
 }
+
+/* Buscador de clientes: la lista flota sobre el formulario, pegada al input. */
+.buscador {
+  position: relative;
+}
+
+.opciones {
+  position: absolute;
+  z-index: 10;
+  top: calc(100% + 4px);
+  left: 0;
+  right: 0;
+  max-height: 320px;
+  overflow-y: auto;
+  margin: 0;
+  padding: 4px;
+  list-style: none;
+  background: var(--surface);
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius);
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.18);
+}
+
+.opcion {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 8px 10px;
+  border-radius: var(--radius);
+  cursor: pointer;
+}
+
+.opcionActiva {
+  background: var(--hover);
+}
+
+.sinOpciones {
+  padding: 8px 10px;
+  font-size: 13px;
+  color: var(--muted);
+}
+
+.clienteElegido {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 10px 12px;
+  border: 1px solid var(--field-line);
+  border-radius: var(--radius);
+  background: var(--surface-sunken);
+}
+
+.clienteElegido > span {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+/* "Ya está como X": el aviso de que se va a asociar en vez de crear otro. */
+.coincide {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px 10px;
+  font-size: 13px;
+  color: var(--muted);
+}
+
+/* El buscador del período se lleva el espacio que sobra en la fila. */
+.campoAncho {
+  flex: 1 1 220px;
+}

@@ -78,6 +78,13 @@
       "when": 1792869692231,
       "tag": "0010_slim_taskmaster",
       "breakpoints": true
+    },
+    {
+      "idx": 11,
+      "version": "7",
+      "when": 1792939249979,
+      "tag": "0011_curly_spiral",
+      "breakpoints": true
     }
   ]
 }

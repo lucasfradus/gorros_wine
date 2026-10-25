@@ -2,7 +2,7 @@ import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 import { asc, desc, eq, or } from "drizzle-orm";
 import { db } from "@/lib/db";
-import { comprobanteItems, comprobantes, type FormaPago } from "@/lib/db/schema";
+import { clientes, comprobanteItems, comprobantes, type FormaPago } from "@/lib/db/schema";
 import { requireFacturacion } from "@/lib/auth";
 import { formatARS, formatDateTime } from "@/lib/format";
 import { AutoRefresh } from "../../auto-refresh";
@@ -10,7 +10,7 @@ import { TablaComprobantes, documentoReceptor } from "../../tabla-comprobantes";
 import styles from "../../../../admin.module.css";
 import propios from "../../facturacion.module.css";
 
-export const metadata = { title: "Factura manual" };
+export const metadata = { title: "Factura" };
 
 const FORMAS: Record<FormaPago, string> = {
   efectivo: "Efectivo",
@@ -35,7 +35,7 @@ export default async function FacturaManualDetallePage({
   if (c.movimientoId) redirect(`/admin/facturacion/${c.movimientoId}`);
   if (c.tipo === "nota_credito" && c.origenId) redirect(`/admin/facturacion/manual/${c.origenId}`);
 
-  const [comps, items] = await Promise.all([
+  const [comps, items, [cliente]] = await Promise.all([
     db
       .select()
       .from(comprobantes)
@@ -46,14 +46,21 @@ export default async function FacturaManualDetallePage({
       .from(comprobanteItems)
       .where(eq(comprobanteItems.comprobanteId, id))
       .orderBy(asc(comprobanteItems.orden)),
+    c.clienteId
+      ? db
+          .select({ id: clientes.id, nombre: clientes.nombre })
+          .from(clientes)
+          .where(eq(clientes.id, c.clienteId))
+          .limit(1)
+      : Promise.resolve([]),
   ]);
   const enCamino = comps.some((x) => x.estado === "pendiente" || x.estado === "en_proceso");
 
   return (
     <>
       <AutoRefresh activo={enCamino} />
-      <Link href="/admin/facturacion/comprobantes" className={styles.backLink}>
-        ← Comprobantes
+      <Link href="/admin/facturacion" className={styles.backLink}>
+        ← Facturación
       </Link>
       <div className={styles.pageHead}>
         <div>
@@ -65,9 +72,14 @@ export default async function FacturaManualDetallePage({
             {formatDateTime(c.createdAt)}
             {c.formaPago ? ` · ${FORMAS[c.formaPago]}` : null}
           </p>
+          {cliente ? (
+            <p className={styles.pageSub}>
+              Cliente: <Link href={`/admin/clientes/${cliente.id}`}>{cliente.nombre}</Link>
+            </p>
+          ) : null}
         </div>
         <Link href="/admin/facturacion/manual" className={styles.btn}>
-          Nueva factura manual
+          Nueva factura
         </Link>
       </div>
 

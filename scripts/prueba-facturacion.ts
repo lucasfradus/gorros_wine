@@ -26,6 +26,7 @@ import {
   validarRenglones,
   type Renglon,
 } from "../lib/facturacion/calculo.ts";
+import { camposACompletar, datosDeReceptor } from "../lib/facturacion/cliente-receptor.ts";
 
 let fallos = 0;
 const ok = (q: string, real: unknown, esperado: unknown) => {
@@ -342,6 +343,85 @@ const ncv = mapNotaCredito(
 );
 ok("la NC copia los tributos", ncv.header.tributes, fv.header.tributes);
 ok("la NC copia ítems y descuentos", ncv.items, fv.items);
+
+console.log("\nCliente desde la factura");
+const ri = {
+  condicionIva: "responsable_inscripto" as const,
+  docTipo: "cuit" as const,
+  docNumero: "30712345675",
+  nombre: "Almacén Sur SRL",
+  email: "compras@almacensur.com",
+  domicilio: { calle: "Av. Siempreviva 742", ciudad: "Rosario", provincia: "AR-S" },
+};
+const dRi = datosDeReceptor(ri, true);
+ok(
+  "RI: razón social = lo tipeado, CUIT con guiones, percepción",
+  dRi && [dRi.razonSocial, dRi.documento, dRi.percepcionIva],
+  ["Almacén Sur SRL", "30-71234567-5", true],
+);
+ok(
+  "consumidor final sin nombre: no hay cliente que guardar",
+  datosDeReceptor(
+    { condicionIva: "consumidor_final", docTipo: "ninguno", docNumero: null, nombre: null, email: null, domicilio: null },
+    false,
+  ),
+  null,
+);
+const dCf = datosDeReceptor(
+  { condicionIva: "consumidor_final", docTipo: "dni", docNumero: "30123456", nombre: "Ana Pérez", email: null, domicilio: null },
+  true,
+);
+ok(
+  "CF: sin razón social, DNI pelado, nunca percepción",
+  dCf && [dCf.razonSocial, dCf.documento, dCf.percepcionIva],
+  [null, "30123456", false],
+);
+
+const sinDatos = {
+  documento: null,
+  razonSocial: null,
+  condicionIva: null,
+  email: null,
+  direccion: null,
+  localidad: null,
+  provincia: null,
+};
+ok("cliente vacío: se completa todo", dRi && camposACompletar(sinDatos, dRi), {
+  documento: "30-71234567-5",
+  razonSocial: "Almacén Sur SRL",
+  condicionIva: "responsable_inscripto",
+  email: "compras@almacensur.com",
+  direccion: "Av. Siempreviva 742",
+  localidad: "Rosario",
+  provincia: "AR-S",
+});
+ok(
+  "lo cargado no se pisa",
+  dRi &&
+    camposACompletar(
+      { ...sinDatos, documento: "30-71234567-5", razonSocial: "Otra SA", condicionIva: "exento", email: "x@y.com" },
+      dRi,
+    ),
+  { direccion: "Av. Siempreviva 742", localidad: "Rosario", provincia: "AR-S" },
+);
+ok(
+  "misma calle (sin importar mayúsculas): se le suma localidad y provincia",
+  dRi &&
+    camposACompletar(
+      { ...sinDatos, direccion: "av. siempreviva 742 ", condicionIva: "responsable_inscripto", documento: "x", razonSocial: "x", email: "x" },
+      dRi,
+    ),
+  { localidad: "Rosario", provincia: "AR-S" },
+);
+ok(
+  "otra calle: ni localidad ni provincia",
+  dRi &&
+    camposACompletar(
+      { ...sinDatos, direccion: "Depósito, Ruta 9 km 3", condicionIva: "responsable_inscripto", documento: "x", razonSocial: "x", email: "x" },
+      dRi,
+    ),
+  {},
+);
 
 if (ver) {
   console.log("\n— Factura B —\n" + JSON.stringify([fb], null, 2));

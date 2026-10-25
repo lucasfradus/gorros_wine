@@ -157,6 +157,40 @@ export function FacturaManualForm({
       <input type="hidden" name="id" value={id} />
       <input type="hidden" name="renglones" value={JSON.stringify(validos)} />
 
+      {/* Primero a quién: el cliente precarga el receptor y la percepción. */}
+      <ReceptorCampos
+        iniciales={SIN_IDENTIFICAR}
+        clientes={clientes}
+        onCambio={(r) => {
+          setCondicion(r.condicion);
+          // La casilla se precarga del cliente al elegirlo (y se apaga al
+          // volver a "Otro"); después se puede cambiar a mano.
+          const id = r.cliente?.id ?? null;
+          if (id !== clienteAnterior.current) {
+            clienteAnterior.current = id;
+            setPercepcion(r.cliente?.percepcionIva ?? false);
+          }
+        }}
+      />
+
+      {esRI ? (
+        <div className={styles.field}>
+          <label className={propios.renglonCheck}>
+            <input
+              type="checkbox"
+              name="percepcionIva"
+              checked={percepcion}
+              onChange={(e) => setPercepcion(e.target.checked)}
+            />
+            Percepción de IVA RG 5329 (3% sobre las bebidas)
+          </label>
+          <span className={styles.hint}>
+            A un responsable inscripto que revende: almacén, vinoteca, restaurante. Se aplica
+            sólo si supera {formatARS(RG_5329.umbralCentavos)}.
+          </span>
+        </div>
+      ) : null}
+
       <fieldset className={propios.renglones}>
         <legend className={styles.label}>Qué se vende</legend>
         <datalist id="productos">
@@ -271,39 +305,6 @@ export function FacturaManualForm({
         </button>
         {problema ? <span className={propios.error}>{problema}</span> : null}
       </fieldset>
-
-      <ReceptorCampos
-        iniciales={SIN_IDENTIFICAR}
-        clientes={clientes}
-        onCambio={(r) => {
-          setCondicion(r.condicion);
-          // La casilla se precarga del cliente al elegirlo (y se apaga al
-          // volver a "Otro"); después se puede cambiar a mano.
-          const id = r.cliente?.id ?? null;
-          if (id !== clienteAnterior.current) {
-            clienteAnterior.current = id;
-            setPercepcion(r.cliente?.percepcionIva ?? false);
-          }
-        }}
-      />
-
-      {esRI ? (
-        <div className={styles.field}>
-          <label className={propios.renglonCheck}>
-            <input
-              type="checkbox"
-              name="percepcionIva"
-              checked={percepcion}
-              onChange={(e) => setPercepcion(e.target.checked)}
-            />
-            Percepción de IVA RG 5329 (3% sobre las bebidas)
-          </label>
-          <span className={styles.hint}>
-            A un responsable inscripto que revende: almacén, vinoteca, restaurante. Se aplica
-            sólo si supera {formatARS(RG_5329.umbralCentavos)}.
-          </span>
-        </div>
-      ) : null}
 
       <div className={styles.field}>
         <label className={styles.label} htmlFor="formaPago">

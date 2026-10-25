@@ -7,23 +7,25 @@
 > Antes de tocar código: leer `AGENTS.md` (este Next.js y este Drizzle no son
 > los del training data) y `tasks/lessons.md`.
 
-**Facturas manuales de productos (renglones, descuentos, percepciones).**
-Plan completo: [docs/planes/2026-10-24-factura-manual.md](../docs/planes/2026-10-24-factura-manual.md).
+**Facturación centrada en comprobantes, y clientes en la factura.**
+Plan completo: [docs/planes/2026-10-25-facturacion-clientes.md](../docs/planes/2026-10-25-facturacion-clientes.md).
 
-Worktree `../Gorros-factura-manual` · rama `feat/factura-manual` · puerto `:3003`
+Worktree `../Gorros-factura-manual` (reusado) · rama `feat/facturacion-clientes` · puerto `:3003`
 
-- [x] **Preguntas abiertas** — percepción IVA RG 5329 (3%); sandbox con las credenciales de Clicnet; panel-formal mergeado antes
-- [x] **Tarea 0** — Arrancar sobre `feat/panel-formal` mergeado (#17)
-- [x] **Tarea 1** — `calculo.ts` (renglones, descuentos, percepción), mapper con `items`/`tributes`, chequeos offline · request de MP idéntico a `main`
-- [x] **Credenciales del sandbox** — empresa RI 224234 en el `.env.local` del worktree
-- [x] **Tarea 2** — Calibración contra el sandbox: todo coincide al centavo · descuento dentro del precio (la B imprime mal la bonificación)
-- [x] **Tarea 3** — Schema: `movimiento_id` opcional, `forma_pago`, `tributos`, `comprobante_items`, `clientes.percepcion_iva` · migración `0010_slim_taskmaster` aplicada en local
-- [x] **Tarea 4** — `reservarFacturaManual` sobre una reserva común, NC copia ítems y tributos, action
-- [x] **Tarea 5** — Formulario de venta (buscador de productos, renglones, percepción), `/manual`, `/manual/[id]`, tabla compartida
+- [x] **Tarea 1** — Schema: `clientes.localidad` y `clientes.provincia`, alta/edición de Clientes · migración `0011_curly_spiral` aplicada en local
+- [x] **Tarea 2** — `resolverCliente` (asociar / completar vacíos / crear) dentro de la reserva · 7 chequeos offline nuevos
+- [x] **Tarea 3** — Buscador de clientes y "Guardar como cliente" en el receptor · el receptor pasó arriba de los renglones
+- [x] **Tarea 4** — `/admin/facturacion` = comprobantes; cobros de MP a `/cobros`; "Nueva factura"
+- [x] **Tarea 5** — Comprobantes en la ficha del cliente
 - [x] **Tarea 6** — `docs/ARQUITECTURA.md`
-- [ ] **Cierre** — tsc ✓, prueba offline ✓, build ✓, sandbox ✓, review ✓ (arreglado), PR #18 abierto · falta: merge y deploy, primera B manual real + NC (confirmar antes), umbral $3.000 con el contador, borrar worktree
+- [ ] **Cierre** — tsc ✓, prueba offline ✓, build ✓, sandbox ✓ (FA 00002-4 crea el cliente, FA 00002-5 lo asocia sin duplicar), review ✓ (arreglado), PR abierto · falta: merge y deploy (migración `0011`), probar en producción
 
 ## Viene de las iteraciones anteriores (sigue pendiente)
+
+- **Factura manual (#18, mergeado y deployado)**: primera B manual real emitida
+  bien en producción; umbral de la RG 5329 confirmado en $3.000. Falta, si no
+  se hizo, probar la NC real sobre esa B. El worktree `../Gorros-factura-manual`
+  se reusa para esta iteración.
 
 - **Panel formal (#17, mergeado)**: Review y archivo de
   `docs/planes/2026-10-23-panel-formal.md`, y borrar el worktree

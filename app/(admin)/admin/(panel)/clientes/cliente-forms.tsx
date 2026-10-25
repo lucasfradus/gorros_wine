@@ -1,6 +1,7 @@
 "use client";
 
 import { useActionState } from "react";
+import { PROVINCIAS } from "@/lib/facturante/provincias";
 import type { ClienteFormState } from "./actions";
 import { Aviso, Submit, type FormAction } from "../form-ui";
 import styles from "../../admin.module.css";
@@ -53,6 +54,8 @@ export interface ClienteDefaults {
   razonSocial?: string | null;
   condicionIva?: string | null;
   direccion?: string | null;
+  localidad?: string | null;
+  provincia?: string | null;
   notas?: string | null;
   percepcionIva?: boolean;
   cuentaCorriente?: boolean;
@@ -172,10 +175,37 @@ export function ClienteForm({
       </div>
       <Campo
         name="direccion"
-        label="Dirección de entrega"
+        label="Dirección"
+        hint="La de entrega, y la que sale en la factura junto con la localidad y la provincia."
         maxLength={240}
         defaultValue={defaults?.direccion}
       />
+      <div className={propios.dosColumnas}>
+        <Campo
+          name="localidad"
+          label="Localidad"
+          maxLength={100}
+          defaultValue={defaults?.localidad}
+        />
+        <div className={styles.field}>
+          <label className={styles.label} htmlFor="provincia">
+            Provincia
+          </label>
+          <select
+            id="provincia"
+            name="provincia"
+            defaultValue={defaults?.provincia ?? ""}
+            className={styles.select}
+          >
+            <option value="">—</option>
+            {PROVINCIAS.map((p) => (
+              <option key={p.code} value={p.code}>
+                {p.nombre}
+              </option>
+            ))}
+          </select>
+        </div>
+      </div>
 
       <div className={styles.field}>
         <label className={styles.label} htmlFor="notas">

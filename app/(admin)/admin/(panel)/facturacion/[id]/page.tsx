@@ -1,8 +1,8 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { and, asc, desc, eq, isNotNull } from "drizzle-orm";
+import { desc, eq } from "drizzle-orm";
 import { db } from "@/lib/db";
-import { clientes, comprobantes, movimientosMp } from "@/lib/db/schema";
+import { comprobantes, movimientosMp } from "@/lib/db/schema";
 import { requireFacturacion } from "@/lib/auth";
 import { formatARS, formatDateTime } from "@/lib/format";
 import { facturacionConfigurada } from "@/lib/facturante/config";
@@ -14,6 +14,7 @@ import {
 import { AutoRefresh } from "../auto-refresh";
 import { EmitirForm, type DatosIniciales } from "../emitir-form";
 import { TablaComprobantes } from "../tabla-comprobantes";
+import { clientesParaFacturar } from "../clientes-para-facturar";
 import styles from "../../../admin.module.css";
 import propios from "../facturacion.module.css";
 
@@ -67,27 +68,14 @@ export default async function CobroPage({ params }: { params: Promise<{ id: stri
   const facturable = sePuedeFacturar(situacion);
 
   const listaClientes = facturable
-    ? await db
-        .select({
-          id: clientes.id,
-          nombre: clientes.nombre,
-          razonSocial: clientes.razonSocial,
-          documento: clientes.documento,
-          condicionIva: clientes.condicionIva,
-          percepcionIva: clientes.percepcionIva,
-          direccion: clientes.direccion,
-          email: clientes.email,
-        })
-        .from(clientes)
-        .where(and(eq(clientes.isActive, true), isNotNull(clientes.documento)))
-        .orderBy(asc(clientes.nombre))
+    ? await clientesParaFacturar()
     : [];
 
   return (
     <>
       <AutoRefresh activo={enCamino} />
-      <Link href="/admin/facturacion" className={styles.backLink}>
-        ← Facturación
+      <Link href="/admin/facturacion/cobros" className={styles.backLink}>
+        ← Cobros de Mercado Pago
       </Link>
       <div className={styles.pageHead}>
         <div>
@@ -131,7 +119,7 @@ export default async function CobroPage({ params }: { params: Promise<{ id: stri
               movimientoId={mov.id}
               importeCentavos={mov.montoCentavos}
               iniciales={inicialesDe(mov)}
-              clientes={listaClientes.map((c) => ({ ...c, documento: c.documento ?? "" }))}
+              clientes={listaClientes}
             />
           ) : (
             <p className={styles.hint}>

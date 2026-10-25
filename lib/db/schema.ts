@@ -634,6 +634,13 @@ export const clientes = pgTable(
 
     direccion: text("direccion"),
 
+    /** Localidad y provincia, aparte de la dirección porque la Factura A las
+     *  pide por separado: sin esto, a cada responsable inscripto había que
+     *  volver a elegirle la provincia en cada factura. `provincia` guarda el
+     *  código de `lib/facturante/provincias.ts`, no el nombre. */
+    localidad: text("localidad"),
+    provincia: text("provincia"),
+
     /** El campo para lo que no entra en ningún casillero: "paga a fin de mes",
      *  "prefiere tintos". Interno, no lo ve el cliente. */
     notas: text("notas"),

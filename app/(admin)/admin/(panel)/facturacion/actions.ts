@@ -50,7 +50,7 @@ export async function sincronizarAction(
     return { error: "No se pudo consultar Mercado Pago. Probá de nuevo en un rato." };
   }
 
-  revalidatePath("/admin/facturacion");
+  revalidatePath("/admin/facturacion/cobros");
 
   if (r.cuentas === 0) return { error: "No hay ninguna cuenta de Mercado Pago vinculada." };
   if (r.fallidas.length > 0) {
@@ -127,12 +127,15 @@ export async function emitirFacturaAction(
     movimientoId,
     datos,
     clienteId: clienteId || null,
+    guardarCliente: formData.get("guardarCliente") === "on",
     actorId: user.id,
   });
   if (!r.ok) return { error: r.error };
 
   after(() => enviarComprobante(r.comprobanteId));
   revalidatePath("/admin/facturacion", "layout");
+  // La factura puede haber creado o completado un cliente.
+  revalidatePath("/admin/clientes", "layout");
   return { ok: "Emitiendo la factura. Tarda unos 20 segundos." };
 }
 
@@ -196,12 +199,15 @@ export async function emitirFacturaManualAction(
     formaPago: forma,
     datos,
     clienteId: clienteId || null,
+    guardarCliente: formData.get("guardarCliente") === "on",
     actorId: user.id,
   });
   if (!r.ok) return { error: r.error };
 
   after(() => enviarComprobante(r.comprobanteId));
   revalidatePath("/admin/facturacion", "layout");
+  // La factura puede haber creado o completado un cliente.
+  revalidatePath("/admin/clientes", "layout");
   redirect(`/admin/facturacion/manual/${r.comprobanteId}`);
 }
 
