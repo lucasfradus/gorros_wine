@@ -1,8 +1,10 @@
 "use client";
 
-import { useState } from "react";
+import { useRef, useState } from "react";
 import type { CondicionIva } from "@/lib/db/schema";
+import { cuitValido } from "@/lib/facturacion/cuit";
 import { PROVINCIAS } from "@/lib/facturante/provincias";
+import { buscarEnPadronAction } from "./actions";
 import { ClienteBuscador, etiquetaCliente } from "./cliente-buscador";
 import styles from "../../admin.module.css";
 import propios from "./facturacion.module.css";
@@ -77,6 +79,11 @@ export function ReceptorCampos({
   const [ciudad, setCiudad] = useState("");
   const [provincia, setProvincia] = useState("");
   const [guardar, setGuardar] = useState(true);
+  const [padron, setPadron] = useState<{ estado: "buscando" | "ok" | "error"; mensaje: string } | null>(
+    null,
+  );
+  /** El CUIT de la última consulta: evita repetirla y descarta respuestas viejas. */
+  const buscado = useRef("");
 
   const letra = letraDe(condicion);
   const consumidorFinal = condicion === "consumidor_final";
@@ -88,8 +95,53 @@ export function ReceptorCampos({
       ? (clientes.find((c) => digitos(c.documento) === tipeado) ?? null)
       : null;
 
+  /**
+   * Con un CUIT completo y válido que no es de un cliente cargado, trae del
+   * padrón de ARCA lo que habría que tipear: razón social, condición,
+   * domicilio. Como en "Comprobantes en línea". Queda todo editable.
+   */
+  async function completarDesdePadron(tipo: DocTipo, numero: string) {
+    const cuit = digitos(numero);
+    if (tipo !== "cuit" || !cuitValido(cuit)) {
+      buscado.current = "";
+      setPadron(null);
+      return;
+    }
+    // Un cliente ya cargado manda: su ficha es lo que se usa (y se avisa abajo).
+    if (cliente || clientes.some((c) => digitos(c.documento) === cuit) || buscado.current === cuit) return;
+    buscado.current = cuit;
+    setPadron({ estado: "buscando", mensaje: "Buscando en el padrón de ARCA…" });
+    const r = await buscarEnPadronAction(cuit).catch(() => ({
+      ok: false as const,
+      error: "No se pudo consultar el padrón de ARCA. Cargá los datos a mano.",
+    }));
+    if (buscado.current !== cuit) return; // Cambió el CUIT mientras tanto.
+    if (!r.ok) {
+      setPadron({ estado: "error", mensaje: r.error });
+      return;
+    }
+    const d = r.datos;
+    if (d.razonSocial) setNombre(d.razonSocial);
+    if (d.calle) setCalle(d.calle);
+    if (d.localidad) setCiudad(d.localidad);
+    if (d.provincia) setProvincia(d.provincia);
+    if (d.condicionIva) {
+      setCondicion(d.condicionIva);
+      onCambio?.({ condicion: d.condicionIva, cliente: null });
+    }
+    setPadron({
+      estado: "ok",
+      mensaje:
+        d.condicionIva === "monotributo"
+          ? "Datos del padrón de ARCA. Es monotributista: todavía no se le factura desde acá."
+          : `Datos del padrón de ARCA${d.calle ? "" : " (vino sin domicilio)"}: revisalos antes de emitir.`,
+    });
+  }
+
   function elegirCliente(c: ClienteParaFacturar | null) {
     setCliente(c);
+    buscado.current = "";
+    setPadron(null);
     if (!c) {
       // Volver a cargar a mano arranca de cero (o de lo que trajo el cobro),
       // no con los datos del cliente que se acaba de sacar. La condición
@@ -162,7 +214,11 @@ export function ReceptorCampos({
             id="docTipo"
             name="docTipo"
             value={docTipo}
-            onChange={(e) => setDocTipo(e.target.value as DocTipo)}
+            onChange={(e) => {
+              const tipo = e.target.value as DocTipo;
+              setDocTipo(tipo);
+              void completarDesdePadron(tipo, docNumero);
+            }}
             className={styles.select}
           >
             <option value="cuit">CUIT</option>
@@ -180,7 +236,10 @@ export function ReceptorCampos({
               name="docNumero"
               inputMode="numeric"
               value={docNumero}
-              onChange={(e) => setDocNumero(e.target.value)}
+              onChange={(e) => {
+                setDocNumero(e.target.value);
+                void completarDesdePadron(docTipo, e.target.value);
+              }}
               maxLength={20}
               required
               autoComplete="off"
@@ -189,6 +248,15 @@ export function ReceptorCampos({
           </div>
         ) : null}
       </div>
+      {padron ? (
+        <p
+          className={padron.estado === "error" ? propios.error : `${styles.hint} ${propios.enCurso}`}
+          role="status"
+        >
+          {padron.estado === "buscando" ? <span className={propios.spinner} aria-hidden="true" /> : null}
+          {padron.mensaje}
+        </p>
+      ) : null}
       {coincide ? (
         <p className={propios.coincide} role="status">
           <span>

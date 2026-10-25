@@ -33,6 +33,7 @@ import {
   type Renglon,
 } from "../lib/facturacion/calculo.ts";
 import { camposACompletar, datosDeReceptor } from "../lib/facturacion/cliente-receptor.ts";
+import { datosDelPadron, limpiarCalle, provinciaPorId } from "../lib/facturante/padron.ts";
 
 let fallos = 0;
 const ok = (q: string, real: unknown, esperado: unknown) => {
@@ -389,6 +390,39 @@ const fCheque = mapFactura({
 });
 ok("cheque = condición 12 del maestro", fCheque.header.detail.sellCondition[0].conditionType, 12);
 ok("la fecha elegida va al request", fCheque.header.detail.dates[0].dateTime, "2026-10-23T00:00:00");
+
+console.log("\nPadrón de ARCA (respuestas reales de producción)");
+ok(
+  "Valentin Bianchi: RI, calle, Mendoza",
+  datosDelPadron({
+    foundInPadron: true,
+    businessName: "VALENTIN BIANCHI S A C I F S. A.",
+    taxTreatmentId: 1,
+    fiscalAddress: "COMANDANTE TORRES 500",
+    stateId: 13,
+    cityId: 16708,
+    postalCode: "5600",
+  }),
+  {
+    razonSocial: "VALENTIN BIANCHI S A C I F S. A.",
+    condicionIva: "responsable_inscripto",
+    calle: "COMANDANTE TORRES 500",
+    provincia: "AR-M",
+    codigoPostal: "5600",
+    stateId: 13,
+    cityId: 16708,
+  },
+);
+ok("el ' 0' final de ARCA se va", limpiarCalle("ACCESO N/RAMAL PILAR KM 51200 0"), "ACCESO N/RAMAL PILAR KM 51200");
+ok("entidades y espacios", limpiarCalle("CAAMA&#209;O 1103  Dpto:9-10"), "CAAMAÑO 1103 Dpto:9-10");
+ok("una altura 10 no se toca", limpiarCalle("SARMIENTO 10"), "SARMIENTO 10");
+ok("provincias por id", [1, 2, 13, 24, 0, 25, null].map(provinciaPorId), ["AR-CF", "AR-B", "AR-M", "AR-T", null, null, null]);
+ok("no está en el padrón", datosDelPadron({ foundInPadron: false, businessName: null }), null);
+ok(
+  "sandbox: sin domicilio, monotributo",
+  datosDelPadron({ foundInPadron: true, businessName: "X", taxTreatmentId: 5, fiscalAddress: null, stateId: null }),
+  { razonSocial: "X", condicionIva: "monotributo", calle: null, provincia: null, codigoPostal: null, stateId: null, cityId: null },
+);
 
 console.log("\nCliente desde la factura");
 const ri = {

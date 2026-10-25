@@ -1,8 +1,9 @@
 "use client";
 
-import { useActionState } from "react";
+import { useActionState, useRef, useState } from "react";
+import { cuitValido } from "@/lib/facturacion/cuit";
 import { PROVINCIAS } from "@/lib/facturante/provincias";
-import type { ClienteFormState } from "./actions";
+import { buscarEnPadronClienteAction, type ClienteFormState } from "./actions";
 import { Aviso, Submit, type FormAction } from "../form-ui";
 import styles from "../../admin.module.css";
 import propios from "./clientes.module.css";
@@ -130,6 +131,7 @@ export function ClienteForm({
         maxLength={40}
         defaultValue={defaults?.documento}
       />
+      <CompletarDesdeArca />
       <Campo
         name="razonSocial"
         label="Razón social"
@@ -285,6 +287,81 @@ export function ClienteForm({
         <Submit>{submitLabel}</Submit>
       </div>
     </form>
+  );
+}
+
+/**
+ * Trae del padrón de ARCA lo que corresponde al CUIT cargado: razón social,
+ * condición frente al IVA y domicilio. El formulario no guarda estado (usa
+ * `defaultValue`), así que escribe en los campos directo; se guarda recién al
+ * tocar "Guardar". El nombre sólo se completa si está vacío: suele ser cómo se
+ * lo conoce, no la razón social.
+ */
+function CompletarDesdeArca() {
+  const boton = useRef<HTMLButtonElement>(null);
+  const [aviso, setAviso] = useState<{ error: boolean; texto: string } | null>(null);
+  const [buscando, setBuscando] = useState(false);
+
+  async function completar() {
+    const form = boton.current?.form;
+    if (!form) return;
+    const campo = (n: string) => form.elements.namedItem(n) as HTMLInputElement | HTMLSelectElement | null;
+    const cuit = (campo("documento")?.value ?? "").replace(/\D/g, "");
+    if (!cuitValido(cuit)) {
+      setAviso({ error: true, texto: "Cargá un CUIT válido (11 dígitos) para buscarlo." });
+      return;
+    }
+    setBuscando(true);
+    setAviso(null);
+    const r = await buscarEnPadronClienteAction(cuit).catch(() => ({
+      ok: false as const,
+      error: "No se pudo consultar el padrón de ARCA.",
+    }));
+    setBuscando(false);
+    if (!r.ok) {
+      setAviso({ error: true, texto: r.error });
+      return;
+    }
+    const d = r.datos;
+    const poner = (n: string, v: string | null) => {
+      const el = campo(n);
+      if (el && v) el.value = v;
+    };
+    if (!campo("nombre")?.value.trim()) poner("nombre", d.razonSocial);
+    poner("razonSocial", d.razonSocial);
+    poner("condicionIva", d.condicionIva);
+    poner("direccion", d.calle);
+    poner("localidad", d.localidad);
+    poner("provincia", d.provincia);
+    setAviso({
+      error: false,
+      texto: `Completado con el padrón de ARCA${d.calle ? "" : " (vino sin domicilio)"}. Revisalo y guardá.`,
+    });
+  }
+
+  return (
+    <div className={styles.field}>
+      <div className={styles.btnRow}>
+        <button
+          ref={boton}
+          type="button"
+          onClick={completar}
+          disabled={buscando}
+          className={`${styles.btn} ${styles.btnSmall}`}
+        >
+          {buscando ? "Buscando en ARCA…" : "Completar desde ARCA"}
+        </button>
+      </div>
+      {aviso ? (
+        <p className={`${styles.alert} ${aviso.error ? styles.alertError : styles.alertOk}`} role="status">
+          {aviso.texto}
+        </p>
+      ) : (
+        <span className={styles.hint}>
+          Con el CUIT, trae razón social, condición frente al IVA y domicilio fiscal.
+        </span>
+      )}
+    </div>
   );
 }
 
