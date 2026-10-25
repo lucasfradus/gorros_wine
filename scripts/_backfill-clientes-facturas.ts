@@ -20,6 +20,16 @@ import type { ElectronicDocument } from "../lib/facturante/types";
 
 // Antes de importar la base: `lib/db` lee DATABASE_URL al cargarse.
 loadEnvConfig(process.cwd());
+// Contra Railway desde esta máquina: `railway run -s Postgres -- npx tsx …`
+// con un TCP proxy abierto en Postgres. La DATABASE_URL de ahí es la interna,
+// que sólo resuelve dentro de Railway: se arma la pública con el proxy.
+{
+  const { RAILWAY_TCP_PROXY_DOMAIN: host, RAILWAY_TCP_PROXY_PORT: port, PGUSER, PGPASSWORD, PGDATABASE } =
+    process.env;
+  if (host && port && PGUSER && PGPASSWORD && PGDATABASE) {
+    process.env.DATABASE_URL = `postgresql://${encodeURIComponent(PGUSER)}:${encodeURIComponent(PGPASSWORD)}@${host}:${port}/${PGDATABASE}`;
+  }
+}
 
 class Deshacer extends Error {}
 
