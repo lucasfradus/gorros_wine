@@ -1,9 +1,9 @@
 import Link from "next/link";
-import { desc, eq } from "drizzle-orm";
+import { desc, eq, getTableColumns } from "drizzle-orm";
 import { db } from "@/lib/db";
-import { documentos } from "@/lib/db/schema";
+import { comprobantes, documentos } from "@/lib/db/schema";
 import { requireFacturacion } from "@/lib/auth";
-import { NOMBRE_DOCUMENTO, numeroDocumento } from "@/lib/facturacion/documentos";
+import { NOMBRE_DOCUMENTO, facturaViva, numeroDocumento } from "@/lib/facturacion/documentos";
 import { formatARS, formatFecha } from "@/lib/format";
 import styles from "../../../admin.module.css";
 import propios from "../facturacion.module.css";
@@ -22,9 +22,11 @@ export default async function DocumentosPage({
   const { tipo: crudo } = await searchParams;
   const tipo = crudo === "presupuesto" || crudo === "recibo" ? crudo : undefined;
 
+  // Con el estado de su factura: una rechazada o anulada no lo deja facturado.
   const filas = await db
-    .select()
+    .select({ ...getTableColumns(documentos), estadoFactura: comprobantes.estado })
     .from(documentos)
+    .leftJoin(comprobantes, eq(comprobantes.id, documentos.facturaId))
     .where(tipo ? eq(documentos.tipo, tipo) : undefined)
     .orderBy(desc(documentos.fecha), desc(documentos.createdAt))
     .limit(TOPE);
@@ -105,7 +107,7 @@ export default async function DocumentosPage({
                       {formatARS(d.totalCentavos)}
                     </td>
                     <td data-label="Estado">
-                      {d.anulado ? "Anulado" : d.facturaId ? "Facturado" : "Sin facturar"}
+                      {d.anulado ? "Anulado" : facturaViva(d.estadoFactura) ? "Facturado" : "Sin facturar"}
                     </td>
                   </tr>
                 ))}

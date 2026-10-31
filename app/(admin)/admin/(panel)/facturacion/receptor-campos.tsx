@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import type { CondicionIva } from "@/lib/db/schema";
 import { cuitValido } from "@/lib/facturacion/cuit";
 import { PROVINCIAS } from "@/lib/facturante/provincias";
@@ -63,10 +63,13 @@ const digitos = (s: string | null) => (s ?? "").replace(/\D/g, "");
 export function ReceptorCampos({
   iniciales,
   clientes,
+  clienteInicial = null,
   onCambio,
 }: {
   iniciales: DatosIniciales;
   clientes: ClienteParaFacturar[];
+  /** El de un presupuesto o recibo que se pasa a factura. */
+  clienteInicial?: ClienteParaFacturar | null;
   onCambio?: (r: { condicion: CondicionIva; cliente: ClienteParaFacturar | null }) => void;
 }) {
   const [cliente, setCliente] = useState<ClienteParaFacturar | null>(null);
@@ -170,6 +173,16 @@ export function ReceptorCampos({
     setProvincia(c.provincia ?? "");
     onCambio?.({ condicion: nueva, cliente: c });
   }
+
+  // Se elige como si se hubiera tocado en el buscador, para que precargue los
+  // mismos campos y le avise al formulario (letra, percepción). Una sola vez:
+  // después lo que manda es lo que se toque.
+  const precargado = useRef(false);
+  useEffect(() => {
+    if (precargado.current || !clienteInicial) return;
+    precargado.current = true;
+    elegirCliente(clienteInicial);
+  }, [clienteInicial]);
 
   function elegirCondicion(c: CondicionIva) {
     setCondicion(c);

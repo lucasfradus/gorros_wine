@@ -1,7 +1,8 @@
-import { and, asc, eq, inArray, sql } from "drizzle-orm";
+import { and, asc, eq, inArray, isNull, notInArray, or, sql } from "drizzle-orm";
 import { db } from "@/lib/db";
 import {
   clientes,
+  comprobantes,
   documentoItems,
   documentos,
   productos,
@@ -10,7 +11,8 @@ import {
 } from "@/lib/db/schema";
 import { hoyEnArgentina } from "@/lib/format";
 import { calcular, validarRenglones, type Renglon } from "./calculo";
-import { esDuplicado } from "./emitir";
+import { esDuplicado } from "./duplicado";
+import type { Tx } from "./emitir";
 import { validarFechaLibre } from "./reglas";
 
 /**
@@ -169,4 +171,40 @@ export async function documentoConItems(id: string) {
     .where(eq(documentoItems.documentoId, id))
     .orderBy(asc(documentoItems.orden));
   return { doc, items };
+}
+
+/**
+ * Una factura que ya no cuenta: rechazada, que nunca salió, o anulada con su
+ * NC. El documento que la originó se puede volver a facturar. Es el mismo
+ * criterio que el índice de factura viva de `comprobantes`.
+ */
+export const FACTURA_MUERTA = ["rechazado", "error", "anulado"] as const;
+
+export const facturaViva = (estado: string | null | undefined) =>
+  !!estado && !(FACTURA_MUERTA as readonly string[]).includes(estado);
+
+export class DocumentoNoFacturable extends Error {}
+
+/**
+ * Deja asentado en el documento qué factura salió de él. Va dentro de la
+ * transacción de la reserva: si el documento ya tiene una factura viva (otra
+ * pestaña, un doble clic) o se anuló, la factura no se reserva.
+ */
+export async function enlazarFactura(tx: Tx, documentoId: string, facturaId: string) {
+  const muertas = tx
+    .select({ id: comprobantes.id })
+    .from(comprobantes)
+    .where(inArray(comprobantes.estado, [...FACTURA_MUERTA]));
+  const r = await tx
+    .update(documentos)
+    .set({ facturaId, updatedAt: new Date() })
+    .where(
+      and(
+        eq(documentos.id, documentoId),
+        eq(documentos.anulado, false),
+        or(isNull(documentos.facturaId), inArray(documentos.facturaId, muertas)),
+      ),
+    )
+    .returning({ id: documentos.id });
+  if (!r.length) throw new DocumentoNoFacturable();
 }

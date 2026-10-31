@@ -2,7 +2,7 @@ import { and, eq, notInArray } from "drizzle-orm";
 import { db } from "@/lib/db";
 import { comprobantes } from "@/lib/db/schema";
 import type { ResultadoDocumento } from "@/lib/facturante/mappers";
-import { esDuplicado } from "./emitir";
+import { esDuplicado } from "./duplicado";
 
 /**
  * Guardar en la fila lo que Facturante dice de un comprobante.

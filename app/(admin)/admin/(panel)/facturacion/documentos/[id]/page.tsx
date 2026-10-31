@@ -5,7 +5,12 @@ import { db } from "@/lib/db";
 import { comprobantes } from "@/lib/db/schema";
 import { requireFacturacion } from "@/lib/auth";
 import { formatCuit } from "@/lib/facturacion/cuit";
-import { NOMBRE_DOCUMENTO, documentoConItems, numeroDocumento } from "@/lib/facturacion/documentos";
+import {
+  NOMBRE_DOCUMENTO,
+  documentoConItems,
+  facturaViva,
+  numeroDocumento,
+} from "@/lib/facturacion/documentos";
 import { FORMAS_DE_PAGO } from "@/lib/facturacion/formas-de-pago";
 import { formatARS, formatFecha } from "@/lib/format";
 import { AccionComprobante } from "../../acciones-comprobante";
@@ -28,7 +33,12 @@ export default async function DocumentoPage({ params }: { params: Promise<{ id: 
   const { doc, items } = encontrado;
   const [factura] = doc.facturaId
     ? await db
-        .select({ id: comprobantes.id, numero: comprobantes.numeroCompleto, letra: comprobantes.letra })
+        .select({
+          id: comprobantes.id,
+          numero: comprobantes.numeroCompleto,
+          letra: comprobantes.letra,
+          estado: comprobantes.estado,
+        })
         .from(comprobantes)
         .where(eq(comprobantes.id, doc.facturaId))
         .limit(1)
@@ -37,6 +47,7 @@ export default async function DocumentoPage({ params }: { params: Promise<{ id: 
   const nombre = NOMBRE_DOCUMENTO[doc.tipo];
   const cuit = process.env.EMISOR_CUIT?.replace(/\D/g, "");
   const hayDescuento = items.some((it) => it.descuentoPct > 0);
+  const facturado = !!factura && facturaViva(factura.estado);
 
   return (
     <>
@@ -46,7 +57,7 @@ export default async function DocumentoPage({ params }: { params: Promise<{ id: 
 
       <div className={propios.acciones}>
         <Imprimir />
-        {factura ? (
+        {facturado && factura ? (
           <Link href={`/admin/facturacion/manual/${factura.id}`} className={`${styles.btn} ${styles.btnSmall}`}>
             Facturado: {factura.numero ?? `Factura ${factura.letra}`}
           </Link>
@@ -58,7 +69,8 @@ export default async function DocumentoPage({ params }: { params: Promise<{ id: 
             Pasar a factura
           </Link>
         ) : null}
-        {!doc.anulado ? (
+        {/* Uno facturado ya no se anula acá: lo que se anula es la factura, con su NC. */}
+        {!doc.anulado && !facturado ? (
           <AccionComprobante
             action={anularDocumentoAction}
             id={doc.id}

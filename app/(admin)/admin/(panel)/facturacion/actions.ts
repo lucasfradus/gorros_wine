@@ -146,6 +146,7 @@ const facturaManualSchema = receptorSchema.extend({
   formaPago: z.enum(formaPago.enumValues, { error: "Elegí la forma de pago." }),
   // El rango (hasta 5 días atrás, correlativa) lo valida `reservar`.
   fecha: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "Elegí la fecha de la factura."),
+  documentoId: z.union([z.uuid(), z.literal("")]),
 });
 
 /**
@@ -165,7 +166,7 @@ export async function emitirFacturaManualAction(
   const leidos = leerRenglones(formData.get("renglones"));
   if ("error" in leidos) return { error: leidos.error };
 
-  const { id, clienteId, formaPago: forma, fecha, ...datos } = parsed.data;
+  const { id, clienteId, formaPago: forma, fecha, documentoId, ...datos } = parsed.data;
   const r = await reservarFacturaManual({
     id,
     renglones: leidos.renglones,
@@ -175,6 +176,7 @@ export async function emitirFacturaManualAction(
     clienteId: clienteId || null,
     guardarCliente: formData.get("guardarCliente") === "on",
     dia: fecha,
+    documentoId: documentoId || null,
     actorId: user.id,
   });
   if (!r.ok) return { error: r.error };
@@ -183,6 +185,7 @@ export async function emitirFacturaManualAction(
   revalidatePath("/admin/facturacion", "layout");
   // La factura puede haber creado o completado un cliente.
   revalidatePath("/admin/clientes", "layout");
+  if (documentoId) revalidatePath(`/admin/facturacion/documentos/${documentoId}`);
   redirect(`/admin/facturacion/manual/${r.comprobanteId}`);
 }
 

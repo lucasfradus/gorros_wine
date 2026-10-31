@@ -14,6 +14,7 @@ import {
   SIN_IDENTIFICAR,
   letraDe,
   type ClienteParaFacturar,
+  type DatosIniciales,
 } from "../receptor-campos";
 import { RenglonesCampos, useRenglones, type ProductoParaFacturar } from "../renglones";
 import styles from "../../../admin.module.css";
@@ -33,7 +34,7 @@ export function FacturaManualForm({
   productos,
   hoy,
   ultimas,
-  renglonesIniciales,
+  desde,
 }: {
   id: string;
   clientes: ClienteParaFacturar[];
@@ -42,11 +43,16 @@ export function FacturaManualForm({
   hoy: string;
   /** La fecha de la última factura de cada letra, para no romper la correlatividad. */
   ultimas: Record<"A" | "B", string | null>;
-  /** Los de un presupuesto o recibo que se pasa a factura. */
-  renglonesIniciales?: Renglon[];
+  /** El presupuesto o recibo que se pasa a factura: precarga renglones y receptor. */
+  desde?: {
+    documentoId: string;
+    renglones: Renglon[];
+    cliente: ClienteParaFacturar | null;
+    receptor: DatosIniciales;
+  };
 }) {
   const [state, action] = useActionState(emitirFacturaManualAction, INICIAL);
-  const renglonesEstado = useRenglones(renglonesIniciales);
+  const renglonesEstado = useRenglones(desde?.renglones);
   const { validos, problema } = renglonesEstado;
   const [condicion, setCondicion] = useState<CondicionIva>("consumidor_final");
   const [percepcion, setPercepcion] = useState(false);
@@ -64,11 +70,13 @@ export function FacturaManualForm({
     <form action={action} className={styles.form}>
       <input type="hidden" name="id" value={id} />
       <input type="hidden" name="renglones" value={JSON.stringify(validos)} />
+      {desde ? <input type="hidden" name="documentoId" value={desde.documentoId} /> : null}
 
       {/* Primero a quién: el cliente precarga el receptor y la percepción. */}
       <ReceptorCampos
-        iniciales={SIN_IDENTIFICAR}
+        iniciales={desde?.receptor ?? SIN_IDENTIFICAR}
         clientes={clientes}
+        clienteInicial={desde?.cliente}
         onCambio={(r) => {
           setCondicion(r.condicion);
           // La casilla se precarga del cliente al elegirlo (y se apaga al

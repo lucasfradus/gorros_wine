@@ -135,9 +135,9 @@ El 2026-10-31 el usuario pidió:
 
 ## Tarea 3: Pasar a factura
 
-- [ ] `manual/page.tsx` lee `?desde=` y precarga renglones y cliente.
-- [ ] La action de la factura recibe `documentoId` y lo enlaza en la misma transacción de la reserva.
-- [ ] El documento muestra "Facturado: FB 00015-…" con link.
+- [x] `manual/page.tsx` lee `?desde=` y precarga renglones y cliente.
+- [x] La action de la factura recibe `documentoId` y lo enlaza en la misma transacción de la reserva.
+- [x] El documento muestra "Facturado: FB 00015-…" con link.
 
 ## Tarea 4: Concepto 3 — Productos y Servicios
 
