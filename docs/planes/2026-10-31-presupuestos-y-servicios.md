@@ -121,17 +121,17 @@ El 2026-10-31 el usuario pidió:
 
 ## Tarea 2: Presupuestos y recibos
 
-- [ ] Schema: enum `documento_tipo`, tablas `documentos` y `documento_items`; `npm run db:generate` → `0014`. Revisar que sea sólo CREATE.
-- [ ] `lib/facturacion/documentos.ts`:
+- [x] Schema: enum `documento_tipo`, tablas `documentos` y `documento_items`; `npm run db:generate` → `0014`. Revisar que sea sólo CREATE.
+- [x] `lib/facturacion/documentos.ts`:
   - `reservarDocumento` (valida, calcula, numera e inserta en una transacción);
   - `anularDocumento`.
-- [ ] Actions: `emitirDocumentoAction` y `anularDocumentoAction` (zod, `requireUser`, `revalidatePath`, `redirect`).
-- [ ] Pantallas:
+- [x] Actions: `emitirDocumentoAction` y `anularDocumentoAction` (zod, `requireUser`, `revalidatePath`, `redirect`).
+- [x] Pantallas:
   - `documentos/nuevo` (formulario con selector de tipo, reusa `renglones.tsx` y un receptor simple: cliente del buscador o nombre/documento libre);
   - `documentos/[id]` (vista imprimible);
   - `documentos/page.tsx` (listado);
   - links en `facturacion/page.tsx`.
-- [ ] Mobile a 390 px y la impresión, sin el panel alrededor.
+- [x] Mobile a 390 px y la impresión, sin el panel alrededor.
 
 ## Tarea 3: Pasar a factura
 

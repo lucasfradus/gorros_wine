@@ -75,6 +75,20 @@ export function validarFecha(dia: string, rango: { min: string; max: string }): 
   return null;
 }
 
+/**
+ * La fecha de un presupuesto o recibo: sin ARCA de por medio no hay
+ * correlatividad ni días hacia atrás. Sólo se cuida que sea una fecha real y
+ * no un error de tipeo (2062 por 2026).
+ */
+export function validarFechaLibre(dia: string, hoy: string): string | null {
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(dia) || Number.isNaN(Date.parse(`${dia}T12:00:00Z`))) {
+    return "La fecha no es válida.";
+  }
+  if (dia > sumarDias(hoy, 365)) return "La fecha está a más de un año: revisala.";
+  if (dia < sumarDias(hoy, -5 * 365)) return "La fecha tiene más de cinco años: revisala.";
+  return null;
+}
+
 export interface DatosReceptor {
   condicionIva: CondicionIva;
   docTipo: "cuit" | "dni" | "ninguno";

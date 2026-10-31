@@ -18,6 +18,7 @@ import { buscarCuit, type BusquedaCuit } from "@/lib/facturacion/buscar-cuit";
 import { enviarComprobante } from "@/lib/facturacion/enviar";
 import { consultarEstado, marcarNoEmitido } from "@/lib/facturacion/reconciliar";
 import type { FormState } from "../form-ui";
+import { leerRenglones } from "./renglones-schema";
 
 /**
  * Actions de la sección Facturación. Todas arrancan por
@@ -140,42 +141,12 @@ export async function emitirFacturaAction(
   return { ok: "Emitiendo la factura. Tarda unos 20 segundos." };
 }
 
-/**
- * Los renglones llegan como JSON en un input oculto: son una lista de largo
- * variable, y el formulario ya los tiene armados para mostrar las cuentas. Lo
- * que vale es lo que se valida y se calcula acá, no lo que mostró la pantalla.
- */
-const renglonesSchema = z
-  .array(
-    z.object({
-      productoId: z.union([z.uuid(), z.null()]),
-      descripcion: z.string().trim().min(1, "Falta la descripción de un renglón.").max(200),
-      cantidad: z.number().int().min(1).max(9_999),
-      precioUnitarioCentavos: z.number().int().positive("Falta el precio de un renglón."),
-      descuentoPct: z.number().min(0).max(99.99),
-      alcanzado: z.boolean(),
-    }),
-  )
-  .min(1, "Agregá al menos un renglón.")
-  .max(50, "Hasta 50 renglones por factura.");
-
 const facturaManualSchema = receptorSchema.extend({
   id: z.uuid(),
   formaPago: z.enum(formaPago.enumValues, { error: "Elegí la forma de pago." }),
   // El rango (hasta 5 días atrás, correlativa) lo valida `reservar`.
   fecha: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "Elegí la fecha de la factura."),
 });
-
-function leerRenglones(texto: FormDataEntryValue | null) {
-  let crudo: unknown;
-  try {
-    crudo = JSON.parse(String(texto ?? ""));
-  } catch {
-    return { error: "No llegaron los renglones. Recargá la página." } as const;
-  }
-  const r = renglonesSchema.safeParse(crudo);
-  return r.success ? ({ renglones: r.data } as const) : ({ error: r.error.issues[0].message } as const);
-}
 
 /**
  * Factura de una venta que no pasó por MP. Reserva, manda en `after()` y lleva

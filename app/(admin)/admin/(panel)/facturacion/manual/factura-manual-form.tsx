@@ -19,8 +19,6 @@ import { RenglonesCampos, useRenglones, type ProductoParaFacturar } from "../ren
 import styles from "../../../admin.module.css";
 import propios from "../facturacion.module.css";
 
-export type { ProductoParaFacturar };
-
 const INICIAL: FormState = {};
 
 /**

@@ -13,7 +13,7 @@ Plan completo: [docs/planes/2026-10-31-presupuestos-y-servicios.md](../docs/plan
 Rama `claude/loving-cori-4f45nc` (sesión en la nube).
 
 - [x] **Tarea 1** — Precio s/IVA y c/IVA enlazados; renglones en un componente compartido
-- [ ] **Tarea 2** — Presupuestos y recibos: schema, reserva, pantallas, vista imprimible
+- [x] **Tarea 2** — Presupuestos y recibos: schema, reserva, pantallas, vista imprimible
 - [ ] **Tarea 3** — Pasar un presupuesto/recibo a factura
 - [ ] **Tarea 4** — Concepto 3 (hasta 10 días atrás) · calibrar `dateType` en sandbox · confirmar con el contador
 - [ ] **Cierre** — tsc, prueba offline, build, navegador, ARQUITECTURA, PR
