@@ -7,19 +7,20 @@
 > Antes de tocar código: leer `AGENTS.md` (este Next.js y este Drizzle no son
 > los del training data) y `tasks/lessons.md`.
 
-**Datos del receptor desde el padrón de ARCA (autocompletar por CUIT).**
-Plan completo: [docs/planes/2026-10-25-padron-cuit.md](../docs/planes/2026-10-25-padron-cuit.md).
+**Presupuestos y recibos, precio sin IVA y concepto "Productos y Servicios".**
+Plan completo: [docs/planes/2026-10-31-presupuestos-y-servicios.md](../docs/planes/2026-10-31-presupuestos-y-servicios.md).
 
-Worktree `../Gorros-factura-manual` (reusado) · rama `feat/padron-cuit` · puerto `:3003`
+Rama `claude/loving-cori-4f45nc` (sesión en la nube).
 
-- [x] **Tarea 1** — `consultarCuit()` / `ciudadesDe()` y el parseo puro del padrón
-- [x] **Tarea 2** — `buscarEnPadronAction` con caché
-- [x] **Tarea 3** — El receptor completa solo al tipear un CUIT
-- [x] **Tarea 4** — "Completar desde ARCA" en el alta/edición de cliente
-- [x] **Tarea 5** — `docs/ARQUITECTURA.md`
-- [ ] **Cierre** — tsc ✓, prueba offline ✓, build ✓, sandbox ✓, producción solo lectura ✓ · falta: PR y merge
+- [ ] **Tarea 1** — Precio s/IVA y c/IVA enlazados; renglones en un componente compartido
+- [ ] **Tarea 2** — Presupuestos y recibos: schema, reserva, pantallas, vista imprimible
+- [ ] **Tarea 3** — Pasar un presupuesto/recibo a factura
+- [ ] **Tarea 4** — Concepto 3 (hasta 10 días atrás) · calibrar `dateType` en sandbox · confirmar con el contador
+- [ ] **Cierre** — tsc, prueba offline, build, navegador, ARQUITECTURA, PR
 
 ## Viene de las iteraciones anteriores (sigue pendiente)
+
+- **Padrón de ARCA por CUIT (#20, mergeado)**: archivar el plan con su Review.
 
 - **Facturación y clientes (#19, mergeado y deployado)**: backfill de clientes de
   FA 00015-2 y FA 00015-3 aplicado en producción. Falta confirmar con el
