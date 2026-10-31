@@ -29,6 +29,8 @@ import { sePuedeMarcarNoEmitido } from "../lib/facturacion/estado.ts";
 import {
   calcular,
   parseImporte,
+  conIvaDeNeto,
+  netoDeConIva,
   validarRenglones,
   type Renglon,
 } from "../lib/facturacion/calculo.ts";
@@ -275,6 +277,13 @@ ok("letras → no", parseImporte("12a"), null);
 ok("cero → no", parseImporte("0,00"), null);
 ok("vacío → no", parseImporte(""), null);
 ok("más de $100.000.000 → no", parseImporte("100.000.000,01"), null);
+
+console.log("\nPrecio sin IVA ↔ con IVA");
+ok("neto redondo", conIvaDeNeto(100_000), 121_000);
+ok("…y de vuelta", netoDeConIva(121_000), 100_000);
+ok("neto con centavos", conIvaDeNeto(99_999), 120_999);
+ok("…y de vuelta da lo tipeado", netoDeConIva(120_999), 99_999);
+ok("un centavo", conIvaDeNeto(1), 1);
 
 const renglon = (o: Partial<Renglon>): Renglon => ({
   productoId: null,

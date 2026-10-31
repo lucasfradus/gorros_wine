@@ -110,14 +110,14 @@ El 2026-10-31 el usuario pidió:
 
 ## Tarea 1: Precio sin IVA (sólo pantalla)
 
-- [ ] `calculo.ts`:
+- [x] `calculo.ts`:
   - `conIvaDeNeto(neto)` y `netoDeConIva(conIva)`, en centavos;
   - casos en `prueba-facturacion.ts` (1.000,00 ↔ 1.210,00; 999,99 ↔ 1.209,99).
-- [ ] Extraer los renglones de `factura-manual-form.tsx` a `facturacion/renglones.tsx`:
+- [x] Extraer los renglones de `factura-manual-form.tsx` a `facturacion/renglones.tsx`:
   - estado, fila, datalist de productos;
   - la casilla "Bebida (percepción)" es opcional.
-- [ ] Sumar el input "Precio s/IVA" enlazado.
-- [ ] **Verificar**: tsc, prueba offline, y el formulario en el navegador: tipear en cualquiera de las dos columnas.
+- [x] Sumar el input "Precio s/IVA" enlazado.
+- [x] **Verificar**: tsc, prueba offline, y el formulario en el navegador: tipear en cualquiera de las dos columnas.
 
 ## Tarea 2: Presupuestos y recibos
 
