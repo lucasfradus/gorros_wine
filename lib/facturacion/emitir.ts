@@ -12,6 +12,7 @@ import {
 import { normalizeEmail } from "@/lib/auth/password";
 import { configFacturante } from "@/lib/facturante/config";
 import {
+  fechaDelComprobante,
   mapFactura,
   mapNotaCredito,
   numeroDeComprobante,
@@ -367,7 +368,7 @@ export async function reservarNotaCredito(opts: {
   const respuesta = f.responsePayload as DocumentoResponse | null;
   const numero = numeroDeComprobante(respuesta, f.numeroCompleto);
   const prefijo = prefijoDeComprobante(respuesta, f.numeroCompleto);
-  const fecha = facturaRequest?.header?.detail?.dates?.[0]?.dateTime;
+  const fecha = fechaDelComprobante(facturaRequest);
   if (!facturaRequest || !numero || !prefijo || !fecha) {
     return {
       ok: false,

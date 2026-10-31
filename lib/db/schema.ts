@@ -952,7 +952,7 @@ export const comprobantes = pgTable(
     estado: comprobanteEstado("estado").notNull().default("pendiente"),
 
     /** La fecha **fiscal** del comprobante, la que va impresa. No es
-     *  `createdAt`: una factura manual se puede fechar hasta 5 días atrás
+     *  `createdAt`: una factura manual se puede fechar hasta 10 días atrás
      *  (`rangoDeFecha` en lib/facturacion/reglas.ts). Es la que ordena los
      *  listados y la que ARCA exige correlativa por tipo y punto de venta. */
     fecha: date("fecha").notNull(),

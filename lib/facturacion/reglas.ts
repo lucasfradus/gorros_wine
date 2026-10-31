@@ -41,11 +41,12 @@ export function letraPara(condicion: CondicionIva): ComprobanteLetra | null {
 }
 
 /**
- * Cuántos días se puede fechar hacia atrás una factura de bienes. ARCA acepta
- * de N-5 a N+5, con N el día en que se pide el CAE (manual WSFEv1, campo
- * CbteFch, Concepto 1 Productos).
+ * Cuántos días se puede fechar hacia atrás una factura. Se factura con
+ * concepto 3, Productos y Servicios (`GOOD_PRODUCTOS_Y_SERVICIOS` en
+ * mappers.ts), y para ése ARCA acepta de N-10 a N+10, con N el día en que se
+ * pide el CAE (manual WSFEv1, campo CbteFch). Con Bienes serían 5.
  */
-export const DIAS_HACIA_ATRAS = 5;
+export const DIAS_HACIA_ATRAS = 10;
 
 const sumarDias = (dia: string, n: number) =>
   new Date(Date.parse(`${dia}T12:00:00Z`) + n * 24 * 60 * 60 * 1000).toISOString().slice(0, 10);
@@ -53,9 +54,9 @@ const sumarDias = (dia: string, n: number) =>
 /**
  * Entre qué fechas se puede emitir una factura, "AAAA-MM-DD".
  *
- * - **Hasta hoy**, aunque ARCA acepte 5 días adelante: una factura fechada en
+ * - **Hasta hoy**, aunque ARCA acepte días adelante: una factura fechada en
  *   el futuro bloquea todas las de fecha anterior hasta que llegue ese día.
- * - **Desde hace 5 días, y nunca antes que la última** del mismo tipo y letra
+ * - **Desde hace `DIAS_HACIA_ATRAS` días, y nunca antes que la última** del mismo tipo y letra
  *   en el punto de venta: ARCA las exige correlativas y si no, rechaza con
  *   "Existe un comprobante con fecha posterior a la que se intenta emitir".
  */

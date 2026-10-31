@@ -141,13 +141,14 @@ El 2026-10-31 el usuario pidió:
 
 ## Tarea 4: Concepto 3 — Productos y Servicios
 
-- [ ] `types.ts`: `DocDetail.good` documentado, fechas del período.
-- [ ] `mapFactura`: `good: 3` y las fechas del período y del vencimiento.
-- [ ] `DIAS_HACIA_ATRAS = 10` en `reglas.ts`, con la fuente en el comentario.
-- [ ] Casos en `prueba-facturacion.ts`: período del mes y NC que hereda.
+- [x] `types.ts`: `DocDetail.good` documentado, fechas del período.
+- [x] `mapFactura`: `good: 3` y las fechas del período y del vencimiento.
+- [x] `DIAS_HACIA_ATRAS = 10` en `reglas.ts`, con la fuente en el comentario.
+- [x] Casos en `prueba-facturacion.ts`: período del mes y NC que hereda.
 - [ ] **Calibración en el sandbox** (`scripts/_facturante-sandbox.ts`, lo corre el usuario con las credenciales de test en su `.env.local`):
   - confirmar los `dateType` del período y del vencimiento;
-  - una B y una A con fecha de 8 días atrás;
+  - una B y una A con fecha de 6 a 10 días atrás (`DIAS_ATRAS=7 APPLY=1`), sin
+    facturas posteriores de esa letra en el POS del sandbox;
   - una NC.
 
   **No se mergea sin esto.**
@@ -155,11 +156,39 @@ El 2026-10-31 el usuario pidió:
 
 ## Cierre
 
-- [ ] `npx tsc --noEmit`, `npm run prueba:facturacion`, `npm run build` (con el dev bajado)
-- [ ] Probado en el navegador contra una base local
-- [ ] `docs/ARQUITECTURA.md`: documentos no fiscales y concepto 3
+- [x] `npx tsc --noEmit`, `npm run prueba:facturacion`, `npm run build` (con el dev bajado)
+- [x] Probado en el navegador contra una base local
+- [x] `docs/ARQUITECTURA.md`: documentos no fiscales y concepto 3
 - [ ] PR (cuando el usuario lo pida)
 
 ## Review
 
-_(al cerrar)_
+**Hecho (2026-10-31), en la rama `claude/loving-cori-4f45nc`:**
+
+- **Precio s/IVA y c/IVA enlazados** en los renglones (`renglones.tsx`, compartido).
+- **Presupuestos y recibos**: tablas propias, numeración por tipo, hoja imprimible, anulación.
+- **Pasar a factura**, con el vínculo en la transacción de la reserva.
+- **Concepto 3**, con período y vencimiento; 10 días hacia atrás.
+
+**Cambió respecto del plan:**
+
+- **Recibo/presupuesto facturado**: deja de ofrecer "Anular". Lo que se anula es la factura, con su NC.
+- **Documento liberado**: una factura rechazada, fallida o anulada lo libera para volver a facturarlo (`enlazarFactura`).
+- **`esDuplicado`** pasó a `lib/facturacion/duplicado.ts`, para no cruzar imports entre `emitir.ts` y `documentos.ts`.
+- **Fecha del comprobante**: se lee con `fechaDelComprobante` (por `dateType`) y no con `dates[0]`.
+
+**Verificado** contra un Postgres local, con `next dev` y con `next start` (Facturante falso, así que las facturas quedan en `error`):
+
+- tsc, prueba offline y build;
+- precio en las dos columnas;
+- presupuesto y recibo, numeración, PDF del navegador, 390 px, anular y validación de fecha;
+- pasar a factura con cliente RI precargado;
+- segundo intento rechazado por el servidor sin dejar comprobante;
+- documento liberado cuando su factura falla.
+
+**Pendiente** (bloquea el merge):
+
+- **Sandbox**: confirmar los `dateType` 2, 3 y 4.
+  - Si no son ésos, la salida más corta es no mandarlos: Facturante completa el período con la fecha de hoy.
+- **Contador**: confirmar el concepto 3 para la venta de vinos.
+- **Mes anterior**: el manual de ARCA dice que la fecha "no podrá exceder el mes de presentación". Nunca se probó si eso impide fechar en el mes anterior. Con 10 días se va a intentar más seguido, por ejemplo el 3 de noviembre con fecha del 28 de octubre.

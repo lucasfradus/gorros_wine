@@ -144,7 +144,7 @@ export async function emitirFacturaAction(
 const facturaManualSchema = receptorSchema.extend({
   id: z.uuid(),
   formaPago: z.enum(formaPago.enumValues, { error: "Elegí la forma de pago." }),
-  // El rango (hasta 5 días atrás, correlativa) lo valida `reservar`.
+  // El rango (días hacia atrás, correlativa) lo valida `reservar`.
   fecha: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "Elegí la fecha de la factura."),
   documentoId: z.union([z.uuid(), z.literal("")]),
 });

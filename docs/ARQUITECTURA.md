@@ -292,8 +292,10 @@ diferencias:
 
 - **Sin cobro detrás**: `comprobantes.movimiento_id` es NULL (y el de su NC
   también). No hay otra columna que diga "manual".
-- **Renglones**: del catálogo o libres, con cantidad, precio con IVA y
-  descuento %. Se guardan en `comprobante_items`, que es lo que se consulta
+- **Renglones**: del catálogo o libres, con cantidad, precio y descuento %.
+  El precio se carga con o sin IVA (dos columnas enlazadas en
+  `renglones.tsx`); lo que se guarda y se factura es siempre el precio con
+  IVA, y el sin IVA es sólo una forma de tipearlo (`conIvaDeNeto`). Se guardan en `comprobante_items`, que es lo que se consulta
   para saber qué se vendió; el `request_payload` sigue siendo lo que se mandó.
   La factura de un cobro de MP escribe su único renglón también.
   - **El descuento va dentro del precio unitario**, redondeado por unidad, y
@@ -311,8 +313,13 @@ diferencias:
 `created_at`). La manual se elige; la de un cobro y la NC salen con la de hoy.
 El rango sale de `rangoDeFecha` en `lib/facturacion/reglas.ts`:
 
-- **Hasta 5 días atrás**: ARCA acepta N-5 a N+5 para bienes (manual WSFEv1,
-  CbteFch). No se ofrecen fechas futuras: una factura fechada mañana bloquea
+- **Hasta 10 días atrás**: se factura con **concepto 3, Productos y
+  Servicios** (`GOOD_PRODUCTOS_Y_SERVICIOS` en `mappers.ts`), y para ése ARCA
+  acepta N-10 a N+10 (manual WSFEv1, CbteFch); con Bienes serían 5. A cambio
+  el request lleva el período del servicio (del 1 del mes al día de la
+  factura) y el vencimiento del pago (el mismo día), en `detail.dates`
+  (`fechasDe`). La NC copia concepto y período, con fecha y vencimiento
+  propios. No se ofrecen fechas futuras: una factura fechada mañana bloquea
   todas las de hoy.
 - **Nunca antes que la última de la misma letra** (`ultimasFechas()`): ARCA las
   exige correlativas por tipo y punto de venta. Si igual pasa (una factura
@@ -339,6 +346,27 @@ sin condición el PDF imprime "Contado"; por eso no hay un "otros" acá.
   calculado (`amountType: 1`). Sin ese campo, Facturante lee el monto como
   porcentaje. Se guarda en `comprobantes.tributos` y la NC la copia.
 
+### Presupuestos y recibos
+
+**Facturación → Presupuestos y recibos**: comprobantes **sin validez fiscal**,
+para dar en el momento de la venta y facturar después.
+
+- **Tablas propias** (`documentos`, `documento_items`), no `comprobantes`, que
+  es fiscal de punta a punta: letra, CAE, estados de Facturante,
+  correlatividad. No pasan por Facturante.
+- **Numeración** correlativa por tipo (`max + 1` en la transacción, con un
+  índice único que hace chocar y renumerar a dos simultáneos).
+- **Fecha libre**: sin ARCA no hay días hacia atrás ni correlatividad.
+- **Mismos renglones** que la factura manual (`renglones.tsx`), sin
+  percepción. Se guardan con el documento y no se editan: se anula.
+- **Hoja imprimible** (`documentos/[id]`): siempre en claro, con la leyenda
+  "DOCUMENTO NO VÁLIDO COMO FACTURA". El PDF lo arma el navegador al imprimir.
+- **Pasar a factura**: abre la factura manual con `?desde=<id>`, con renglones
+  y receptor precargados. La reserva escribe `documentos.factura_id` en la
+  misma transacción, y sólo si no tiene ya una factura viva. Una rechazada,
+  fallida o anulada con NC lo libera para facturarlo de nuevo
+  (`enlazarFactura` en `lib/facturacion/documentos.ts`).
+
 `calculo.ts` es una función pura que comparten el formulario, el servidor y la
 prueba offline. Los totales se calibraron contra el sandbox de Facturante con
 `scripts/_facturante-sandbox.ts`, que se niega a correr contra producción.
@@ -354,6 +382,7 @@ token de MP por vez: renovar en ráfaga da 429 e invalida los tokens vigentes.
 | `lib/facturacion/reglas.ts` | Letra y datos obligatorios del receptor, sin base |
 | `lib/facturacion/calculo.ts` | Renglones, descuentos, percepción y totales, sin base |
 | `lib/facturacion/cliente-receptor.ts` | Qué se le guarda a un cliente desde una factura, sin base |
+| `lib/facturacion/documentos.ts` | Presupuestos y recibos: numeración, anulación, vínculo con la factura |
 | `lib/facturacion/{emitir,enviar,guardar,reconciliar,webhook}.ts` | El ciclo de vida del comprobante |
 | `lib/facturacion/estado.ts` | Qué estado de facturación tiene un cobro, visto desde sus comprobantes |
 
