@@ -137,6 +137,15 @@ export function calcular(renglones: Renglon[], opts: { percepcionIva: boolean })
 }
 
 /**
+ * La factura de un cobro tiene que decir lo que entró por MP, percepción
+ * incluida: un total distinto deja la factura y el cobro sin conciliar.
+ */
+export const errorDeTotalDelCobro = (totalCentavos: number, cobroCentavos: number) =>
+  totalCentavos === cobroCentavos
+    ? null
+    : "La factura tiene que sumar exactamente el importe del cobro.";
+
+/**
  * Lo que se le exige a una venta antes de calcularla. Devuelve el primer
  * problema, en el idioma de la pantalla.
  */

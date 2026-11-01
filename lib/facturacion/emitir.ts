@@ -22,7 +22,7 @@ import {
 } from "@/lib/facturante/mappers";
 import type { DocumentoResponse, ElectronicDocument } from "@/lib/facturante/types";
 import { diaEnArgentina, hoyEnArgentina } from "@/lib/format";
-import { calcular, validarRenglones, type Renglon } from "./calculo";
+import { calcular, errorDeTotalDelCobro, validarRenglones, type Renglon } from "./calculo";
 import { camposACompletar, datosDeReceptor } from "./cliente-receptor";
 import { DocumentoNoFacturable, verificarFacturable } from "./documentos";
 import { esDuplicado, indiceDuplicado } from "./duplicado";
@@ -43,8 +43,8 @@ export type Reserva = { ok: true; comprobanteId: string } | { ok: false; error: 
 
 const DESCRIPCION_POR_DEFECTO = "Vinos y productos";
 
-/** El único renglón de la factura de un cobro de MP: su descripción, o una
- *  genérica. La vista previa muestra esto mismo. */
+/** El renglón con el que arranca la factura de un cobro de MP: su descripción,
+ *  o una genérica. */
 export const descripcionDelCobro = (mov: { descripcion: string | null }) =>
   (mov.descripcion?.trim() || DESCRIPCION_POR_DEFECTO).slice(0, 200);
 
@@ -172,6 +172,8 @@ async function reservar(o: {
   documentoId?: string | null;
   /** El día de la venta, si es otro que el de la factura (el del cobro). */
   venta?: string | null;
+  /** El importe que tiene que dar la factura, si sale de un cobro. */
+  cobroCentavos?: number;
   actorId: string;
   siDuplicado: string;
 }): Promise<Reserva> {
@@ -186,6 +188,10 @@ async function reservar(o: {
   const calc = calcular(o.renglones, {
     percepcionIva: o.percepcionIva && o.datos.condicionIva === "responsable_inscripto",
   });
+  if (o.cobroCentavos !== undefined) {
+    const errorTotal = errorDeTotalDelCobro(calc.totalCentavos, o.cobroCentavos);
+    if (errorTotal) return { ok: false, error: errorTotal };
+  }
   const v = validarReceptor(o.datos, calc.totalCentavos);
   if (!v.ok) return v;
 
@@ -300,9 +306,11 @@ async function reservar(o: {
   return { ok: true, comprobanteId: o.id };
 }
 
-/** La factura de un cobro de MP: un único renglón por el total, sin percepción. */
+/** La factura de un cobro de MP: los conceptos que sean, sumando lo cobrado. */
 export async function reservarFactura(opts: {
   movimientoId: string;
+  renglones: Renglon[];
+  percepcionIva: boolean;
   datos: DatosReceptor;
   clienteId: string | null;
   guardarCliente: boolean;
@@ -319,17 +327,9 @@ export async function reservarFactura(opts: {
   return reservar({
     id: randomUUID(),
     movimientoId: mov.id,
-    renglones: [
-      {
-        productoId: null,
-        descripcion: descripcionDelCobro(mov),
-        cantidad: 1,
-        precioUnitarioCentavos: mov.montoCentavos,
-        descuentoPct: 0,
-        alcanzado: false,
-      },
-    ],
-    percepcionIva: false,
+    renglones: opts.renglones,
+    percepcionIva: opts.percepcionIva,
+    cobroCentavos: mov.montoCentavos,
     formaPago: "electronico",
     datos: opts.datos,
     clienteId: opts.clienteId,

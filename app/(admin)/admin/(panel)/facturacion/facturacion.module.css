@@ -115,13 +115,13 @@
   margin: 0;
 }
 
-/* Factura manual: los renglones de la venta. En escritorio, una fila por
-   renglón; en el teléfono, cada renglón es una tarjeta con la descripción
-   arriba y los números de a dos. */
+/* Los renglones de una venta. En escritorio son una tabla: títulos una sola vez
+   y una fila por renglón; en pantallas chicas, cada renglón es una tarjeta con
+   la descripción arriba y los números de a dos. */
 .renglones {
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  gap: 10px;
   margin: 0;
   padding: 0;
   border: 0;
@@ -132,32 +132,56 @@
   align-self: flex-start;
 }
 
+.renglonesTitulos,
 .renglon {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) 84px 130px 130px 84px;
+  grid-template-columns: minmax(160px, 1fr) 60px 112px 112px 60px 112px 68px;
   gap: 10px;
-  padding: 12px;
-  border: 1px solid var(--field-line);
-  border-radius: 10px;
+}
+
+.renglonesTitulos {
+  padding-bottom: 6px;
+  border-bottom: 1px solid var(--border-strong);
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--muted);
+}
+
+/* Las columnas de números se alinean a la derecha, como en el comprobante. */
+.renglonesTitulos > span:nth-child(n + 2) {
+  text-align: right;
+}
+
+.renglon {
+  align-items: start;
+  padding-bottom: 10px;
+  border-bottom: 1px solid var(--row-line);
 }
 
 .renglonDescripcion {
   min-width: 0;
 }
 
-.renglonPie {
-  grid-column: 1 / -1;
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  justify-content: flex-end;
-  gap: 8px 16px;
-  font-size: 14px;
+.renglonNumero {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
 }
 
-.renglonPie .importe {
-  margin-right: auto;
+.renglonImporte {
+  /* La altura de un campo: centra el importe con los inputs de la fila. */
+  line-height: 38px;
   font-weight: 600;
+}
+
+/* Oculto a la vista, no a un lector de pantalla: el título de la columna lo
+   reemplaza. */
+.renglonRotulo {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
 }
 
 .renglonCheck {
@@ -168,13 +192,59 @@
   cursor: pointer;
 }
 
-@media (max-width: 640px) {
+@media (max-width: 1100px) {
+  .renglonesTitulos {
+    display: none;
+  }
+
   .renglon {
     grid-template-columns: 1fr 1fr;
+    padding: 12px;
+    border: 1px solid var(--field-line);
+    border-radius: 10px;
   }
 
   .renglonDescripcion {
     grid-column: 1 / -1;
+  }
+
+  .renglonRotulo {
+    position: static;
+    width: auto;
+    height: auto;
+    clip-path: none;
+  }
+
+  .renglonNumero,
+  .renglonImporte {
+    text-align: left;
+  }
+}
+
+/* La hoja a lo ancho y los datos del cobro al costado, mientras entren. */
+.cobroConHoja {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 300px;
+  gap: 18px;
+  align-items: start;
+}
+
+.cobroConHoja .cuentaDatos {
+  grid-template-columns: minmax(0, 1fr);
+  gap: 2px;
+  margin: 0;
+}
+
+.cobroConHoja .cuentaDatos dd {
+  margin-bottom: 10px;
+  overflow-wrap: anywhere;
+}
+
+/* Debajo de esto, la columna lateral le saca a la hoja el ancho que necesita
+   la descripción de los renglones. */
+@media (max-width: 1600px) {
+  .cobroConHoja {
+    grid-template-columns: minmax(0, 1fr);
   }
 }
 

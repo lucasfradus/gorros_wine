@@ -41,7 +41,8 @@ const CONDICIONES: { value: CondicionIva; label: string; disabled?: boolean }[] 
 
 /** Misma regla que `letraPara` en lib/facturacion/reglas.ts, para mostrarla
  *  antes de enviar. La que vale es la del servidor. */
-export const letraDe = (c: CondicionIva) => (c === "responsable_inscripto" ? "A" : "B");
+export const letraDe = (c: CondicionIva): "A" | "B" =>
+  c === "responsable_inscripto" ? "A" : "B";
 
 export const SIN_IDENTIFICAR: DatosIniciales = { nombre: "", email: "", docTipo: "ninguno", docNumero: "" };
 

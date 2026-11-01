@@ -6,7 +6,7 @@ import { comprobantes, movimientosMp } from "@/lib/db/schema";
 import { requireFacturacion } from "@/lib/auth";
 import { formatARS, formatDateTime, hoyEnArgentina } from "@/lib/format";
 import { descripcionDelCobro } from "@/lib/facturacion/emitir";
-import { facturacionConfigurada } from "@/lib/facturante/config";
+import { configFacturante, facturacionConfigurada } from "@/lib/facturante/config";
 import {
   sePuedeFacturar,
   situacionDe,
@@ -17,6 +17,7 @@ import { AvisoEmitiendo } from "../en-curso";
 import { EmitirForm, type DatosIniciales } from "../emitir-form";
 import { TablaComprobantes } from "../tabla-comprobantes";
 import { clientesParaFacturar } from "../clientes-para-facturar";
+import { productosParaFacturar } from "../productos-para-facturar";
 import styles from "../../../admin.module.css";
 import propios from "../facturacion.module.css";
 
@@ -69,12 +70,33 @@ export default async function CobroPage({ params }: { params: Promise<{ id: stri
   const enCamino = comps.some((c) => c.estado === "pendiente" || c.estado === "en_proceso");
   const facturable = sePuedeFacturar(situacion);
 
-  const listaClientes = facturable
-    ? await clientesParaFacturar()
-    : [];
+  const [listaClientes, productos] = facturable
+    ? await Promise.all([clientesParaFacturar(), productosParaFacturar()])
+    : [[], []];
+
+  const datosDelCobro = (
+    <section className={styles.card}>
+      <dl className={propios.cuentaDatos}>
+        <dt>Operación de MP</dt>
+        <dd>{mov.mpPagoId}</dd>
+        <dt>Medio</dt>
+        <dd>{mov.metodoPago ?? "—"}</dd>
+        <dt>Detalle</dt>
+        <dd>{mov.descripcion ?? "—"}</dd>
+        <dt>Mail</dt>
+        <dd>{mov.email ?? "—"}</dd>
+        <dt>Documento</dt>
+        <dd>{mov.docNumero ? `${mov.docTipo ?? ""} ${mov.docNumero}` : "—"}</dd>
+        <dt>Comisión de MP</dt>
+        <dd>{mov.comisionCentavos != null ? formatARS(mov.comisionCentavos) : "—"}</dd>
+        <dt>Neto acreditado</dt>
+        <dd>{mov.netoCentavos != null ? formatARS(mov.netoCentavos) : "—"}</dd>
+      </dl>
+    </section>
+  );
 
   return (
-    <>
+    <div className={styles.anchoCompleto}>
       <AutoRefresh activo={enCamino} />
       <Link href="/admin/facturacion/cobros" className={styles.backLink}>
         ← Cobros de Mercado Pago
@@ -88,25 +110,6 @@ export default async function CobroPage({ params }: { params: Promise<{ id: stri
         </div>
       </div>
 
-      <section className={styles.card} style={{ marginBottom: 18 }}>
-        <dl className={propios.cuentaDatos}>
-          <dt>Operación de MP</dt>
-          <dd>{mov.mpPagoId}</dd>
-          <dt>Medio</dt>
-          <dd>{mov.metodoPago ?? "—"}</dd>
-          <dt>Detalle</dt>
-          <dd>{mov.descripcion ?? "—"}</dd>
-          <dt>Mail</dt>
-          <dd>{mov.email ?? "—"}</dd>
-          <dt>Documento</dt>
-          <dd>{mov.docNumero ? `${mov.docTipo ?? ""} ${mov.docNumero}` : "—"}</dd>
-          <dt>Comisión de MP</dt>
-          <dd>{mov.comisionCentavos != null ? formatARS(mov.comisionCentavos) : "—"}</dd>
-          <dt>Neto acreditado</dt>
-          <dd>{mov.netoCentavos != null ? formatARS(mov.netoCentavos) : "—"}</dd>
-        </dl>
-      </section>
-
       <AvisoEmitiendo comps={comps} />
       {comps.length > 0 ? (
         <section className={`${styles.card} ${styles.cardTight}`} style={{ marginBottom: 18 }}>
@@ -114,26 +117,32 @@ export default async function CobroPage({ params }: { params: Promise<{ id: stri
         </section>
       ) : null}
 
-      {facturable ? (
-        <section className={styles.card}>
-          <h2 className={`${styles.label} ${styles.sectionHead}`}>Facturar</h2>
-          {facturacionConfigurada() ? (
-            <EmitirForm
-              movimientoId={mov.id}
-              importeCentavos={mov.montoCentavos}
-              descripcion={descripcionDelCobro(mov)}
-              hoy={hoyEnArgentina()}
-              iniciales={inicialesDe(mov)}
-              clientes={listaClientes}
-            />
-          ) : (
-            <p className={styles.hint}>
-              Falta la configuración de Facturante en el entorno (FACTURANTE_* y
-              EMISOR_CUIT).
-            </p>
-          )}
-        </section>
-      ) : null}
-    </>
+      {facturable && facturacionConfigurada() ? (
+        <div className={propios.cobroConHoja}>
+          <EmitirForm
+            movimientoId={mov.id}
+            importeCentavos={mov.montoCentavos}
+            descripcion={descripcionDelCobro(mov)}
+            hoy={hoyEnArgentina()}
+            iniciales={inicialesDe(mov)}
+            clientes={listaClientes}
+            productos={productos}
+            emisorCuit={configFacturante()?.emisorCuit ?? null}
+          />
+          <aside>{datosDelCobro}</aside>
+        </div>
+      ) : (
+        <>
+          {datosDelCobro}
+          {facturable ? (
+            <section className={styles.card} style={{ marginTop: 18 }}>
+              <p className={styles.hint}>
+                Falta la configuración de Facturante en el entorno (FACTURANTE_* y EMISOR_CUIT).
+              </p>
+            </section>
+          ) : null}
+        </>
+      )}
+    </div>
   );
 }
