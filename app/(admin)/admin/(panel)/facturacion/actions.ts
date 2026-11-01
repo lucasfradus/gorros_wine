@@ -123,10 +123,14 @@ export async function emitirFacturaAction(
 
   const parsed = facturaSchema.safeParse(leer(formData, Object.keys(facturaSchema.shape)));
   if (!parsed.success) return { error: parsed.error.issues[0].message };
+  const leidos = leerRenglones(formData.get("renglones"));
+  if ("error" in leidos) return { error: leidos.error };
   const { movimientoId, clienteId, ...datos } = parsed.data;
 
   const r = await reservarFactura({
     movimientoId,
+    renglones: leidos.renglones,
+    percepcionIva: formData.get("percepcionIva") === "on",
     datos,
     clienteId: clienteId || null,
     guardarCliente: formData.get("guardarCliente") === "on",

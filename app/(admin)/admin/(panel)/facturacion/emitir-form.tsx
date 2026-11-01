@@ -1,30 +1,28 @@
 "use client";
 
-import { useActionState, useState } from "react";
-import type { CondicionIva } from "@/lib/db/schema";
-import { calcular } from "@/lib/facturacion/calculo";
+import { useActionState } from "react";
+import { calcular, errorDeTotalDelCobro } from "@/lib/facturacion/calculo";
 import { FORMAS_DE_PAGO } from "@/lib/facturacion/formas-de-pago";
-import { formatARS } from "@/lib/format";
 import type { FormState } from "../form-ui";
 import { emitirFacturaAction } from "./actions";
+import { HojaFactura, PercepcionCampo, usePercepcion } from "./hoja-factura";
 import {
   ReceptorCampos,
-  letraDe,
   type ClienteParaFacturar,
   type DatosIniciales,
 } from "./receptor-campos";
+import { RenglonesCampos, useRenglones, type ProductoParaFacturar } from "./renglones";
 import { VistaPrevia } from "./vista-previa";
 import styles from "../../admin.module.css";
-import propios from "./facturacion.module.css";
 
 export type { ClienteParaFacturar, DatosIniciales };
 
 const INICIAL: FormState = {};
 
 /**
- * La factura de un cobro de MP: el importe es el del cobro, lo único que se
- * carga es el receptor. Precargado con lo que mandó MP del pagador. Sale con la
- * fecha del día y como pago electrónico.
+ * La factura de un cobro de MP. Arranca con un renglón por el total, precargado
+ * con lo que mandó MP, y los conceptos se pueden cambiar mientras sumen lo
+ * cobrado. Sale con la fecha del día y como pago electrónico.
  */
 export function EmitirForm({
   movimientoId,
@@ -33,56 +31,80 @@ export function EmitirForm({
   hoy,
   iniciales,
   clientes,
+  productos,
+  emisorCuit,
 }: {
   movimientoId: string;
   importeCentavos: number;
-  /** El renglón que va a la factura (`descripcionDelCobro`). */
+  /** El renglón con el que arranca (`descripcionDelCobro`). */
   descripcion: string;
   hoy: string;
   iniciales: DatosIniciales;
   clientes: ClienteParaFacturar[];
+  productos: ProductoParaFacturar[];
+  emisorCuit: string | null;
 }) {
   const [state, action] = useActionState(emitirFacturaAction, INICIAL);
-  const [condicion, setCondicion] = useState<CondicionIva>("consumidor_final");
-  // El mismo cálculo que hace el servidor con el único renglón del cobro.
-  const calc = calcular(
-    [
-      {
-        productoId: null,
-        descripcion,
-        cantidad: 1,
-        precioUnitarioCentavos: importeCentavos,
-        descuentoPct: 0,
-        alcanzado: false,
-      },
-    ],
-    { percepcionIva: false },
-  );
+  const renglones = useRenglones([
+    {
+      productoId: null,
+      descripcion,
+      cantidad: 1,
+      precioUnitarioCentavos: importeCentavos,
+      descuentoPct: 0,
+      alcanzado: false,
+    },
+  ]);
+  const { validos, problema } = renglones;
+  const percepcion = usePercepcion();
+  const calc = calcular(validos, { percepcionIva: percepcion.aplica });
+  const noCoincide = errorDeTotalDelCobro(calc.totalCentavos, importeCentavos) !== null;
 
   return (
-    <form action={action} className={styles.form}>
+    <form action={action}>
       <input type="hidden" name="movimientoId" value={movimientoId} />
-      <ReceptorCampos
-        iniciales={iniciales}
-        clientes={clientes}
-        onCambio={(r) => setCondicion(r.condicion)}
-      />
+      <input type="hidden" name="renglones" value={JSON.stringify(validos)} />
 
-      <p className={propios.resumen}>
-        <span>Neto {formatARS(calc.netoCentavos)}</span>
-        <span>IVA 21% {formatARS(calc.ivaCentavos)}</span>
-        <strong>Total {formatARS(calc.totalCentavos)}</strong>
-      </p>
-
-      <VistaPrevia
-        letra={letraDe(condicion)}
+      <HojaFactura
+        letra={percepcion.letra}
         fecha={hoy}
-        formaPago={FORMAS_DE_PAGO.electronico}
+        emisorCuit={emisorCuit}
+        receptor={
+          <ReceptorCampos
+            iniciales={iniciales}
+            clientes={clientes}
+            onCambio={percepcion.alCambiarReceptor}
+          />
+        }
+        renglones={
+          <RenglonesCampos
+            estado={renglones}
+            productos={productos}
+            calc={calc}
+            conAlcanzado={percepcion.aplica}
+          />
+        }
+        condiciones={
+          <>
+            <p className={styles.hint}>
+              Sale con la fecha de hoy y forma de pago {FORMAS_DE_PAGO.electronico.toLowerCase()}.
+            </p>
+            <PercepcionCampo estado={percepcion} calc={calc} />
+          </>
+        }
         calc={calc}
-        clientes={clientes}
-        state={state}
-        deshabilitado={false}
-      />
+        cobroCentavos={importeCentavos}
+      >
+        <VistaPrevia
+          letra={percepcion.letra}
+          fecha={hoy}
+          formaPago={FORMAS_DE_PAGO.electronico}
+          calc={calc}
+          clientes={clientes}
+          state={state}
+          deshabilitado={problema !== null || validos.length === 0 || noCoincide}
+        />
+      </HojaFactura>
     </form>
   );
 }

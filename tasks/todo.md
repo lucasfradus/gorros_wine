@@ -7,6 +7,16 @@
 > Antes de tocar código: leer `AGENTS.md` (este Next.js y este Drizzle no son
 > los del training data) y `tasks/lessons.md`.
 
+**Facturador con conceptos y forma de factura.**
+Plan completo: [docs/planes/2026-11-01-facturador.md](../docs/planes/2026-11-01-facturador.md).
+
+Rama `feat/facturador`, worktree `../Gorros-facturador`, puerto `:3009`.
+
+- [x] **Tarea 1** — El servidor acepta conceptos y exige el total del cobro
+- [x] **Tarea 2** — Formulario del cobro con renglones
+- [x] **Tarea 3** — Hoja de factura compartida a todo el ancho
+- [ ] **Tarea 4** — tsc ✓, prueba offline ✓, build ✓, navegador ✓ · falta: PR, deploy, y B real con dos conceptos más su NC
+
 **Presupuestos y recibos, precio sin IVA y concepto "Productos y Servicios".**
 Plan completo: [docs/planes/2026-10-31-presupuestos-y-servicios.md](../docs/planes/2026-10-31-presupuestos-y-servicios.md).
 

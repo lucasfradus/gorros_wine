@@ -146,6 +146,9 @@ export function useRenglones(iniciales: Renglon[] = []) {
 
 export type EstadoRenglones = ReturnType<typeof useRenglones>;
 
+const rotulo = `${styles.label} ${propios.renglonRotulo}`;
+const campoNumero = `${styles.input} ${propios.renglonNumero}`;
+
 export function RenglonesCampos({
   estado,
   productos,
@@ -187,6 +190,18 @@ export function RenglonesCampos({
         ))}
       </datalist>
 
+      {/* Los títulos de columna se ven una sola vez. Cada campo conserva su
+          label, oculto en escritorio y visible en la tarjeta del teléfono. */}
+      <div className={propios.renglonesTitulos} aria-hidden="true">
+        <span>Detalle</span>
+        <span>Cant.</span>
+        <span>Precio s/IVA</span>
+        <span>Precio c/IVA</span>
+        <span>Dto. %</span>
+        <span>Subtotal</span>
+        <span />
+      </div>
+
       {filas.map((f, i) => {
         const r = renglones[i];
         const calculado = r ? calc.renglones[validos.indexOf(r)] : null;
@@ -194,7 +209,7 @@ export function RenglonesCampos({
         return (
           <div key={f.key} className={propios.renglon}>
             <div className={`${styles.field} ${propios.renglonDescripcion}`}>
-              <label className={styles.label} htmlFor={`desc-${f.key}`}>
+              <label className={rotulo} htmlFor={`desc-${f.key}`}>
                 Producto o descripción
               </label>
               <input
@@ -213,68 +228,6 @@ export function RenglonesCampos({
                   pesos con la última cotización.
                 </span>
               ) : null}
-            </div>
-            <div className={styles.field}>
-              <label className={styles.label} htmlFor={`cant-${f.key}`}>
-                Cantidad
-              </label>
-              <input
-                id={`cant-${f.key}`}
-                inputMode="numeric"
-                value={f.cantidad}
-                onChange={(e) => cambiar(f.key, { cantidad: e.target.value })}
-                className={styles.input}
-              />
-            </div>
-            {/* Las dos columnas de precio: la que se tipea manda y la otra se
-                completa. Las cuentas salen siempre del precio con IVA. */}
-            <div className={styles.field}>
-              <label className={styles.label} htmlFor={`neto-${f.key}`}>
-                Precio s/IVA
-              </label>
-              <input
-                id={`neto-${f.key}`}
-                inputMode="decimal"
-                value={f.neto}
-                onChange={(e) =>
-                  cambiar(f.key, { neto: e.target.value, precio: convertido(e.target.value, conIvaDeNeto) })
-                }
-                placeholder="0,00"
-                className={styles.input}
-              />
-            </div>
-            <div className={styles.field}>
-              <label className={styles.label} htmlFor={`precio-${f.key}`}>
-                Precio c/IVA
-              </label>
-              <input
-                id={`precio-${f.key}`}
-                inputMode="decimal"
-                value={f.precio}
-                onChange={(e) =>
-                  cambiar(f.key, { precio: e.target.value, neto: convertido(e.target.value, netoDeConIva) })
-                }
-                placeholder="0,00"
-                className={styles.input}
-              />
-            </div>
-            <div className={styles.field}>
-              <label className={styles.label} htmlFor={`dto-${f.key}`}>
-                Dto. %
-              </label>
-              <input
-                id={`dto-${f.key}`}
-                inputMode="decimal"
-                value={f.descuento}
-                onChange={(e) => cambiar(f.key, { descuento: e.target.value })}
-                placeholder="0"
-                className={styles.input}
-              />
-            </div>
-            <div className={propios.renglonPie}>
-              <span className={propios.importe}>
-                {calculado ? formatARS(calculado.subtotalCentavos) : "—"}
-              </span>
               {conAlcanzado ? (
                 <label className={propios.renglonCheck}>
                   <input
@@ -285,17 +238,79 @@ export function RenglonesCampos({
                   Bebida (percepción)
                 </label>
               ) : null}
-              {filas.length > 1 ? (
-                <button
-                  type="button"
-                  onClick={() => quitar(f.key)}
-                  className={`${styles.btn} ${styles.btnSmall}`}
-                  aria-label={`Quitar el renglón ${i + 1}`}
-                >
-                  Quitar
-                </button>
-              ) : null}
             </div>
+            <div className={styles.field}>
+              <label className={rotulo} htmlFor={`cant-${f.key}`}>
+                Cantidad
+              </label>
+              <input
+                id={`cant-${f.key}`}
+                inputMode="numeric"
+                value={f.cantidad}
+                onChange={(e) => cambiar(f.key, { cantidad: e.target.value })}
+                className={campoNumero}
+              />
+            </div>
+            {/* Las dos columnas de precio: la que se tipea manda y la otra se
+                completa. Las cuentas salen siempre del precio con IVA. */}
+            <div className={styles.field}>
+              <label className={rotulo} htmlFor={`neto-${f.key}`}>
+                Precio s/IVA
+              </label>
+              <input
+                id={`neto-${f.key}`}
+                inputMode="decimal"
+                value={f.neto}
+                onChange={(e) =>
+                  cambiar(f.key, { neto: e.target.value, precio: convertido(e.target.value, conIvaDeNeto) })
+                }
+                placeholder="0,00"
+                className={campoNumero}
+              />
+            </div>
+            <div className={styles.field}>
+              <label className={rotulo} htmlFor={`precio-${f.key}`}>
+                Precio c/IVA
+              </label>
+              <input
+                id={`precio-${f.key}`}
+                inputMode="decimal"
+                value={f.precio}
+                onChange={(e) =>
+                  cambiar(f.key, { precio: e.target.value, neto: convertido(e.target.value, netoDeConIva) })
+                }
+                placeholder="0,00"
+                className={campoNumero}
+              />
+            </div>
+            <div className={styles.field}>
+              <label className={rotulo} htmlFor={`dto-${f.key}`}>
+                Dto. %
+              </label>
+              <input
+                id={`dto-${f.key}`}
+                inputMode="decimal"
+                value={f.descuento}
+                onChange={(e) => cambiar(f.key, { descuento: e.target.value })}
+                placeholder="0"
+                className={campoNumero}
+              />
+            </div>
+            <span className={`${propios.importe} ${propios.renglonImporte}`}>
+              {calculado ? formatARS(calculado.subtotalCentavos) : "—"}
+            </span>
+            {filas.length > 1 ? (
+              <button
+                type="button"
+                onClick={() => quitar(f.key)}
+                className={`${styles.btn} ${styles.btnSmall}`}
+                aria-label={`Quitar el renglón ${i + 1}`}
+              >
+                Quitar
+              </button>
+            ) : (
+              <span />
+            )}
           </div>
         );
       })}

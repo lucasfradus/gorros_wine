@@ -32,6 +32,7 @@ import {
   calcular,
   parseImporte,
   conIvaDeNeto,
+  errorDeTotalDelCobro,
   netoDeConIva,
   validarRenglones,
   type Renglon,
@@ -109,7 +110,7 @@ ok(
 console.log("\nRequest de una Factura B anónima");
 const vB = validarReceptor(base, 1_234_567);
 if (!vB.ok) throw new Error(vB.error);
-/** Lo que arma `reservarFactura` para un cobro de MP: un renglón por el total. */
+/** Con lo que arranca la factura de un cobro de MP: un renglón por el total. */
 const unRenglon = (importe: number): Renglon[] => [
   {
     productoId: null,
@@ -361,6 +362,18 @@ ok("todo fuera de la percepción", calcular([renglon({ cantidad: 12, alcanzado: 
 // $121.000 → neto $100.000 → 3% = $3.000 justos: "supera" es estricto.
 ok("$3.000 justos no se percibe", calcular([renglon({ precioUnitarioCentavos: 12_100_000 })], { percepcionIva: true }).percepciones.length, 0);
 ok("$3.000,01 sí", calcular([renglon({ precioUnitarioCentavos: 12_100_021 })], { percepcionIva: true }).percepciones[0]?.montoCentavos, 300_001);
+
+console.log("\nTotal de la factura de un cobro");
+const errorTotal = "La factura tiene que sumar exactamente el importe del cobro.";
+const dosConceptos = calcular(
+  [renglon({ precioUnitarioCentavos: 700_000 }), renglon({ precioUnitarioCentavos: 300_000, alcanzado: false })],
+  { percepcionIva: false },
+);
+ok("dos conceptos que suman el cobro", errorDeTotalDelCobro(dosConceptos.totalCentavos, 1_000_000), null);
+ok("falta", errorDeTotalDelCobro(dosConceptos.totalCentavos, 1_000_001), errorTotal);
+ok("sobra", errorDeTotalDelCobro(dosConceptos.totalCentavos, 999_999), errorTotal);
+ok("coincide sólo con la percepción", errorDeTotalDelCobro(c2.totalCentavos, 18_446_281), null);
+ok("sin la percepción, no", errorDeTotalDelCobro(c2.totalCentavos, 18_000_000), errorTotal);
 
 console.log("\nRequest de una venta");
 const fv = mapFactura({

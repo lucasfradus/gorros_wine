@@ -1,0 +1,196 @@
+/* La pantalla de emitir, con la forma de una factura argentina: emisor a la
+   izquierda, letra en un recuadro al centro, datos del comprobante a la derecha
+   y totales abajo. Sigue el tema del panel: sin papel blanco fijo. */
+
+.hoja {
+  min-width: 0;
+  background: var(--surface);
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-lg);
+}
+
+.encabezado {
+  position: relative;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
+  gap: 24px;
+  align-items: start;
+  padding: 22px 26px;
+}
+
+.emisor {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  font-size: 13px;
+  color: var(--muted);
+}
+
+.emisor strong {
+  font-size: 20px;
+  font-weight: 600;
+  color: var(--heading);
+}
+
+.letra {
+  display: grid;
+  place-items: center;
+  width: 56px;
+  height: 56px;
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius);
+  background: var(--surface-sunken);
+  font-size: 30px;
+  font-weight: 700;
+  line-height: 1;
+  color: var(--heading);
+}
+
+.identidad {
+  display: grid;
+  grid-template-columns: max-content max-content;
+  justify-content: end;
+  gap: 4px 14px;
+  margin: 0;
+  font-size: 13px;
+}
+
+.identidad dt {
+  color: var(--muted);
+}
+
+.identidad dd {
+  margin: 0;
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+
+.seccion {
+  min-width: 0;
+  padding: 18px 26px;
+  border-top: 1px solid var(--border-strong);
+}
+
+/* Los campos de `ReceptorCampos` son hermanos sueltos: la grilla los reparte, y
+   los avisos del padrón ocupan la fila entera. */
+.receptor {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 14px 24px;
+  align-items: start;
+}
+
+.receptor > p {
+  grid-column: 1 / -1;
+  margin: 0;
+}
+
+.pie {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(280px, 340px);
+  gap: 32px;
+  padding: 18px 26px 22px;
+  border-top: 1px solid var(--border-strong);
+}
+
+.condiciones {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  min-width: 0;
+}
+
+.cierre {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  min-width: 0;
+}
+
+.totales {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) max-content;
+  /* Sin separación entre columnas: la línea del total corre de punta a punta. */
+  gap: 6px 0;
+  margin: 0;
+  font-size: 14px;
+}
+
+.totales dt {
+  color: var(--muted);
+}
+
+.totales dd {
+  margin: 0;
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+
+/* Un <div> dentro del <dl> para repetir una fila: que no rompa las columnas. */
+.fila {
+  display: contents;
+}
+
+.totales .total {
+  padding-top: 8px;
+  border-top: 1px solid var(--border-strong);
+  font-size: 18px;
+  font-weight: 700;
+  color: var(--heading);
+}
+
+.totales .controlFalta {
+  color: var(--warn);
+  font-weight: 600;
+}
+
+.totales .control {
+  grid-column: 1 / -1;
+  font-size: 13px;
+}
+
+.totales .controlOk {
+  color: var(--ok);
+}
+
+.acciones {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+@media (max-width: 860px) {
+  .pie {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 20px;
+  }
+}
+
+@media (max-width: 640px) {
+  .encabezado {
+    grid-template-columns: minmax(0, 1fr) auto;
+    gap: 14px;
+    padding: 16px;
+  }
+
+  .identidad {
+    grid-column: 1 / -1;
+    justify-content: start;
+  }
+
+  .identidad dd {
+    text-align: left;
+  }
+
+  .seccion {
+    padding: 16px;
+  }
+
+  .receptor {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .pie {
+    padding: 16px;
+  }
+}

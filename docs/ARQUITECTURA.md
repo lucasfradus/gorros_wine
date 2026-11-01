@@ -297,7 +297,9 @@ diferencias:
   `renglones.tsx`); lo que se guarda y se factura es siempre el precio con
   IVA, y el sin IVA es sólo una forma de tipearlo (`conIvaDeNeto`). Se guardan en `comprobante_items`, que es lo que se consulta
   para saber qué se vendió; el `request_payload` sigue siendo lo que se mandó.
-  La factura de un cobro de MP escribe su único renglón también.
+  La factura de un cobro de MP arranca con un renglón por el total y admite
+  varios conceptos, pero su total, percepción incluida, tiene que ser igual al
+  cobro: lo exige `reservar`, además de la pantalla.
   - **El descuento va dentro del precio unitario**, redondeado por unidad, y
     nombrado en la descripción ("(10% dto.)"). Como bonificación del ítem, el
     PDF de la Factura B de Facturante la imprime mal: 6 botellas al 10% salen

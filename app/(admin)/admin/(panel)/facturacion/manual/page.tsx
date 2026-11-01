@@ -1,7 +1,7 @@
 import { randomUUID } from "node:crypto";
 import Link from "next/link";
 import { requireFacturacion } from "@/lib/auth";
-import { facturacionConfigurada } from "@/lib/facturante/config";
+import { configFacturante, facturacionConfigurada } from "@/lib/facturante/config";
 import { ultimasFechas } from "@/lib/facturacion/emitir";
 import { eq, inArray } from "drizzle-orm";
 import { db } from "@/lib/db";
@@ -89,7 +89,7 @@ export default async function FacturaManualPage({
       : undefined;
 
   return (
-    <>
+    <div className={styles.anchoCompleto}>
       <Link href="/admin/facturacion" className={styles.backLink}>
         ← Facturación
       </Link>
@@ -113,24 +113,25 @@ export default async function FacturaManualPage({
         </p>
       ) : null}
 
-      <section className={styles.card}>
-        {facturacionConfigurada() ? (
-          <FacturaManualForm
-            // Un id por formulario dibujado: es el del comprobante, y lo que
-            // impide que un doble envío saque dos facturas.
-            id={randomUUID()}
-            clientes={listaClientes}
-            productos={productos}
-            hoy={hoyEnArgentina()}
-            ultimas={ultimas}
-            desde={desde}
-          />
-        ) : (
+      {facturacionConfigurada() ? (
+        <FacturaManualForm
+          // Un id por formulario dibujado: es el del comprobante, y lo que
+          // impide que un doble envío saque dos facturas.
+          id={randomUUID()}
+          clientes={listaClientes}
+          productos={productos}
+          hoy={hoyEnArgentina()}
+          ultimas={ultimas}
+          emisorCuit={configFacturante()?.emisorCuit ?? null}
+          desde={desde}
+        />
+      ) : (
+        <section className={styles.card}>
           <p className={styles.hint}>
             Falta la configuración de Facturante en el entorno (FACTURANTE_* y EMISOR_CUIT).
           </p>
-        )}
-      </section>
-    </>
+        </section>
+      )}
+    </div>
   );
 }
