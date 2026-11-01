@@ -152,7 +152,7 @@ El 2026-10-31 el usuario pidió:
   - una NC.
 
   **No se mergea sin esto.**
-- [ ] **Confirmar con el contador** que la venta de vinos puede ir como concepto 3.
+- [x] **Confirmar con el contador** que la venta de vinos puede ir como concepto 3. Confirmado el 2026-11-01.
 
 ## Cierre
 
@@ -190,5 +190,4 @@ El 2026-10-31 el usuario pidió:
 
 - **Sandbox**: confirmar los `dateType` 2, 3 y 4.
   - Si no son ésos, la salida más corta es no mandarlos: Facturante completa el período con la fecha de hoy.
-- **Contador**: confirmar el concepto 3 para la venta de vinos.
 - **Mes anterior**: el manual de ARCA dice que la fecha "no podrá exceder el mes de presentación". Nunca se probó si eso impide fechar en el mes anterior. Con 10 días se va a intentar más seguido, por ejemplo el 3 de noviembre con fecha del 28 de octubre.

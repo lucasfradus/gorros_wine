@@ -15,7 +15,7 @@ Rama `claude/loving-cori-4f45nc` (sesión en la nube).
 - [x] **Tarea 1** — Precio s/IVA y c/IVA enlazados; renglones en un componente compartido
 - [x] **Tarea 2** — Presupuestos y recibos: schema, reserva, pantallas, vista imprimible
 - [x] **Tarea 3** — Pasar un presupuesto/recibo a factura
-- [ ] **Tarea 4** — Concepto 3 (hasta 10 días atrás): código ✓ · falta calibrar `dateType` en sandbox y confirmar con el contador
+- [ ] **Tarea 4** — Concepto 3 (hasta 10 días atrás): código ✓ · contador ✓ · falta calibrar `dateType` en sandbox
 - [ ] **Cierre** — tsc ✓, prueba offline ✓, build ✓, navegador ✓, ARQUITECTURA ✓ · falta: sandbox, PR
 
 ## Viene de las iteraciones anteriores (sigue pendiente)
