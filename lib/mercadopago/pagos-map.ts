@@ -30,6 +30,10 @@ export const pagoMpSchema = z.object({
     .nullish(),
   date_created: z.string().nullish(),
   date_approved: z.string().nullish(),
+  collector_id: z.union([z.string(), z.number()]).nullish(),
+  collector: z
+    .object({ id: z.union([z.string(), z.number()]).nullish() })
+    .nullish(),
 });
 export type PagoMp = z.infer<typeof pagoMpSchema>;
 
@@ -62,6 +66,20 @@ export interface PagoMapeado {
 
 /** MP informa pesos con decimales; acá todo es centavos enteros. */
 const centavos = (x: number) => Math.round(x * 100);
+
+/**
+ * Si la plata la recibió esta cuenta. `payments/search` trae también lo que la
+ * cuenta pagó a otros —transferencias, suscripciones—, y eso no es un cobro: el
+ * 2026-11-01 eran 22 de 62 filas en prod, listadas como facturables.
+ *
+ * MP informa el destinatario en `collector_id` en los cobros y en `collector.id`
+ * en los pagos salientes. Sin ninguno de los dos, el pago queda afuera: un cobro
+ * que falta se ve, una factura de un pago ajeno hay que anularla.
+ */
+export function esCobroDe(raw: PagoMp, mpUserId: string): boolean {
+  const destinatario = raw.collector_id ?? raw.collector?.id;
+  return destinatario != null && String(destinatario) === mpUserId;
+}
 
 /**
  * Convierte un pago de MP en los datos de la fila. Devuelve `null` si le falta

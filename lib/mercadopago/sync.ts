@@ -4,6 +4,7 @@ import { cuentasMp, movimientosMp } from "@/lib/db/schema";
 import { tokenDe } from "./cuenta";
 import {
   construirUrlBusqueda,
+  esCobroDe,
   mapearPago,
   respuestaBusquedaSchema,
   type PagoMapeado,
@@ -13,7 +14,8 @@ import {
  * Trae los cobros aprobados de Mercado Pago y los copia a `movimientos_mp`.
  *
  * Sólo `status=approved`: es lo único facturable, y mezclar pendientes y
- * rechazados convierte la pantalla en ruido.
+ * rechazados convierte la pantalla en ruido. Por lo mismo, sólo lo que recibió
+ * la cuenta (`esCobroDe`).
  */
 
 const LIMIT = 50;
@@ -27,8 +29,9 @@ export const DIAS_VENTANA_DEFAULT = 7;
  * informa MP **y** ante una página vacía: confiar sólo en el total deja el
  * barrido colgado si viene mal.
  */
-async function buscarPagosAprobados(
+async function buscarCobrosAprobados(
   token: string,
+  mpUserId: string,
   desde: Date,
   hasta: Date,
 ): Promise<PagoMapeado[]> {
@@ -49,6 +52,7 @@ async function buscarPagosAprobados(
     if (results.length === 0) break;
 
     for (const raw of results) {
+      if (!esCobroDe(raw, mpUserId)) continue;
       const m = mapearPago(raw);
       if (m) out.push(m);
     }
@@ -92,7 +96,12 @@ export async function sincronizarPagos(
   for (const cuenta of cuentas) {
     let pagos: PagoMapeado[];
     try {
-      pagos = await buscarPagosAprobados(tokenDe(cuenta), desde, hasta);
+      pagos = await buscarCobrosAprobados(
+        tokenDe(cuenta),
+        cuenta.mpUserId,
+        desde,
+        hasta,
+      );
     } catch (e) {
       resultado.fallidas.push({
         alias: cuenta.alias,
