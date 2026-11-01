@@ -151,7 +151,16 @@ El 2026-10-31 el usuario pidió:
     facturas posteriores de esa letra en el POS del sandbox;
   - una NC.
 
-  **No se mergea sin esto.**
+  **No se pudo** (2026-11-01): la cuenta de Testing respondió "Username or
+  Password incorrect". El usuario decidió probar en producción. Se mergea, y
+  apenas termina el deploy se emite desde el panel una B a consumidor final,
+  con fecha de hoy y de un renglón chico:
+  - si Facturante la rechaza, no queda nada fiscal y se corrigen los `dateType`;
+  - si sale autorizada, se revisa en el PDF el período y el vencimiento, y se
+    anula con su NC.
+
+  No se fecha en octubre desde producción: la factura caería en octubre y su
+  NC en noviembre.
 - [x] **Confirmar con el contador** que la venta de vinos puede ir como concepto 3. Confirmado el 2026-11-01.
 
 ## Cierre
@@ -188,6 +197,6 @@ El 2026-10-31 el usuario pidió:
 
 **Pendiente** (bloquea el merge):
 
-- **Sandbox**: confirmar los `dateType` 2, 3 y 4.
+- **Primera B real con concepto 3, más su NC**: confirmar los `dateType` 2, 3 y 4.
   - Si no son ésos, la salida más corta es no mandarlos: Facturante completa el período con la fecha de hoy.
 - **Mes anterior**: el manual de ARCA dice que la fecha "no podrá exceder el mes de presentación". Nunca se probó si eso impide fechar en el mes anterior. Con 10 días se va a intentar más seguido, por ejemplo el 3 de noviembre con fecha del 28 de octubre.
