@@ -24,6 +24,11 @@ respecto de lo que suele estar en el entrenamiento de un modelo.
   No hay `findMany` ni `include`.
 - Los filtros (`eq`, `and`, `ne`, `count`, `inArray`...) se importan de
   `drizzle-orm`, no cuelgan del objeto `db`.
+- En una plantilla `` sql`...` `` las columnas salen **sin la tabla**
+  (`"id"`, no `"documentos"."id"`). Una subconsulta escrita a mano que mezcla
+  dos tablas compara contra la columna equivocada sin dar error. Para eso,
+  armar la subconsulta con el builder (`db.select().from(...).where(...)`), que
+  sí califica, y meterla en la plantilla.
 - Migraciones con `drizzle-kit`: `npm run db:generate` escribe el SQL en
   `drizzle/`, `npm run db:migrate` lo aplica. `push` sólo para prototipar
   en local, nunca contra datos que importen.

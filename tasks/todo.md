@@ -18,6 +18,17 @@ Rama `claude/loving-cori-4f45nc` (sesión en la nube).
 - [ ] **Tarea 4** — Concepto 3 (hasta 10 días atrás): código ✓ · contador ✓ · sandbox sin acceso: se prueba con una B real + NC tras el deploy
 - [ ] **Cierre** — tsc ✓, prueba offline ✓, build ✓, navegador ✓, ARQUITECTURA ✓ · falta: merge, deploy y B real + NC
 
+**Arreglos de la revisión de #21** (rama `claude/loving-cori-4f45nc`, desde `main`):
+
+- [x] Una factura viva por documento: `comprobantes.documento_id` con índice único
+      (migración `0015`, con backfill de `documentos.factura_id`). Una factura que
+      revive queda `DUPLICADO`.
+- [x] Pasar a factura precarga fecha (corrida al rango de ARCA) y forma de pago.
+- [x] El período del servicio arranca en la venta si fue el mes anterior (cobro MP, recibo).
+- [x] No se anula un documento con factura viva (también en el servidor).
+- [x] "Válido hasta" desde la fecha del presupuesto; "bebida" leída de la base.
+- [x] tsc ✓, prueba offline ✓, build ✓, navegador ✓, casos de base ✓ · falta: PR y merge
+
 ## Viene de las iteraciones anteriores (sigue pendiente)
 
 - **Padrón de ARCA por CUIT (#20, mergeado)**: archivar el plan con su Review.

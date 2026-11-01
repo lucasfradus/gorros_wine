@@ -78,8 +78,6 @@ export const netoDeConIva = (conIva: number) => Math.round((conIva * 100) / 121)
  */
 export const conIvaDeNeto = (neto: number) => Math.round((neto * 121) / 100);
 
-const netoDe = netoDeConIva;
-
 /**
  * El descuento va **dentro del precio unitario**, redondeado por unidad, y no
  * como bonificación del ítem: el PDF de la Factura B de Facturante imprime la
@@ -104,7 +102,7 @@ export function calcular(renglones: Renglon[], opts: { percepcionIva: boolean })
       brutoCentavos: bruto,
       descuentoCentavos: descuento,
       subtotalCentavos: subtotal,
-      netoCentavos: netoDe(subtotal),
+      netoCentavos: netoDeConIva(subtotal),
     };
   });
 

@@ -88,9 +88,12 @@ export function formatDate(value: Date | null | undefined): string {
  * resolviera por su cuenta el HTML hidratado no coincidiría.
  */
 export function hoyEnArgentina(): string {
-  return new Intl.DateTimeFormat("en-CA", {
-    timeZone: ZONA,
-  }).format(new Date());
+  return diaEnArgentina(new Date());
+}
+
+/** El día de un instante en Buenos Aires, "AAAA-MM-DD". */
+export function diaEnArgentina(instante: Date): string {
+  return new Intl.DateTimeFormat("en-CA", { timeZone: ZONA }).format(instante);
 }
 
 /**

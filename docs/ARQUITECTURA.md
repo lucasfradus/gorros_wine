@@ -317,7 +317,8 @@ El rango sale de `rangoDeFecha` en `lib/facturacion/reglas.ts`:
   Servicios** (`GOOD_PRODUCTOS_Y_SERVICIOS` en `mappers.ts`), y para ése ARCA
   acepta N-10 a N+10 (manual WSFEv1, CbteFch); con Bienes serían 5. A cambio
   el request lleva el período del servicio (del 1 del mes al día de la
-  factura) y el vencimiento del pago (el mismo día), en `detail.dates`
+  factura, o desde el día de la venta si fue el mes anterior: el cobro de MP o
+  el recibo) y el vencimiento del pago (el mismo día), en `detail.dates`
   (`fechasDe`). La NC copia concepto y período, con fecha y vencimiento
   propios. No se ofrecen fechas futuras: una factura fechada mañana bloquea
   todas las de hoy.
@@ -361,11 +362,18 @@ para dar en el momento de la venta y facturar después.
   percepción. Se guardan con el documento y no se editan: se anula.
 - **Hoja imprimible** (`documentos/[id]`): siempre en claro, con la leyenda
   "DOCUMENTO NO VÁLIDO COMO FACTURA". El PDF lo arma el navegador al imprimir.
-- **Pasar a factura**: abre la factura manual con `?desde=<id>`, con renglones
-  y receptor precargados. La reserva escribe `documentos.factura_id` en la
-  misma transacción, y sólo si no tiene ya una factura viva. Una rechazada,
-  fallida o anulada con NC lo libera para facturarlo de nuevo
-  (`enlazarFactura` en `lib/facturacion/documentos.ts`).
+- **Pasar a factura**: abre la factura manual con `?desde=<id>`, con
+  renglones, receptor, forma de pago y fecha precargados. La fecha es la del
+  documento, corrida a lo más cercano que deja ARCA.
+  - **Una factura viva por documento**: cada factura guarda de qué documento
+    salió (`comprobantes.documento_id`), con un índice único parcial igual al
+    de los cobros. Una factura rechazada, fallida o anulada con NC libera el
+    documento para volver a facturarlo.
+  - **Factura que revive**: si una factura dada por no emitida aparece
+    autorizada después, choca con el índice y `guardarDocumento` la marca
+    `DUPLICADO` en vez de pisar a la vigente.
+  - **Anular**: un documento con factura viva no se anula. Lo que se anula es
+    la factura, con su NC.
 
 `calculo.ts` es una función pura que comparten el formulario, el servidor y la
 prueba offline. Los totales se calibraron contra el sandbox de Facturante con

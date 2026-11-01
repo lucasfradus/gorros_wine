@@ -23,6 +23,27 @@ import propios from "../facturacion.module.css";
 const INICIAL: FormState = {};
 
 /**
+ * La fecha con la que arranca una factura que sale de un presupuesto o recibo:
+ * la del documento, que es la de la venta, corrida a lo más cercano que deja
+ * ARCA si quedó afuera del rango. La letra se adivina como la va a poner el
+ * receptor al precargar el cliente; si después cambia, la validación de la
+ * fecha lo avisa.
+ */
+function fechaInicial(
+  desde: { fecha: string; cliente: ClienteParaFacturar | null },
+  hoy: string,
+  ultimas: Record<"A" | "B", string | null>,
+) {
+  // La misma regla que `elegirCliente` en receptor-campos.tsx; sin cliente,
+  // el receptor arranca como consumidor final.
+  const c = desde.cliente;
+  const conCuit = (c?.documento ?? "").replace(/\D/g, "").length === 11;
+  const condicion = c ? (c.condicionIva ?? (conCuit ? "responsable_inscripto" : "consumidor_final")) : "consumidor_final";
+  const { min, max } = rangoDeFecha(hoy, ultimas[letraDe(condicion)]);
+  return desde.fecha < min ? min : desde.fecha > max ? max : desde.fecha;
+}
+
+/**
  * La factura de una venta de mostrador o mayorista: renglones del catálogo o
  * libres, descuento por renglón, percepción de IVA y forma de pago. Las cuentas
  * se muestran con el mismo `calcular()` que usa el servidor, pero las que valen
@@ -49,6 +70,9 @@ export function FacturaManualForm({
     renglones: Renglon[];
     cliente: ClienteParaFacturar | null;
     receptor: DatosIniciales;
+    /** La del documento: es la de la venta. */
+    fecha: string;
+    formaPago: FormaPago | null;
   };
 }) {
   const [state, action] = useActionState(emitirFacturaManualAction, INICIAL);
@@ -56,8 +80,8 @@ export function FacturaManualForm({
   const { validos, problema } = renglonesEstado;
   const [condicion, setCondicion] = useState<CondicionIva>("consumidor_final");
   const [percepcion, setPercepcion] = useState(false);
-  const [formaPago, setFormaPago] = useState<FormaPago>("efectivo");
-  const [fecha, setFecha] = useState(hoy);
+  const [formaPago, setFormaPago] = useState<FormaPago>(desde?.formaPago ?? "efectivo");
+  const [fecha, setFecha] = useState(() => (desde ? fechaInicial(desde, hoy, ultimas) : hoy));
 
   const esRI = condicion === "responsable_inscripto";
   const calc = calcular(validos, { percepcionIva: esRI && percepcion });

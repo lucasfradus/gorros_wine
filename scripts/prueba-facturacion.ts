@@ -12,6 +12,7 @@ import {
   letraPara,
   rangoDeFecha,
   validarFecha,
+  validarFechaLibre,
   validarReceptor,
   type DatosReceptor,
 } from "../lib/facturacion/reglas.ts";
@@ -415,6 +416,31 @@ const fCheque = mapFactura({
 });
 ok("cheque = condición 12 del maestro", fCheque.header.detail.sellCondition[0].conditionType, 12);
 ok("la fecha elegida va al request", fechaDelComprobante(fCheque), "2026-10-23T00:00:00");
+
+// El período abre en la venta si fue antes del mes de la factura: un cobro o
+// un recibo de octubre facturado en noviembre.
+const conVenta = (venta: string | null) =>
+  mapFactura({
+    letra: "B",
+    receptor: { condicionIva: "consumidor_final", docTipo: "ninguno", docNumero: null, nombre: null, email: null, domicilio: null },
+    renglones: [{ productoId: null, descripcion: "x", cantidad: 1, precioUnitarioCentavos: 100, descuentoPct: 0, alcanzado: false }],
+    percepciones: [],
+    formaPago: "efectivo",
+    dia: "2026-11-02",
+    venta,
+    externalId: "x",
+    posId: 1,
+  }).header.detail.dates.find((d) => d.dateType === 2)?.dateTime;
+ok("venta del mes pasado: el período arranca en la venta", conVenta("2026-10-28"), "2026-10-28T00:00:00");
+ok("venta de este mes: el período arranca el 1", conVenta("2026-11-01"), "2026-11-01T00:00:00");
+ok("sin venta: el período arranca el 1", conVenta(null), "2026-11-01T00:00:00");
+
+console.log("\nFecha de un presupuesto o recibo");
+ok("del mes pasado, sí", validarFechaLibre("2026-10-02", "2026-11-01"), null);
+ok("dentro de un año, sí", validarFechaLibre("2027-10-31", "2026-11-01"), null);
+ok("2062 por 2026, no", validarFechaLibre("2062-10-02", "2026-11-01"), "La fecha está a más de un año: revisala.");
+ok("hace más de cinco años, no", validarFechaLibre("2020-01-01", "2026-11-01"), "La fecha tiene más de cinco años: revisala.");
+ok("fecha imposible, no", validarFechaLibre("2026-02-31x", "2026-11-01"), "La fecha no es válida.");
 
 console.log("\nPadrón de ARCA (respuestas reales de producción)");
 ok(

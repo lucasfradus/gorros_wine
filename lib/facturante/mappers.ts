@@ -199,15 +199,18 @@ const fechaRequest = (dia: string) => `${dia}T00:00:00`;
 
 /**
  * Las fechas de una factura de Productos y Servicios. El período va del 1 del
- * mes hasta el día de la factura: es lo que dice una factura de fin de mes, y
- * ARCA sólo pide que Desde no sea posterior a Hasta. El vencimiento del pago
- * es el mismo día (no puede ser anterior al comprobante): se factura lo cobrado
- * o lo que se cobra al entregar.
+ * mes hasta el día de la factura, o desde el día de la venta si fue antes (un
+ * cobro o un recibo del mes pasado facturado en éste): así el período siempre
+ * contiene la venta. ARCA sólo pide que Desde no sea posterior a Hasta. El
+ * vencimiento del pago es el mismo día (no puede ser anterior al
+ * comprobante): se factura lo cobrado o lo que se cobra al entregar.
  */
-function fechasDe(dia: string): DocDate[] {
+function fechasDe(dia: string, venta: string | null): DocDate[] {
+  const inicioDelMes = `${dia.slice(0, 8)}01`;
+  const desde = venta && venta < inicioDelMes ? venta : inicioDelMes;
   return [
     { dateType: FECHA_COMPROBANTE, dateTime: fechaRequest(dia) },
-    { dateType: FECHA_SERVICIO_DESDE, dateTime: fechaRequest(`${dia.slice(0, 8)}01`) },
+    { dateType: FECHA_SERVICIO_DESDE, dateTime: fechaRequest(desde) },
     { dateType: FECHA_SERVICIO_HASTA, dateTime: fechaRequest(dia) },
     { dateType: FECHA_VENCIMIENTO_PAGO, dateTime: fechaRequest(dia) },
   ];
@@ -257,6 +260,8 @@ export function mapFactura(opts: {
   formaPago: FormaPago;
   /** Día del comprobante "YYYY-MM-DD", **en hora de Argentina**. */
   dia: string;
+  /** Día de la venta (el cobro, el recibo), si se sabe: abre el período. */
+  venta?: string | null;
   externalId: string;
   posId: number;
 }): ElectronicDocument {
@@ -271,7 +276,7 @@ export function mapFactura(opts: {
         sellCondition: [
           { conditionType: SELL_CONDITION[opts.formaPago], currency: "ARS", currencyValue: 1 },
         ],
-        dates: fechasDe(opts.dia),
+        dates: fechasDe(opts.dia, opts.venta ?? null),
         currencySettings: { currency: "ARS", currencyValue: 1 },
       },
       receiver: receptorDe(opts.receptor),
