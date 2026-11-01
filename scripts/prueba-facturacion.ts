@@ -16,6 +16,7 @@ import {
   type DatosReceptor,
 } from "../lib/facturacion/reglas.ts";
 import {
+  fechaDelComprobante,
   mapFactura,
   mapNotaCredito,
   conWebhook,
@@ -29,6 +30,8 @@ import { sePuedeMarcarNoEmitido } from "../lib/facturacion/estado.ts";
 import {
   calcular,
   parseImporte,
+  conIvaDeNeto,
+  netoDeConIva,
   validarRenglones,
   type Renglon,
 } from "../lib/facturacion/calculo.ts";
@@ -129,8 +132,13 @@ const fb = mapFactura({
 ok("letra B = 3", fb.header.documentType, 3);
 ok("factura = 1", fb.header.documentGeneralType, 1);
 ok("POS interno", fb.header.detail.pos, 13665);
-ok("bienes, pago electrónico", [fb.header.detail.good, fb.header.detail.sellCondition[0].conditionType], [1, 6]);
-ok("fecha ISO", fb.header.detail.dates, [{ dateType: 1, dateTime: "2026-10-23T00:00:00" }]);
+ok("productos y servicios, pago electrónico", [fb.header.detail.good, fb.header.detail.sellCondition[0].conditionType], [3, 6]);
+ok("fecha ISO, período del mes y vencimiento", fb.header.detail.dates, [
+  { dateType: 1, dateTime: "2026-10-23T00:00:00" },
+  { dateType: 2, dateTime: "2026-10-01T00:00:00" },
+  { dateType: 3, dateTime: "2026-10-23T00:00:00" },
+  { dateType: 4, dateTime: "2026-10-23T00:00:00" },
+]);
 ok("receptor Otro con 0, consumidor final", fb.header.receiver, {
   countryId: 1,
   documentType: 6,
@@ -224,7 +232,17 @@ const nc = mapNotaCredito(
   { dia: "2026-10-24", externalId: "gorros-nc-prueba" },
 );
 ok("misma letra, NC = 2", [nc.header.documentType, nc.header.documentGeneralType], [1, 2]);
-ok("fecha propia", nc.header.detail.dates[0].dateTime, "2026-10-24T00:00:00");
+ok("fecha propia", fechaDelComprobante(nc), "2026-10-24T00:00:00");
+ok("período de la factura, vencimiento propio", nc.header.detail.dates.slice(1), [
+  { dateType: 2, dateTime: "2026-10-01T00:00:00" },
+  { dateType: 3, dateTime: "2026-10-23T00:00:00" },
+  { dateType: 4, dateTime: "2026-10-24T00:00:00" },
+]);
+ok("mismo concepto que la factura", nc.header.detail.good, fa.header.detail.good);
+// Una factura emitida antes del concepto 3: su NC sigue siendo de Bienes, sin período.
+const faVieja = { ...fa, header: { ...fa.header, detail: { ...fa.header.detail, good: 1, dates: [{ dateType: 1, dateTime: "2026-10-20T00:00:00" }] } } };
+const ncVieja = mapNotaCredito(faVieja, { posId: 13665, posPrefix: 15, number: 1, cuitEmisor: "20160680904", fecha: "2026-10-20T00:00:00" }, { dia: "2026-10-24", externalId: "x" });
+ok("NC de una factura de Bienes: sólo su fecha", [ncVieja.header.detail.good, ncVieja.header.detail.dates], [1, [{ dateType: 1, dateTime: "2026-10-24T00:00:00" }]]);
 ok("externalId propio", nc.header.identification?.[0].code, "gorros-nc-prueba");
 ok("mismo receptor y domicilio", [nc.header.receiver, nc.header.address], [fa.header.receiver, fa.header.address]);
 ok("mismos ítems", nc.items, fa.items);
@@ -275,6 +293,13 @@ ok("letras → no", parseImporte("12a"), null);
 ok("cero → no", parseImporte("0,00"), null);
 ok("vacío → no", parseImporte(""), null);
 ok("más de $100.000.000 → no", parseImporte("100.000.000,01"), null);
+
+console.log("\nPrecio sin IVA ↔ con IVA");
+ok("neto redondo", conIvaDeNeto(100_000), 121_000);
+ok("…y de vuelta", netoDeConIva(121_000), 100_000);
+ok("neto con centavos", conIvaDeNeto(99_999), 120_999);
+ok("…y de vuelta da lo tipeado", netoDeConIva(120_999), 99_999);
+ok("un centavo", conIvaDeNeto(1), 1);
 
 const renglon = (o: Partial<Renglon>): Renglon => ({
   productoId: null,
@@ -369,10 +394,10 @@ ok("la NC copia los tributos", ncv.header.tributes, fv.header.tributes);
 ok("la NC copia ítems y descuentos", ncv.items, fv.items);
 
 console.log("\nFecha de la factura");
-ok("sin facturas previas: 5 días atrás hasta hoy", rangoDeFecha("2026-10-25", null), { min: "2026-10-20", max: "2026-10-25" });
-ok("cruza el mes", rangoDeFecha("2026-11-02", null).min, "2026-10-28");
+ok("sin facturas previas: 10 días atrás hasta hoy", rangoDeFecha("2026-10-25", null), { min: "2026-10-15", max: "2026-10-25" });
+ok("cruza el mes", rangoDeFecha("2026-11-02", null).min, "2026-10-23");
 ok("la última de la letra manda si es más nueva", rangoDeFecha("2026-10-25", "2026-10-23").min, "2026-10-23");
-ok("una última más vieja no importa", rangoDeFecha("2026-10-25", "2026-10-01").min, "2026-10-20");
+ok("una última más vieja no importa", rangoDeFecha("2026-10-25", "2026-10-01").min, "2026-10-15");
 const rango = rangoDeFecha("2026-10-25", "2026-10-23");
 ok("dentro del rango", validarFecha("2026-10-24", rango), null);
 ok("futura, no", validarFecha("2026-10-26", rango), "La factura no puede tener fecha futura.");
@@ -389,7 +414,7 @@ const fCheque = mapFactura({
   posId: 1,
 });
 ok("cheque = condición 12 del maestro", fCheque.header.detail.sellCondition[0].conditionType, 12);
-ok("la fecha elegida va al request", fCheque.header.detail.dates[0].dateTime, "2026-10-23T00:00:00");
+ok("la fecha elegida va al request", fechaDelComprobante(fCheque), "2026-10-23T00:00:00");
 
 console.log("\nPadrón de ARCA (respuestas reales de producción)");
 ok(

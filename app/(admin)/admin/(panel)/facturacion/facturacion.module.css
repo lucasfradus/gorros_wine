@@ -134,7 +134,7 @@
 
 .renglon {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) 84px 130px 84px;
+  grid-template-columns: minmax(0, 1fr) 84px 130px 130px 84px;
   gap: 10px;
   padding: 12px;
   border: 1px solid var(--field-line);

@@ -12,6 +12,7 @@ import {
 import { normalizeEmail } from "@/lib/auth/password";
 import { configFacturante } from "@/lib/facturante/config";
 import {
+  fechaDelComprobante,
   mapFactura,
   mapNotaCredito,
   numeroDeComprobante,
@@ -22,6 +23,8 @@ import type { DocumentoResponse, ElectronicDocument } from "@/lib/facturante/typ
 import { hoyEnArgentina } from "@/lib/format";
 import { calcular, validarRenglones, type Renglon } from "./calculo";
 import { camposACompletar, datosDeReceptor } from "./cliente-receptor";
+import { DocumentoNoFacturable, enlazarFactura } from "./documentos";
+import { esDuplicado } from "./duplicado";
 import { rangoDeFecha, validarFecha, validarReceptor, type DatosReceptor } from "./reglas";
 
 /**
@@ -36,11 +39,6 @@ import { rangoDeFecha, validarFecha, validarReceptor, type DatosReceptor } from 
 
 export type Reserva = { ok: true; comprobanteId: string } | { ok: false; error: string };
 
-/** Lo que manda Postgres cuando choca un unique: drizzle lo envuelve en `cause`. */
-export function esDuplicado(e: unknown): boolean {
-  const codigo = (x: unknown) => (x as { code?: string } | null | undefined)?.code;
-  return codigo(e) === "23505" || codigo((e as { cause?: unknown } | null)?.cause) === "23505";
-}
 
 const DESCRIPCION_POR_DEFECTO = "Vinos y productos";
 
@@ -169,6 +167,8 @@ async function reservar(o: {
   guardarCliente: boolean;
   /** "AAAA-MM-DD"; `null` es hoy. */
   dia: string | null;
+  /** El presupuesto o recibo del que sale, si sale de uno. */
+  documentoId?: string | null;
   actorId: string;
   siDuplicado: string;
 }): Promise<Reserva> {
@@ -267,9 +267,13 @@ async function reservar(o: {
           alcanzado: r.alcanzado,
         })),
       );
+      if (o.documentoId) await enlazarFactura(tx, o.documentoId, o.id);
     });
   } catch (e) {
     if (esDuplicado(e)) return { ok: false, error: o.siDuplicado };
+    if (e instanceof DocumentoNoFacturable) {
+      return { ok: false, error: "Ese presupuesto o recibo ya se facturó, o está anulado." };
+    }
     throw e;
   }
 
@@ -332,6 +336,7 @@ export async function reservarFacturaManual(opts: {
   guardarCliente: boolean;
   /** "AAAA-MM-DD", elegida en pantalla dentro de `rangoDeFecha`. */
   dia: string;
+  documentoId: string | null;
   actorId: string;
 }): Promise<Reserva> {
   return reservar({
@@ -363,7 +368,7 @@ export async function reservarNotaCredito(opts: {
   const respuesta = f.responsePayload as DocumentoResponse | null;
   const numero = numeroDeComprobante(respuesta, f.numeroCompleto);
   const prefijo = prefijoDeComprobante(respuesta, f.numeroCompleto);
-  const fecha = facturaRequest?.header?.detail?.dates?.[0]?.dateTime;
+  const fecha = fechaDelComprobante(facturaRequest);
   if (!facturaRequest || !numero || !prefijo || !fecha) {
     return {
       ok: false,

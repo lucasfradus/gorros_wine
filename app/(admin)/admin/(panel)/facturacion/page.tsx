@@ -122,6 +122,9 @@ export default async function FacturacionPage({
           >
             Nueva factura
           </Link>
+          <Link href="/admin/facturacion/documentos" className={`${styles.btn} ${styles.btnSmall}`}>
+            Presupuestos y recibos
+          </Link>
           <Link href="/admin/facturacion/cobros" className={`${styles.btn} ${styles.btnSmall}`}>
             Cobros de MP
           </Link>

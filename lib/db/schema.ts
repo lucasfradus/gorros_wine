@@ -952,7 +952,7 @@ export const comprobantes = pgTable(
     estado: comprobanteEstado("estado").notNull().default("pendiente"),
 
     /** La fecha **fiscal** del comprobante, la que va impresa. No es
-     *  `createdAt`: una factura manual se puede fechar hasta 5 días atrás
+     *  `createdAt`: una factura manual se puede fechar hasta 10 días atrás
      *  (`rangoDeFecha` en lib/facturacion/reglas.ts). Es la que ordena los
      *  listados y la que ARCA exige correlativa por tipo y punto de venta. */
     fecha: date("fecha").notNull(),
@@ -1079,6 +1079,85 @@ export const comprobanteItems = pgTable(
     index("comprobante_items_producto_idx").on(t.productoId),
   ],
 );
+
+/**
+ * Presupuestos y recibos: comprobantes **sin validez fiscal**. No pasan por
+ * Facturante ni por ARCA, así que viven aparte de `comprobantes`, que es
+ * fiscal de punta a punta (letra, CAE, correlatividad). No tienen letra ni
+ * reglas de fecha: se fechan el día de la venta, aunque la factura salga
+ * después.
+ */
+export const documentoTipo = pgEnum("documento_tipo", ["presupuesto", "recibo"]);
+export type DocumentoTipo = (typeof documentoTipo.enumValues)[number];
+
+export const documentos = pgTable(
+  "documentos",
+  {
+    /** Lo genera el formulario al dibujarse: un doble envío choca con la PK
+     *  en vez de sacar dos documentos. */
+    id: uuid("id").primaryKey(),
+    tipo: documentoTipo("tipo").notNull(),
+    /** Correlativo por tipo, propio: Presupuesto N° 1, Recibo N° 1. */
+    numero: integer("numero").notNull(),
+    fecha: date("fecha").notNull(),
+
+    clienteId: uuid("cliente_id").references(() => clientes.id, { onDelete: "set null" }),
+    /** Como en la factura, se copia: el documento dice lo que decía el día que
+     *  se hizo. Los dos son opcionales: un presupuesto puede ser "a quien
+     *  corresponda". */
+    receptorNombre: text("receptor_nombre"),
+    receptorDocumento: text("receptor_documento"),
+
+    /** Sólo el recibo: cómo se pagó. */
+    formaPago: formaPago("forma_pago"),
+    /** Sólo el presupuesto: hasta cuándo valen los precios. */
+    validoHasta: date("valido_hasta"),
+    observaciones: text("observaciones"),
+
+    totalCentavos: bigint("total_centavos", { mode: "number" }).notNull(),
+
+    /** No se edita ni se borra, como la factura: se anula y queda. */
+    anulado: boolean("anulado").notNull().default(false),
+    /** La factura que se hizo a partir de este documento. */
+    facturaId: uuid("factura_id").references(() => comprobantes.id, { onDelete: "set null" }),
+
+    creadoPor: uuid("creado_por").references(() => users.id, { onDelete: "set null" }),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [
+    /** Lo que impide que dos documentos simultáneos salgan con el mismo
+     *  número: el segundo choca y se renumera. */
+    uniqueIndex("documentos_tipo_numero_idx").on(t.tipo, t.numero),
+    index("documentos_fecha_idx").on(t.fecha),
+  ],
+);
+
+/** Los renglones de un presupuesto o recibo; las mismas columnas que los de
+ *  una factura, sin la percepción. Se escriben con el documento y no se tocan. */
+export const documentoItems = pgTable(
+  "documento_items",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    documentoId: uuid("documento_id")
+      .notNull()
+      .references(() => documentos.id, { onDelete: "restrict" }),
+    productoId: uuid("producto_id").references(() => productos.id, { onDelete: "set null" }),
+    orden: integer("orden").notNull(),
+    descripcion: text("descripcion").notNull(),
+    cantidad: integer("cantidad").notNull(),
+    /** Con IVA incluido, antes del descuento. */
+    precioUnitarioCentavos: bigint("precio_unitario_centavos", { mode: "number" }).notNull(),
+    descuentoPct: numeric("descuento_pct", { precision: 5, scale: 2, mode: "number" })
+      .notNull()
+      .default(0),
+    subtotalCentavos: bigint("subtotal_centavos", { mode: "number" }).notNull(),
+  },
+  (t) => [index("documento_items_documento_idx").on(t.documentoId)],
+);
+
+export type Documento = typeof documentos.$inferSelect;
+export type DocumentoItem = typeof documentoItems.$inferSelect;
 
 export type CuentaMp = typeof cuentasMp.$inferSelect;
 export type MovimientoMp = typeof movimientosMp.$inferSelect;

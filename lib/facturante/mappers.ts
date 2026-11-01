@@ -12,6 +12,7 @@ import {
 } from "../facturacion/calculo.ts";
 import type {
   DocAddress,
+  DocDate,
   DocItem,
   DocReceiver,
   DocTribute,
@@ -52,8 +53,17 @@ export const TAX_TREATMENT: Record<CondicionIva, number> = {
 const VAT_21 = 7;
 /** Bruto con IVA incluido: el total del comprobante es el monto del cobro. */
 const PRECIO_BRUTO = 2;
-/** Bienes: con Servicios Facturante completa el período con la fecha de hoy. */
-const GOOD_BIENES = 1;
+/**
+ * Concepto de ARCA. Se factura como **Productos y Servicios** (3) y no como
+ * Bienes (1): ARCA deja fechar un comprobante de concepto 2 o 3 de N-10 a
+ * N+10, contra N-5 de Bienes (manual WSFEv1, `CbteFch`), y eso es lo que
+ * permite emitir las facturas de la semana juntas. A cambio pide el período
+ * del servicio y el vencimiento del pago (`fechasDe`).
+ *
+ * Sin esas fechas, Facturante completa el período con la de hoy (visto con
+ * Bienes/Servicios al armar #16).
+ */
+const GOOD_PRODUCTOS_Y_SERVICIOS = 3;
 /**
  * `detail.sellCondition[].conditionType`: el maestro `GET /SellCondition`,
  * leído del sandbox el 2026-10-25 (20 condiciones, ninguna "otros"; sin
@@ -81,7 +91,16 @@ const MONTO = 1;
 const pesos = (centavos: number) => centavos / 100;
 /** No hay una entrada propia en `GET /ExternalSoftware`; 12 es "Otro". */
 const EXTERNAL_SOFTWARE_OTRO = 12;
+/**
+ * `detail.dates[].dateType`. El 1 está verificado. Los del período y el
+ * vencimiento siguen el orden de WSFEv1 (`FchServDesde`, `FchServHasta`,
+ * `FchVtoPago`) y **hay que confirmarlos en el sandbox** antes de la primera
+ * emisión real (`scripts/_facturante-sandbox.ts`).
+ */
 const FECHA_COMPROBANTE = 1;
+const FECHA_SERVICIO_DESDE = 2;
+const FECHA_SERVICIO_HASTA = 3;
+const FECHA_VENCIMIENTO_PAGO = 4;
 
 export interface Domicilio {
   calle: string;
@@ -179,6 +198,26 @@ function settingsDe(webhook?: WebhookConfig) {
 const fechaRequest = (dia: string) => `${dia}T00:00:00`;
 
 /**
+ * Las fechas de una factura de Productos y Servicios. El período va del 1 del
+ * mes hasta el día de la factura: es lo que dice una factura de fin de mes, y
+ * ARCA sólo pide que Desde no sea posterior a Hasta. El vencimiento del pago
+ * es el mismo día (no puede ser anterior al comprobante): se factura lo cobrado
+ * o lo que se cobra al entregar.
+ */
+function fechasDe(dia: string): DocDate[] {
+  return [
+    { dateType: FECHA_COMPROBANTE, dateTime: fechaRequest(dia) },
+    { dateType: FECHA_SERVICIO_DESDE, dateTime: fechaRequest(`${dia.slice(0, 8)}01`) },
+    { dateType: FECHA_SERVICIO_HASTA, dateTime: fechaRequest(dia) },
+    { dateType: FECHA_VENCIMIENTO_PAGO, dateTime: fechaRequest(dia) },
+  ];
+}
+
+/** La fecha del comprobante tal como se mandó, para asociarlo en una NC. */
+export const fechaDelComprobante = (doc: ElectronicDocument | null | undefined) =>
+  doc?.header?.detail?.dates?.find((d) => d.dateType === FECHA_COMPROBANTE)?.dateTime;
+
+/**
  * Un renglón al ítem de Facturante. El descuento viene aplicado en el precio y
  * nombrado en la descripción (por qué no como bonificación: ver
  * `precioConDescuento`). Sin descuento el ítem queda igual que siempre: el de
@@ -228,11 +267,11 @@ export function mapFactura(opts: {
       documentGeneralType: GENERAL_TYPE.FACTURA,
       detail: {
         pos: opts.posId,
-        good: GOOD_BIENES,
+        good: GOOD_PRODUCTOS_Y_SERVICIOS,
         sellCondition: [
           { conditionType: SELL_CONDITION[opts.formaPago], currency: "ARS", currencyValue: 1 },
         ],
-        dates: [{ dateType: FECHA_COMPROBANTE, dateTime: fechaRequest(opts.dia) }],
+        dates: fechasDe(opts.dia),
         currencySettings: { currency: "ARS", currencyValue: 1 },
       },
       receiver: receptorDe(opts.receptor),
@@ -277,7 +316,15 @@ export function mapNotaCredito(
       documentGeneralType: GENERAL_TYPE.NOTA_CREDITO,
       detail: {
         ...factura.header.detail,
-        dates: [{ dateType: FECHA_COMPROBANTE, dateTime: fechaRequest(opts.dia) }],
+        // Concepto y período, los de la factura: la NC devuelve eso mismo.
+        // Su propia fecha, y con ella el vencimiento (que no puede ser
+        // anterior al comprobante). Una factura vieja de Bienes trae sólo la
+        // fecha y así sigue.
+        dates: factura.header.detail.dates.map((d) =>
+          d.dateType === FECHA_COMPROBANTE || d.dateType === FECHA_VENCIMIENTO_PAGO
+            ? { ...d, dateTime: fechaRequest(opts.dia) }
+            : d,
+        ),
       },
       receiver: factura.header.receiver,
       ...(factura.header.address ? { address: factura.header.address } : {}),

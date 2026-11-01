@@ -69,7 +69,16 @@ export interface Calculo {
 }
 
 /** El neto de un importe con IVA 21% incluido. */
-const netoDe = (conIva: number) => Math.round((conIva * 100) / 121);
+export const netoDeConIva = (conIva: number) => Math.round((conIva * 100) / 121);
+
+/**
+ * El precio con IVA de un neto. El renglón guarda y factura el precio con IVA,
+ * así que cargar "sin IVA" es sólo una forma de tipearlo: se convierte acá,
+ * redondeado al centavo, y el resto de las cuentas no se entera.
+ */
+export const conIvaDeNeto = (neto: number) => Math.round((neto * 121) / 100);
+
+const netoDe = netoDeConIva;
 
 /**
  * El descuento va **dentro del precio unitario**, redondeado por unidad, y no

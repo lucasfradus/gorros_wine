@@ -42,7 +42,8 @@ export interface DocAddress {
 }
 
 export interface DocDate {
-  /** 1 = fecha del comprobante. */
+  /** 1 = fecha del comprobante; 2 y 3, período del servicio; 4, vencimiento
+   *  del pago (ver `fechasDe` en mappers.ts). */
   dateType: number;
   /** ISO "yyyy-MM-ddT00:00:00": con dd/mm AFIP rechaza (10016). */
   dateTime: string;
@@ -50,7 +51,8 @@ export interface DocDate {
 
 export interface DocDetail {
   pos: number;
-  /** Concepto AFIP: 1 Bienes, que no pide período de servicio. */
+  /** Concepto AFIP: 1 Bienes, 2 Servicios, 3 Productos y Servicios. El 2 y
+   *  el 3 piden período del servicio y vencimiento del pago en `dates`. */
   good: number;
   sellCondition: { conditionType: number; currency: string; currencyValue: number }[];
   dates: DocDate[];

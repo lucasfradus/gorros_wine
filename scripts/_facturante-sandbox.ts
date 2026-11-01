@@ -7,6 +7,14 @@
  *
  *   npx tsx scripts/_facturante-sandbox.ts            → dry-run: imprime requests y totales
  *   APPLY=1 npx tsx scripts/_facturante-sandbox.ts    → emite en el sandbox
+ *   DIAS_ATRAS=7 APPLY=1 npx tsx scripts/_facturante-sandbox.ts
+ *                                                     → fechadas 7 días atrás
+ *
+ * Con DIAS_ATRAS entre 6 y 10 se prueba el concepto 3 (Productos y
+ * Servicios): con Bienes, ARCA rechazaría más de 5. Ojo con la correlatividad:
+ * el punto de venta del sandbox no puede tener una factura de la misma letra
+ * con fecha posterior, o el rechazo es por eso y no por el concepto. Las NC
+ * salen con la fecha de hoy.
  *
  * Se niega a correr si FACTURANTE_BASE_URL no es la de test.
  */
@@ -16,6 +24,7 @@ import { loadEnvConfig } from "@next/env";
 import { configFacturante } from "../lib/facturante/config";
 import { emitirEnFacturante } from "../lib/facturante/client";
 import {
+  fechaDelComprobante,
   mapFactura,
   mapNotaCredito,
   numeroDeComprobante,
@@ -148,10 +157,20 @@ async function emitir(doc: ElectronicDocument, esperadoCentavos: number) {
   return res;
 }
 
+/** Hoy menos `DIAS_ATRAS`, en el calendario de Buenos Aires. */
+function diaDeLaFactura(hoy: string): string {
+  const atras = Number(process.env.DIAS_ATRAS ?? 0);
+  if (!Number.isInteger(atras) || atras < 0 || atras > 10) {
+    throw new Error("DIAS_ATRAS va de 0 a 10.");
+  }
+  return new Date(Date.parse(`${hoy}T12:00:00Z`) - atras * 24 * 60 * 60 * 1000).toISOString().slice(0, 10);
+}
+
 async function main() {
-  const dia = hoyEnArgentina();
+  const hoy = hoyEnArgentina();
+  const dia = diaDeLaFactura(hoy);
   console.log(
-    `Sandbox ${cfg.baseUrl} · company ${cfg.companyId} · POS ${cfg.posId} · ${aplicar ? "EMITIENDO" : "dry-run"}`,
+    `Sandbox ${cfg.baseUrl} · company ${cfg.companyId} · POS ${cfg.posId} · facturas del ${dia} · ${aplicar ? "EMITIENDO" : "dry-run"}`,
   );
 
   for (const caso of casos) {
@@ -203,9 +222,9 @@ async function main() {
           posPrefix: prefijo,
           number: numero,
           cuitEmisor: cfg.emisorCuit,
-          fecha: doc.header.detail.dates[0].dateTime,
+          fecha: fechaDelComprobante(doc)!,
         },
-        { dia, externalId: `gorros-sandbox-nc-${randomUUID()}` },
+        { dia: hoy, externalId: `gorros-sandbox-nc-${randomUUID()}` },
       );
       await emitir(nc, c.totalCentavos);
     }
