@@ -5,6 +5,7 @@ import {
   clientes,
   comprobanteItems,
   comprobantes,
+  documentos,
   movimientosMp,
   productos,
   type FormaPago,
@@ -20,11 +21,11 @@ import {
   type ReceptorFiscal,
 } from "@/lib/facturante/mappers";
 import type { DocumentoResponse, ElectronicDocument } from "@/lib/facturante/types";
-import { hoyEnArgentina } from "@/lib/format";
+import { diaEnArgentina, hoyEnArgentina } from "@/lib/format";
 import { calcular, validarRenglones, type Renglon } from "./calculo";
 import { camposACompletar, datosDeReceptor } from "./cliente-receptor";
-import { DocumentoNoFacturable, enlazarFactura } from "./documentos";
-import { esDuplicado } from "./duplicado";
+import { DocumentoNoFacturable, verificarFacturable } from "./documentos";
+import { esDuplicado, indiceDuplicado } from "./duplicado";
 import { rangoDeFecha, validarFecha, validarReceptor, type DatosReceptor } from "./reglas";
 
 /**
@@ -169,6 +170,8 @@ async function reservar(o: {
   dia: string | null;
   /** El presupuesto o recibo del que sale, si sale de uno. */
   documentoId?: string | null;
+  /** El día de la venta, si es otro que el de la factura (el del cobro). */
+  venta?: string | null;
   actorId: string;
   siDuplicado: string;
 }): Promise<Reserva> {
@@ -215,6 +218,18 @@ async function reservar(o: {
     }
   }
 
+  // La fecha del documento es la de la venta: abre el período del servicio.
+  let venta = o.venta ?? null;
+  if (o.documentoId) {
+    const [doc] = await db
+      .select({ fecha: documentos.fecha })
+      .from(documentos)
+      .where(eq(documentos.id, o.documentoId))
+      .limit(1);
+    if (!doc) return { ok: false, error: "No se encontró el presupuesto o recibo." };
+    venta = doc.fecha;
+  }
+
   const externalId = `gorros-f-${o.id}`;
   const request = mapFactura({
     letra: v.letra,
@@ -223,12 +238,14 @@ async function reservar(o: {
     percepciones: calc.percepciones,
     formaPago: o.formaPago,
     dia,
+    venta,
     externalId,
     posId: cfg.posId,
   });
 
   try {
     await db.transaction(async (tx) => {
+      if (o.documentoId) await verificarFacturable(tx, o.documentoId);
       const clienteId = await resolverCliente(tx, {
         clienteId: o.clienteId,
         guardar: o.guardarCliente,
@@ -251,6 +268,7 @@ async function reservar(o: {
         receptorNombre: v.receptor.nombre,
         receptorCondicionIva: v.receptor.condicionIva,
         clienteId,
+        documentoId: o.documentoId ?? null,
         requestPayload: request,
         emitidoPor: o.actorId,
       });
@@ -267,9 +285,11 @@ async function reservar(o: {
           alcanzado: r.alcanzado,
         })),
       );
-      if (o.documentoId) await enlazarFactura(tx, o.documentoId, o.id);
     });
   } catch (e) {
+    if (esDuplicado(e) && indiceDuplicado(e) === "comprobantes_documento_vivo_idx") {
+      return { ok: false, error: "Ese presupuesto o recibo ya tiene una factura." };
+    }
     if (esDuplicado(e)) return { ok: false, error: o.siDuplicado };
     if (e instanceof DocumentoNoFacturable) {
       return { ok: false, error: "Ese presupuesto o recibo ya se facturó, o está anulado." };
@@ -314,8 +334,10 @@ export async function reservarFactura(opts: {
     datos: opts.datos,
     clienteId: opts.clienteId,
     guardarCliente: opts.guardarCliente,
-    // La de un cobro sale con la fecha del día: el cobro ya tiene la suya.
+    // La de un cobro sale con la fecha del día: el cobro ya tiene la suya, y
+    // abre el período del servicio.
     dia: null,
+    venta: diaEnArgentina(mov.fechaAprobacion),
     actorId: opts.actorId,
     siDuplicado: "Ese cobro ya tiene una factura, o se está emitiendo.",
   });

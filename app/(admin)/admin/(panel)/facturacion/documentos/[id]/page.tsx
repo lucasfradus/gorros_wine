@@ -1,9 +1,8 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { eq } from "drizzle-orm";
 import { db } from "@/lib/db";
-import { comprobantes } from "@/lib/db/schema";
 import { requireFacturacion } from "@/lib/auth";
+import { configFacturante } from "@/lib/facturante/config";
 import { formatCuit } from "@/lib/facturacion/cuit";
 import {
   NOMBRE_DOCUMENTO,
@@ -31,23 +30,12 @@ export default async function DocumentoPage({ params }: { params: Promise<{ id: 
   const encontrado = await documentoConItems(id);
   if (!encontrado) notFound();
   const { doc, items } = encontrado;
-  const [factura] = doc.facturaId
-    ? await db
-        .select({
-          id: comprobantes.id,
-          numero: comprobantes.numeroCompleto,
-          letra: comprobantes.letra,
-          estado: comprobantes.estado,
-        })
-        .from(comprobantes)
-        .where(eq(comprobantes.id, doc.facturaId))
-        .limit(1)
-    : [];
+  const factura = await facturaViva(db, doc.id);
 
   const nombre = NOMBRE_DOCUMENTO[doc.tipo];
-  const cuit = process.env.EMISOR_CUIT?.replace(/\D/g, "");
+  const cuit = configFacturante()?.emisorCuit;
   const hayDescuento = items.some((it) => it.descuentoPct > 0);
-  const facturado = !!factura && facturaViva(factura.estado);
+
 
   return (
     <>
@@ -57,7 +45,7 @@ export default async function DocumentoPage({ params }: { params: Promise<{ id: 
 
       <div className={propios.acciones}>
         <Imprimir />
-        {facturado && factura ? (
+        {factura ? (
           <Link href={`/admin/facturacion/manual/${factura.id}`} className={`${styles.btn} ${styles.btnSmall}`}>
             Facturado: {factura.numero ?? `Factura ${factura.letra}`}
           </Link>
@@ -70,7 +58,7 @@ export default async function DocumentoPage({ params }: { params: Promise<{ id: 
           </Link>
         ) : null}
         {/* Uno facturado ya no se anula acá: lo que se anula es la factura, con su NC. */}
-        {!doc.anulado && !facturado ? (
+        {!doc.anulado && !factura ? (
           <AccionComprobante
             action={anularDocumentoAction}
             id={doc.id}

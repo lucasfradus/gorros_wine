@@ -41,6 +41,7 @@ export function DocumentoForm({
   const [nombre, setNombre] = useState("");
   const [documento, setDocumento] = useState("");
   const [formaPago, setFormaPago] = useState<FormaPago>("efectivo");
+  const [fecha, setFecha] = useState(hoy);
 
   const calc = calcular(renglones.validos, { percepcionIva: false });
   const esRecibo = tipo === "recibo";
@@ -123,7 +124,8 @@ export function DocumentoForm({
             id="fecha"
             name="fecha"
             type="date"
-            defaultValue={hoy}
+            value={fecha}
+            onChange={(e) => setFecha(e.target.value)}
             required
             className={styles.input}
           />
@@ -153,7 +155,15 @@ export function DocumentoForm({
             <label className={styles.label} htmlFor="validoHasta">
               Válido hasta (opcional)
             </label>
-            <input id="validoHasta" name="validoHasta" type="date" min={hoy} className={styles.input} />
+            {/* Desde la fecha del presupuesto, no desde hoy: uno cargado tarde
+                puede haber vencido ya. */}
+            <input
+              id="validoHasta"
+              name="validoHasta"
+              type="date"
+              min={fecha || undefined}
+              className={styles.input}
+            />
           </div>
         )}
       </div>

@@ -1,4 +1,4 @@
-import { and, asc, eq, inArray, isNull, notInArray, or, sql } from "drizzle-orm";
+import { and, asc, eq, inArray, notInArray, sql } from "drizzle-orm";
 import { db } from "@/lib/db";
 import {
   clientes,
@@ -11,7 +11,7 @@ import {
 } from "@/lib/db/schema";
 import { hoyEnArgentina } from "@/lib/format";
 import { calcular, validarRenglones, type Renglon } from "./calculo";
-import { esDuplicado } from "./duplicado";
+import { esDuplicado, indiceDuplicado } from "./duplicado";
 import type { Tx } from "./emitir";
 import { validarFechaLibre } from "./reglas";
 
@@ -31,13 +31,9 @@ export const numeroDocumento = (n: number) => String(n).padStart(4, "0");
 
 export type ReservaDocumento = { ok: true; id: string } | { ok: false; error: string };
 
-/** El nombre del índice que numera: si choca ése, es otro documento que se
- *  llevó el número al mismo tiempo, y se reintenta con el siguiente. */
-const INDICE_NUMERO = "documentos_tipo_numero_idx";
-const chocoElNumero = (e: unknown) => {
-  const r = e as { constraint?: string; cause?: { constraint?: string } } | null;
-  return (r?.constraint ?? r?.cause?.constraint) === INDICE_NUMERO;
-};
+/** Si choca este índice, es otro documento que se llevó el número al mismo
+ *  tiempo, y se reintenta con el siguiente. */
+const chocoElNumero = (e: unknown) => indiceDuplicado(e) === "documentos_tipo_numero_idx";
 
 export async function guardarDocumento(o: {
   id: string;
@@ -152,13 +148,30 @@ export async function guardarDocumento(o: {
   }
 }
 
+/**
+ * Uno que ya tiene una factura viva no se anula: lo que se anula es la
+ * factura, con su NC. El documento se bloquea mientras se mira, para que una
+ * factura que se reserva al mismo tiempo no quede colgando de uno anulado
+ * (`verificarFacturable` toma el mismo lock).
+ */
 export async function anularDocumento(id: string): Promise<{ ok: true } | { ok: false; error: string }> {
-  const r = await db
-    .update(documentos)
-    .set({ anulado: true, updatedAt: new Date() })
-    .where(and(eq(documentos.id, id), eq(documentos.anulado, false)))
-    .returning({ id: documentos.id });
-  return r.length ? { ok: true } : { ok: false, error: "Ya estaba anulado, o no existe." };
+  return db.transaction(async (tx) => {
+    const [doc] = await tx
+      .select({ anulado: documentos.anulado })
+      .from(documentos)
+      .where(eq(documentos.id, id))
+      .for("update")
+      .limit(1);
+    if (!doc || doc.anulado) return { ok: false, error: "Ya estaba anulado, o no existe." };
+    if (await facturaViva(tx, id)) {
+      return { ok: false, error: "Ya tiene una factura: anulá la factura con su nota de crédito." };
+    }
+    await tx
+      .update(documentos)
+      .set({ anulado: true, updatedAt: new Date() })
+      .where(eq(documentos.id, id));
+    return { ok: true };
+  });
 }
 
 /** El documento con sus renglones, en el orden en que se cargaron. */
@@ -175,36 +188,63 @@ export async function documentoConItems(id: string) {
 
 /**
  * Una factura que ya no cuenta: rechazada, que nunca salió, o anulada con su
- * NC. El documento que la originó se puede volver a facturar. Es el mismo
- * criterio que el índice de factura viva de `comprobantes`.
+ * NC. Con una así, el documento se puede volver a facturar. Es el mismo
+ * criterio que el índice `comprobantes_documento_vivo_idx`.
  */
-export const FACTURA_MUERTA = ["rechazado", "error", "anulado"] as const;
+const FACTURA_MUERTA = ["rechazado", "error", "anulado"] as const;
 
-export const facturaViva = (estado: string | null | undefined) =>
-  !!estado && !(FACTURA_MUERTA as readonly string[]).includes(estado);
+/** La factura viva que salió del documento, si hay. El índice garantiza que
+ *  hay una como mucho. */
+export async function facturaViva(q: Tx | typeof db, documentoId: string) {
+  const [f] = await q
+    .select({
+      id: comprobantes.id,
+      letra: comprobantes.letra,
+      numero: comprobantes.numeroCompleto,
+      estado: comprobantes.estado,
+    })
+    .from(comprobantes)
+    .where(
+      and(
+        eq(comprobantes.documentoId, documentoId),
+        eq(comprobantes.tipo, "factura"),
+        notInArray(comprobantes.estado, [...FACTURA_MUERTA]),
+      ),
+    )
+    .limit(1);
+  return f ?? null;
+}
+
+/**
+ * Para un listado: "este documento tiene una factura viva". Con el query
+ * builder y no con una plantilla `sql`: en la plantilla drizzle no califica las
+ * columnas, y `"id"` dentro de la subconsulta sería el de `comprobantes`.
+ */
+export const conFacturaViva = sql<boolean>`exists (${db
+  .select({ uno: sql`1` })
+  .from(comprobantes)
+  .where(
+    and(
+      eq(comprobantes.documentoId, documentos.id),
+      eq(comprobantes.tipo, "factura"),
+      notInArray(comprobantes.estado, [...FACTURA_MUERTA]),
+    ),
+  )})`;
 
 export class DocumentoNoFacturable extends Error {}
 
 /**
- * Deja asentado en el documento qué factura salió de él. Va dentro de la
- * transacción de la reserva: si el documento ya tiene una factura viva (otra
- * pestaña, un doble clic) o se anuló, la factura no se reserva.
+ * Antes de reservar una factura desde un documento, dentro de la misma
+ * transacción: que exista y no esté anulado, con el mismo lock que toma
+ * `anularDocumento`. Que no tenga ya otra factura viva lo garantiza el índice
+ * al insertar.
  */
-export async function enlazarFactura(tx: Tx, documentoId: string, facturaId: string) {
-  const muertas = tx
-    .select({ id: comprobantes.id })
-    .from(comprobantes)
-    .where(inArray(comprobantes.estado, [...FACTURA_MUERTA]));
-  const r = await tx
-    .update(documentos)
-    .set({ facturaId, updatedAt: new Date() })
-    .where(
-      and(
-        eq(documentos.id, documentoId),
-        eq(documentos.anulado, false),
-        or(isNull(documentos.facturaId), inArray(documentos.facturaId, muertas)),
-      ),
-    )
-    .returning({ id: documentos.id });
-  if (!r.length) throw new DocumentoNoFacturable();
+export async function verificarFacturable(tx: Tx, documentoId: string) {
+  const [doc] = await tx
+    .select({ id: documentos.id })
+    .from(documentos)
+    .where(and(eq(documentos.id, documentoId), eq(documentos.anulado, false)))
+    .for("update")
+    .limit(1);
+  if (!doc) throw new DocumentoNoFacturable();
 }

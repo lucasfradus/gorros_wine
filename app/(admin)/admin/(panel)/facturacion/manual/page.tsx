@@ -3,9 +3,9 @@ import Link from "next/link";
 import { requireFacturacion } from "@/lib/auth";
 import { facturacionConfigurada } from "@/lib/facturante/config";
 import { ultimasFechas } from "@/lib/facturacion/emitir";
-import { eq } from "drizzle-orm";
+import { eq, inArray } from "drizzle-orm";
 import { db } from "@/lib/db";
-import { comprobantes } from "@/lib/db/schema";
+import { categorias, productos as tablaProductos } from "@/lib/db/schema";
 import {
   NOMBRE_DOCUMENTO,
   documentoConItems,
@@ -29,6 +29,22 @@ function receptorDe(nombre: string | null, documento: string | null): DatosInici
   return { nombre: nombre ?? "", email: "", docTipo, docNumero: docTipo === "ninguno" ? "" : d };
 }
 
+/**
+ * Qué productos de los renglones son bebida, leído de la base y no de la lista
+ * del buscador: ésa trae sólo los activos con precio en pesos, y un producto
+ * archivado desde el presupuesto tiene que seguir contando como lo que es.
+ */
+async function esBebida(items: { productoId: string | null }[]) {
+  const ids = [...new Set(items.flatMap((it) => (it.productoId ? [it.productoId] : [])))];
+  if (!ids.length) return new Map<string, boolean>();
+  const filas = await db
+    .select({ id: tablaProductos.id, esVino: categorias.esVino })
+    .from(tablaProductos)
+    .leftJoin(categorias, eq(categorias.id, tablaProductos.categoriaId))
+    .where(inArray(tablaProductos.id, ids));
+  return new Map(filas.map((f) => [f.id, f.esVino ?? false]));
+}
+
 export default async function FacturaManualPage({
   searchParams,
 }: {
@@ -44,17 +60,13 @@ export default async function FacturaManualPage({
     desdeId && /^[0-9a-f-]{36}$/i.test(desdeId) ? documentoConItems(desdeId) : null,
   ]);
 
-  // Un presupuesto o recibo que se pasa a factura: sus renglones y su receptor
-  // precargados, todo editable. Uno anulado o ya facturado se avisa en vez de
-  // precargarse; igual lo vuelve a chequear la reserva.
-  const [facturaPrevia] = origen?.doc.facturaId
-    ? await db
-        .select({ estado: comprobantes.estado })
-        .from(comprobantes)
-        .where(eq(comprobantes.id, origen.doc.facturaId))
-        .limit(1)
-    : [];
-  const noFacturable = origen && (origen.doc.anulado || facturaViva(facturaPrevia?.estado));
+  // Un presupuesto o recibo que se pasa a factura: renglones, receptor, fecha y
+  // forma de pago precargados, todo editable. Uno anulado o ya facturado se
+  // avisa en vez de precargarse; igual lo vuelve a chequear la reserva.
+  const [previa, bebidas] = origen
+    ? await Promise.all([facturaViva(db, origen.doc.id), esBebida(origen.items)])
+    : [null, new Map<string, boolean>()];
+  const noFacturable = origen && (origen.doc.anulado || previa !== null);
   const desde =
     origen && !noFacturable
       ? {
@@ -67,10 +79,12 @@ export default async function FacturaManualPage({
             descuentoPct: it.descuentoPct,
             // Como al cargarlo a mano: lo del catálogo según su categoría, lo
             // libre como bebida.
-            alcanzado: productos.find((p) => p.id === it.productoId)?.alcanzado ?? true,
+            alcanzado: it.productoId ? (bebidas.get(it.productoId) ?? false) : true,
           })),
           cliente: listaClientes.find((c) => c.id === origen.doc.clienteId) ?? null,
           receptor: receptorDe(origen.doc.receptorNombre, origen.doc.receptorDocumento),
+          fecha: origen.doc.fecha,
+          formaPago: origen.doc.formaPago,
         }
       : undefined;
 

@@ -992,6 +992,15 @@ export const comprobantes = pgTable(
       onDelete: "set null",
     }),
 
+    /** El presupuesto o recibo del que salió la factura. Va de este lado y no
+     *  en `documentos` para que valga lo mismo que con un cobro: el índice de
+     *  abajo deja una sola factura viva por documento, y una que revive
+     *  después de darse por perdida choca en vez de pisar a la otra
+     *  (`guardarDocumento` en lib/facturacion/guardar.ts). Su NC no lo copia. */
+    documentoId: uuid("documento_id").references((): AnyPgColumn => documentos.id, {
+      onDelete: "restrict",
+    }),
+
     /** En una nota de crédito, la factura que anula. */
     origenId: uuid("origen_id").references((): AnyPgColumn => comprobantes.id, {
       onDelete: "restrict",
@@ -1024,6 +1033,12 @@ export const comprobantes = pgTable(
      *  se pueda volver a facturar. */
     uniqueIndex("comprobantes_factura_viva_idx")
       .on(t.movimientoId)
+      .where(
+        sql`${t.tipo} = 'factura' and ${t.estado} not in ('rechazado', 'error', 'anulado')`,
+      ),
+    /** Lo mismo para un presupuesto o recibo: una sola factura viva. */
+    uniqueIndex("comprobantes_documento_vivo_idx")
+      .on(t.documentoId)
       .where(
         sql`${t.tipo} = 'factura' and ${t.estado} not in ('rechazado', 'error', 'anulado')`,
       ),
@@ -1116,10 +1131,9 @@ export const documentos = pgTable(
 
     totalCentavos: bigint("total_centavos", { mode: "number" }).notNull(),
 
-    /** No se edita ni se borra, como la factura: se anula y queda. */
+    /** No se edita ni se borra, como la factura: se anula y queda. Las
+     *  facturas que salieron de él apuntan acá (`comprobantes.documento_id`). */
     anulado: boolean("anulado").notNull().default(false),
-    /** La factura que se hizo a partir de este documento. */
-    facturaId: uuid("factura_id").references(() => comprobantes.id, { onDelete: "set null" }),
 
     creadoPor: uuid("creado_por").references(() => users.id, { onDelete: "set null" }),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),

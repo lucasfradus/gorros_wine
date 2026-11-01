@@ -91,19 +91,20 @@ export async function guardarDocumento(
     if (!esDuplicado(e)) throw e;
 
     // Un comprobante que se dio por no emitido (o rechazado) y Facturante igual
-    // autorizó, cuando el cobro ya tiene otra factura viva: el índice único no
-    // deja revivirlo. El cobro quedó facturado dos veces de verdad. Se guardan
+    // autorizó, cuando el cobro (o el presupuesto o recibo) ya tiene otra
+    // factura viva: el índice único no deja revivirlo. La venta quedó
+    // facturada dos veces de verdad. Se guardan
     // el CAE y el número sin cambiar el estado, y se deja a la vista: hay que
     // anularlo con nota de crédito desde Facturante.
     console.error(
-      `[facturacion] DUPLICADO: ${comprobanteId} quedó autorizado (${r.numeroCompleto}) y el cobro ya tenía otro comprobante vivo`,
+      `[facturacion] DUPLICADO: ${comprobanteId} quedó autorizado (${r.numeroCompleto}) y su cobro o documento ya tenía otro comprobante vivo`,
     );
     await db
       .update(comprobantes)
       .set({
         ...datos,
         errorCodigo: "DUPLICADO",
-        errorMensaje: `Facturante lo autorizó igual (${r.numeroCompleto ?? "sin número"}) y el cobro ya tiene otra factura: anulalo con nota de crédito desde Facturante.`,
+        errorMensaje: `Facturante lo autorizó igual (${r.numeroCompleto ?? "sin número"}) y ${actual.movimientoId ? "el cobro" : "el presupuesto o recibo"} ya tiene otra factura: anulalo con nota de crédito desde Facturante.`,
       })
       .where(eq(comprobantes.id, comprobanteId));
     return { actualizado: true };
