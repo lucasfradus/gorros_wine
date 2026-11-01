@@ -1,0 +1,12 @@
+{
+  "$schema": "https://railway.com/railway.schema.json",
+  "build": {
+    "buildCommand": "echo sin build",
+    "watchPatterns": ["scripts/cron-diario.mjs", "railway.cron.json"]
+  },
+  "deploy": {
+    "startCommand": "node scripts/cron-diario.mjs",
+    "cronSchedule": "0 9 * * *",
+    "restartPolicyType": "NEVER"
+  }
+}
